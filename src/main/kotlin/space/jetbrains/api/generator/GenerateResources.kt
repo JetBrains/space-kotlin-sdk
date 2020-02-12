@@ -1,0 +1,255 @@
+package space.jetbrains.api.generator
+
+import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import space.jetbrains.api.generator.HA_Method.*
+import space.jetbrains.api.generator.HA_PathSegment.*
+
+const val META_PARAMETERS_PREFIX = "$"
+
+private fun resourcePackage(parentDisplayPath: Iterable<String>): String {
+    return RESOURCES_PACKAGE + '.' + parentDisplayPath.joinToString(".") { it.displayNameToMemberName() }
+}
+
+fun generateResources(model: SelfContainedHA_Model): List<FileSpec> {
+    return model.resources.values.groupBy { displayPath(it, model) }.map { (displayPath, resourceGroup) ->
+        val className = ClassName(
+            resourcePackage(displayPath.dropLast(1)),
+            resourceGroup.first().displayPlural.displayNameToClassName()
+        )
+        FileSpec.builder(className.packageName, className.simpleName).also { fileBuilder ->
+            fileBuilder.indent(INDENT)
+
+            necessaryImports.forEach {
+                fileBuilder.addImport(it.packageName, it.simpleNames.joinToString("."))
+            }
+
+            if (displayPath.size == 1) {
+                fileBuilder.addProperty(
+                    PropertySpec.builder(resourceGroup.first().displayPlural.displayNameToMemberName(), className)
+                        .receiver(clientWithContextType)
+                        .getter(FunSpec.getterBuilder().addStatement("return %T(this)", className).build())
+                        .build()
+                )
+            }
+
+            fileBuilder.addType(TypeSpec.classBuilder(className).also { typeBuilder ->
+                typeBuilder.primaryConstructor(FunSpec.constructorBuilder().addParameter("client", clientWithContextType).build())
+                typeBuilder.superclass(restResourceType)
+                typeBuilder.addSuperclassConstructorParameter("client")
+
+                typeBuilder.addProperties(
+                    resourceGroup.asSequence()
+                        .flatMap { it.nestedResources.asSequence() }
+                        .groupBy { displayPath(it, model) }
+                        .values
+                        .map { nestedGroup ->
+                            val nestedName = nestedGroup.first().displayPlural
+                            val nestedType = ClassName(resourcePackage(displayPath), nestedName.displayNameToClassName())
+                            PropertySpec
+                                .builder(nestedName.displayNameToMemberName(), nestedType)
+                                .initializer("%T(client)", nestedType)
+                                .build()
+                        }
+                )
+
+                typeBuilder.addFunctions(resourceGroup.flatMap { it.endpoints }.map { endpoint ->
+                    val urlParams = endpoint.parameters.sortedBy { !it.path }.map { it.field }
+                    val bodyParams = endpoint.requestBody?.fields
+                    val returnType = endpoint.responseBody?.kotlinPoet(model)
+                    val (partial, specialPartial) = endpoint.responseBody.partial()
+                    val partialKP = partial?.kotlinPoet(model)
+                    val partialStructure = partial?.let { structureCode(it, model) }
+                    val hasUrlBatchInfo = urlParams.any { it.name == "\$skip" || it.name == "\$top" }
+
+                    val funcParams: List<ParameterSpec> = mutableListOf<ParameterSpec>().also { funcParams ->
+                        fun paramWithDefault(paramField: HA_Field): ParameterSpec {
+                            val parameter = ParameterSpec.builder(paramField.name, paramField.type.kotlinPoet(model))
+                            when {
+                                paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
+                                paramField.type.nullable -> parameter.defaultValue("null")
+                            }
+                            return parameter.build()
+                        }
+
+                        urlParams.forEach {
+                            if (it.name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
+                            funcParams.add(paramWithDefault(it))
+                        }
+                        funcParams.addAll(bodyParams.orEmpty().map { paramWithDefault(it) })
+                        if (hasUrlBatchInfo) {
+                            funcParams.add(ParameterSpec.builder("batchInfo", batchInfoType.copy(nullable = true))
+                                                .defaultValue("null")
+                                                .build())
+                        }
+                        if (partialStructure != null && partialKP != null) {
+                            funcParams.add(ParameterSpec.builder("buildPartial", LambdaTypeName.get(
+                                partialType.parameterizedBy(partialKP),
+                                listOf(),
+                                UNIT
+                            )).defaultValue("${partialStructure.first}.defaultPartialFull", *partialStructure.second).build())
+                        }
+                    }
+
+                    val fullPath = endpoint.path.segments.asReversed().plus(
+                        ancestors(model.resources.getValue(endpoint.resource.id), model)
+                            .flatMap { it.path.segments.asReversed().asSequence() }
+                    ).asReversed()
+
+                    val funcName = endpoint.displayName.displayNameToMemberName()
+
+                    FunSpec.builder(funcName).also { funcBuilder ->
+                        endpoint.doc?.let { funcBuilder.addKdoc(it) }
+                        funcBuilder.addModifiers(KModifier.SUSPEND)
+                        funcBuilder.addParameters(funcParams)
+                        if (returnType != null) funcBuilder.returns(returnType)
+                        if (partialKP != null && partialStructure != null) {
+                            val specialArg = specialPartial?.let {
+                                fileBuilder.addImport(partialSpecialType, it.name)
+                                ", $it"
+                            } ?: ""
+                            funcBuilder.addStatement(
+                                "val partial = %T(${partialStructure.first}$specialArg).apply(buildPartial)",
+                                partialType, *partialStructure.second
+                            )
+                        }
+
+                        val (httpCallFuncName, httpMethod) = when (endpoint.method) {
+                            HTTP_POST,
+                            REST_CREATE -> "callWithBody" to "Post"
+
+                            HTTP_GET,
+                            REST_GET,
+                            REST_QUERY -> "callWithParameters" to "Get"
+
+                            HTTP_PATCH,
+                            REST_UPDATE -> "callWithBody" to "Patch"
+
+                            HTTP_DELETE,
+                            REST_DELETE -> "callWithParameters" to "Delete"
+
+                            HTTP_PUT -> "callWithBody" to "Put"
+                        }
+
+                        endpoint.parameters.forEach {
+                            @Suppress("UNUSED_VARIABLE")
+                            val unused: Any? = when (val type = it.field.type) {
+                                is HA_Type.Primitive,
+                                is HA_Type.Enum -> {
+                                }
+
+                                is HA_Type.Ref -> if (type.nullable) {
+                                    funcBuilder.addStatement("val ${it.field.name} = ${it.field.name}?.id")
+                                }
+                                else {
+                                    funcBuilder.addStatement("val ${it.field.name} = ${it.field.name}.id")
+                                }
+
+                                is HA_Type.Array -> {
+                                    if (type.elementType is HA_Type.Ref) {
+                                        funcBuilder.addStatement("val ${it.field.name} = ${it.field.name}.map·{ it.id }")
+                                    }
+                                    Unit
+                                }
+
+                                is HA_Type.Object,
+                                is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
+                            }
+                        }
+
+                        val path = fullPath.joinToString("/") {
+                            when (it) {
+                                is Const -> it.value
+                                is Var -> "\${pathParam(" + it.name + ")}"
+                                is PrefixedVar -> it.prefix + ":\${pathParam(" + it.name + ")}"
+                            }
+                        }
+                        val batchInfoQueryArg = if (hasUrlBatchInfo) "batchInfo.toParams()" else ""
+                        val parametersArgListOfNotNull = endpoint.parameters.asSequence()
+                            .filter { !it.path && !it.field.name.startsWith(META_PARAMETERS_PREFIX) }
+                            .toList()
+                            .takeIf { it.isNotEmpty() }
+                            ?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
+                                val name = it.field.name
+                                when (val type = it.field.type) {
+                                    is HA_Type.Primitive,
+                                    is HA_Type.Ref,
+                                    is HA_Type.Enum -> {
+                                        val toString = if (
+                                            type is HA_Type.Primitive &&
+                                            type.primitive == HA_Primitive.String) ""
+                                        else ".toString()"
+
+                                        if (it.field.type.nullable) {
+                                            """$name?.let·{ "$name"·to it$toString }"""
+                                        }
+                                        else """"$name"·to $name$toString"""
+                                    }
+
+                                    is HA_Type.Array -> {
+                                        val toString = if (
+                                            type.elementType is HA_Type.Primitive &&
+                                            type.elementType.primitive == HA_Primitive.String) ""
+                                        else ".toString()"
+
+                                        val orEmpty = if (type.nullable) ".orEmpty()" else ""
+                                        """*$name$orEmpty.map·{ "$name"·to it$toString }.toTypedArray()"""
+                                    }
+
+
+                                    is HA_Type.Object,
+                                    is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
+                                }
+                            }
+                            ?.let { (if (hasUrlBatchInfo) " + " else "") + "listOfNotNull($it)" } ?: ""
+
+                        val parametersArg = (batchInfoQueryArg + parametersArgListOfNotNull).takeIf {
+                            it.isNotEmpty()
+                        }?.let { ", parameters = $it" } ?: ""
+
+                        val references = mutableListOf<Any>(httpMethodType)
+                        val bodyArg = endpoint.requestBody?.fields?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
+                            val typeDesc = buildString { appendType(it.type, references, model) }
+                            val name = it.name
+                            if (it.type.optional) {
+                                """$typeDesc.serialize($name)?.let·{ "$name"·to it }"""
+                            }
+                            else {
+                                """"$name"·to $typeDesc.serialize($name)"""
+                            }
+                        }?.let {
+                            references.add(1, jsonObjectFunction)
+                            ", requestBody = %M(listOfNotNull($it))"
+                        } ?: ""
+
+                        val partialArg = partial?.let {
+                            ", partial = partial"
+                        } ?: ""
+
+                        funcBuilder.addCode(
+                            "val response = $httpCallFuncName(\"$funcName\", \"$path\", %T.$httpMethod$parametersArg$bodyArg$partialArg)\n",
+                            *references.toTypedArray()
+                        )
+                        val resultTypes = mutableListOf<TypeName>()
+                        endpoint.responseBody?.let {
+                            funcBuilder.addStatement(buildString {
+                                append("return·")
+                                appendType(it, resultTypes, model)
+                                append(".deserialize(response)")
+                            }, *resultTypes.toTypedArray())
+                        }
+                    }.build()
+                })
+            }.build())
+        }.build()
+    }
+}
+
+private fun displayPath(it: HA_Resource, model: SelfContainedHA_Model) =
+    ancestors(it, model).map(HA_Resource::displayPlural).toList().asReversed()
+
+private fun ancestors(resource: HA_Resource, model: SelfContainedHA_Model): Sequence<HA_Resource> {
+    return generateSequence(resource) {
+        it.parentResource?.run { model.resources.getValue(id) }
+    }
+}
