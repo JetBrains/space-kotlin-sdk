@@ -42,6 +42,10 @@ kotlin {
         }
     }
 
+    macosX64("macos") {
+
+    }
+
     sourceSets {
         commonMain {
             dependencies {
@@ -78,6 +82,12 @@ kotlin {
                 api npm("moment-timezone", "0.5.27")
                 implementation npm("text-encoding", "0.7.0")
                 implementation npm("abort-controller", "3.0.0")
+            }
+        }
+
+        macosMain {
+            dependencies {
+
             }
         }
     }
