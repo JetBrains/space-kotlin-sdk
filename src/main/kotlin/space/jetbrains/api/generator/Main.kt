@@ -6,7 +6,7 @@ import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.kotlin.*
 import java.io.*
 
-object log {
+object Log {
     inline fun info(message: () -> String) {
         println(message())
     }
@@ -17,11 +17,10 @@ val jackson: ObjectMapper = ObjectMapper()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
     .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-//    .enableDefaultTyping()
     .registerModule(KotlinModule())
     .registerModule(JodaModule())
 
-class SelfContainedHA_Model(
+class HttpApiEntitiesById(
     val dto: Map<TID, HA_Dto>,
     val enums: Map<TID, HA_Enum>,
     val resources: Map<TID, HA_Resource>
@@ -38,18 +37,18 @@ fun main(vararg args: String) {
         "HTTP Client Generator accepts a two arguments: path to serialized HTTP model and path to output directory"
     }
 
-    log.info { "Parsing HTTP model" }
-    val model = SelfContainedHA_Model(jackson.readValue(File(args[0])))
+    Log.info { "Parsing HTTP model" }
+    val model = HttpApiEntitiesById(jackson.readValue(File(args[0])))
 
     val out = File(args[1])
     if (out.exists()) out.deleteRecursively()
     out.mkdirs()
 
-    log.info { "Generating types for HTTP API Client" }
+    Log.info { "Generating types for HTTP API Client" }
     val generatedTypes = generateTypes(model)
-    log.info { "Generating resources for HTTP API Client" }
+    Log.info { "Generating resources for HTTP API Client" }
     val generatedResources = generateResources(model)
-    log.info { "Generating structures for HTTP API Client" }
+    Log.info { "Generating structures for HTTP API Client" }
     val generatedStructures = generateStructures(model)
 
     (generatedTypes + generatedResources + generatedStructures).forEach {

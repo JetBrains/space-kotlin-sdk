@@ -4,12 +4,12 @@ import space.jetbrains.api.generator.HA_Type.Object.Kind.*
 import space.jetbrains.api.generator.HA_Type.Object.Kind.MAP_ENTRY
 import com.squareup.kotlinpoet.*
 
-fun structureCode(type: HA_Type, model: SelfContainedHA_Model): Pair<String, Array<ClassName>> {
+fun structureCode(type: HA_Type, model: HttpApiEntitiesById): Pair<String, Array<ClassName>> {
     val structures = mutableListOf<ClassName>()
     return buildString { appendStructure(type, structures, model) } to structures.toTypedArray()
 }
 
-fun StringBuilder.appendStructure(type: HA_Type, structures: MutableList<in ClassName>, model: SelfContainedHA_Model): StringBuilder {
+fun StringBuilder.appendStructure(type: HA_Type, structures: MutableList<in ClassName>, model: HttpApiEntitiesById): StringBuilder {
     append("%T")
     when (type) {
         is HA_Type.Primitive -> error("Primitives have no structure")
@@ -85,7 +85,7 @@ val necessaryImports = listOf(
     enumTypeType
 )
 
-fun StringBuilder.appendType(type: HA_Type, types: MutableList<in ClassName>, model: SelfContainedHA_Model): StringBuilder {
+fun StringBuilder.appendType(type: HA_Type, types: MutableList<in ClassName>, model: HttpApiEntitiesById): StringBuilder {
     if (type.optional) append(optionalType.simpleName, "(")
     if (type.nullable) append(nullableType.simpleName, "(")
     when (val notNullType = type.copy(nullable = false, optional = false)) {

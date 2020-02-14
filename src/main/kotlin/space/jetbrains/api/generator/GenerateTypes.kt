@@ -15,27 +15,27 @@ inline fun <T> dfs(root: T, crossinline getChildren: (T) -> Iterable<T>): Sequen
     }
 }
 
-fun generateTypes(model: SelfContainedHA_Model): List<FileSpec> {
+fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     val propertyValueType = ClassName(ROOT_PACKAGE, "PropertyValue")
     val propertyValueValueType = propertyValueType.nestedClass("Value")
 
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
 
-    log.info { "Generating DTO classes for HTTP API Client" }
+    Log.info { "Generating DTO classes for HTTP API Client" }
     return model.dto.values.mapNotNull { root ->
         if (root.extends != null) return@mapNotNull null
 
         val rootClassName = root.getClassName()
         if (rootClassName == batchInfoType) return@mapNotNull null
 
-        log.info { "Generating file with DTO classes for '${root.name}' and its ancestors" }
+        Log.info { "Generating file with DTO classes for '${root.name}' and its ancestors" }
         FileSpec.builder(rootClassName.packageName, rootClassName.simpleName).also { fileBuilder ->
             fileBuilder.indent(INDENT)
 
             fileBuilder.addImport(ROOT_PACKAGE, "getValue")
 
             root.subclasses(model).forEach { dto ->
-                log.info { "Generating DTO class for '${dto.name}'" }
+                Log.info { "Generating DTO class for '${dto.name}'" }
                 val dtoClassName = dto.getClassName()
                 val typeBuilder = when (dto.hierarchyRole) {
                     SEALED -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.SEALED)
@@ -132,15 +132,15 @@ fun generateTypes(model: SelfContainedHA_Model): List<FileSpec> {
     }
 }
 
-fun HA_Dto.subclasses(model: SelfContainedHA_Model): Sequence<HA_Dto> {
+fun HA_Dto.subclasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {
     return if (hierarchyRole != INTERFACE) {
         dfs(this) { it.inheritors.asSequence().map(model::resolveDto).asIterable() }
     }
     else sequenceOf(this)
 }
 
-fun SelfContainedHA_Model.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
-    log.info { "Generating field descriptors for DTOs" }
+fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
+    Log.info { "Generating field descriptors for DTOs" }
     val result: MutableMap<TID, MutableList<FieldDescriptor>> = mutableMapOf()
 
     dto.values.asSequence().filter { it.extends == null }.flatMap {
@@ -183,4 +183,4 @@ sealed class FieldState {
     class Overrides(val field: FieldDescriptor) : FieldState()
 }
 
-fun HA_Dto.superclass(model: SelfContainedHA_Model): HA_Dto? = extends?.let { model.dto.getValue(it.id) }
+fun HA_Dto.superclass(model: HttpApiEntitiesById): HA_Dto? = extends?.let { model.dto.getValue(it.id) }

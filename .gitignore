@@ -1,3 +1,11 @@
+.idea
+
+.gradle
+**/build/
+
+# Avoid ignoring Gradle wrapper jar file
+!gradle-wrapper.jar
+
 # Compiled class file
 *.class
 

@@ -91,7 +91,7 @@ fun HA_Type?.partial(): PartialDetectionResult = when (this) {
     is HA_Type.Ref -> PartialDetectionResult(this, null, true)
 }.let { it.copy(partial = it.partial?.copy(nullable = false, optional = false)) }
 
-fun HA_Type.kotlinPoet(model: SelfContainedHA_Model): TypeName = when (this) {
+fun HA_Type.kotlinPoet(model: HttpApiEntitiesById): TypeName = when (this) {
     is HA_Type.Primitive -> when (this.primitive) {
         HA_Primitive.Byte -> Byte::class.asClassName()
         HA_Primitive.Short -> Short::class.asClassName()
@@ -179,4 +179,4 @@ fun HA_Dto.getClassName() = if (name != "BatchInfo") {
 }
 else batchInfoType
 
-fun SelfContainedHA_Model.resolveDto(dto: HA_Dto.Ref): HA_Dto = this.dto.getValue(dto.id)
+fun HttpApiEntitiesById.resolveDto(dto: HA_Dto.Ref): HA_Dto = this.dto.getValue(dto.id)

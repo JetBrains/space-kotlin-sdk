@@ -11,7 +11,7 @@ private fun resourcePackage(parentDisplayPath: Iterable<String>): String {
     return RESOURCES_PACKAGE + '.' + parentDisplayPath.joinToString(".") { it.displayNameToMemberName() }
 }
 
-fun generateResources(model: SelfContainedHA_Model): List<FileSpec> {
+fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
     return model.resources.values.groupBy { displayPath(it, model) }.map { (displayPath, resourceGroup) ->
         val className = ClassName(
             resourcePackage(displayPath.dropLast(1)),
@@ -245,10 +245,10 @@ fun generateResources(model: SelfContainedHA_Model): List<FileSpec> {
     }
 }
 
-private fun displayPath(it: HA_Resource, model: SelfContainedHA_Model) =
+private fun displayPath(it: HA_Resource, model: HttpApiEntitiesById) =
     ancestors(it, model).map(HA_Resource::displayPlural).toList().asReversed()
 
-private fun ancestors(resource: HA_Resource, model: SelfContainedHA_Model): Sequence<HA_Resource> {
+private fun ancestors(resource: HA_Resource, model: HttpApiEntitiesById): Sequence<HA_Resource> {
     return generateSequence(resource) {
         it.parentResource?.run { model.resources.getValue(id) }
     }

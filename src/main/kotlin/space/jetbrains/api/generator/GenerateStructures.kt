@@ -3,7 +3,7 @@ package space.jetbrains.api.generator
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
-private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableList<TypeName>, model: SelfContainedHA_Model): StringBuilder {
+private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableList<TypeName>, model: HttpApiEntitiesById): StringBuilder {
     when (type) {
         is HA_Type.Primitive -> when (type.primitive) {
             HA_Primitive.Byte -> append("byte()")
@@ -49,7 +49,7 @@ private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableLi
     return this
 }
 
-fun generateStructures(model: SelfContainedHA_Model): List<FileSpec> {
+fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
 
     return model.dto.values.mapNotNull { root ->

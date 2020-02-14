@@ -4,6 +4,7 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
 }
 
 kotlin {
@@ -22,6 +23,12 @@ kotlin {
     }
 
     js {
+        browser {
+        }
+
+        nodejs {
+        }
+
         compilations.configureEach {
             tasks.named(compileKotlinTaskName).configure {
                 kotlinOptions {
@@ -38,7 +45,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation kotlin('stdlib-common')
+                api kotlin('stdlib-common')
                 api "io.ktor:ktor-client-core:$ktor_version"
             }
         }
@@ -66,6 +73,11 @@ kotlin {
 
                 api "io.ktor:ktor-client-core-js:$ktor_version"
                 api "io.ktor:ktor-client-js:$ktor_version"
+
+                api npm("moment", "2.24.0")
+                api npm("moment-timezone", "0.5.27")
+                implementation npm("text-encoding", "0.7.0")
+                implementation npm("abort-controller", "3.0.0")
             }
         }
     }
