@@ -5,6 +5,8 @@ plugins {
 repositories {
     mavenCentral()
     maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+    maven { url "https://kotlin.bintray.com/kotlinx" }
+    maven { url "https://kotlin.bintray.com/ktor"}
 }
 
 kotlin {
@@ -43,7 +45,7 @@ kotlin {
     }
 
     macosX64("macos") {
-
+        compilations["main"].enableEndorsedLibs = true
     }
 
     sourceSets {
@@ -87,7 +89,7 @@ kotlin {
 
         macosMain {
             dependencies {
-
+                api "io.ktor:ktor-client-core-native:$ktor_version"
             }
         }
     }
