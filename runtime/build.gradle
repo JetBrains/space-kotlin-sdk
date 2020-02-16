@@ -92,5 +92,9 @@ kotlin {
                 api "io.ktor:ktor-client-core-native:$ktor_version"
             }
         }
+
+        macosTest {
+
+        }
     }
 }

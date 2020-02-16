@@ -1,27 +1,37 @@
 package space.jetbrains.api.runtime
 
+import io.ktor.util.date.Month
+import platform.Foundation.*
+
 /** @param iso date in ISO8601 format (yyyy-MM-dd) */
-actual class SDate() : Comparable<SDate> {
-    actual constructor(iso: String) : this()
+actual class SDate(val date: NSDate) : Comparable<SDate> {
+    actual constructor(iso: String) : this(NSISO8601DateFormatter().dateFromString(iso)!!)
 
     /** This date in ISO8601 format (yyyy-MM-dd) */
-    actual val iso: String = TODO()
+    actual val iso: String = toString()
 
-    actual override fun equals(other: Any?): Boolean = TODO()
-    actual override fun hashCode(): Int = TODO()
+    actual override fun equals(other: Any?): Boolean {
+        if (other != null && other is NSDate) {
+            return date.isEqualToDate(other)
+        }
+        return false
+    }
+
+    actual override fun hashCode(): Int = date.hashCode()
 
     /** [iso] */
-    actual override fun toString(): String = TODO()
+    actual override fun toString(): String = toString()
 
-    actual val year: Int = TODO()
-    actual val month: Int = TODO()
-    actual val dayOfMonth: Int = TODO()
+    actual val year = NSCalendar.currentCalendar.components(NSCalendarUnitYear, date).year.toInt()
+    actual val month = NSCalendar.currentCalendar.components(NSCalendarUnitMonth, date).month.toInt()
+    actual val dayOfMonth = NSCalendar.currentCalendar.components(NSCalendarUnitDay, date).day.toInt()
 
     override fun compareTo(other: SDate): Int {
-        TODO("Not yet implemented")
+        return date.compare(other.date).toInt()
     }
-}
 
+
+}
 
 
 actual fun SDate.withDay(day: Int): SDate = TODO()
