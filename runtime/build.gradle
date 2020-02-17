@@ -1,10 +1,37 @@
 plugins {
     id 'org.jetbrains.kotlin.multiplatform'
+    id 'maven-publish'
 }
 
 repositories {
     mavenCentral()
     maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+}
+
+publishing {
+    mavenForPublishing(delegate)
+    publications {
+        kotlinMultiplatform {
+            groupId = 'org.jetbrains'
+            artifactId = 'space-api-client-runtime'
+            version = "0.0.2"
+
+            pom {
+                name = 'Space API client runtime'
+                description = 'Runtime for JetBrains Space API client'
+            }
+        }
+        metadata {
+            groupId = 'org.jetbrains'
+            artifactId = 'space-api-client-runtime-metadata'
+            version = "0.0.2"
+
+            pom {
+                name = 'Space API client runtime'
+                description = 'Runtime for JetBrains Space API client'
+            }
+        }
+    }
 }
 
 kotlin {
@@ -20,13 +47,32 @@ kotlin {
                 }
             }
         }
+        mavenPublication {
+            groupId = 'org.jetbrains'
+            artifactId = 'space-api-client-runtime-jvm'
+            version = "0.0.2"
+
+            pom {
+                name = 'Space API client runtime'
+                description = 'Runtime for JetBrains Space API client'
+            }
+        }
     }
 
     js {
         browser {
         }
-
         nodejs {
+        }
+        mavenPublication {
+            groupId = 'org.jetbrains'
+            artifactId = 'space-api-client-runtime-js'
+            version = "0.0.2"
+
+            pom {
+                name = 'Space API client runtime'
+                description = 'Runtime for JetBrains Space API client'
+            }
         }
 
         compilations.configureEach {

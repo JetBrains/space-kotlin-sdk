@@ -29,16 +29,6 @@ sealed class HA_PathSegment {
 
 data class HA_Path(val segments: List<HA_PathSegment>)
 
-fun HA_Path.join(separator: String = "/"): String = segments.joinToString(separator) {
-    it.run {
-        when (this) {
-            is Var -> "{$name}"
-            is PrefixedVar -> "$prefix:{$name}"
-            is Const -> value
-        }
-    }
-}.trimEnd('/')
-
 class HA_Resource(
     val id: TID,
     val path: HA_Path,

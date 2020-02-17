@@ -12,7 +12,7 @@ object Log {
     }
 }
 
-val jackson: ObjectMapper = ObjectMapper()
+private val jackson: ObjectMapper = ObjectMapper()
     .configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false)
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
@@ -34,7 +34,10 @@ class HttpApiEntitiesById(
 
 fun main(vararg args: String) {
     require(args.size == 2) {
-        "HTTP Client Generator accepts a two arguments: path to serialized HTTP model and path to output directory"
+        // GET /api/http/http-api-model?$fields=dto(id,deprecation,extends,fields,hierarchyRole,implements,inheritors,
+        // name,record),enums(id,deprecation,name,values),resources(id,displayPlural,displaySingular,endpoints,
+        // nestedResources!,parentResource,path)
+        "HTTP Client Generator accepts a two arguments: path to HTTP model and path to output directory"
     }
 
     Log.info { "Parsing HTTP model" }
