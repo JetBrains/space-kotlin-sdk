@@ -3,14 +3,31 @@ package space.jetbrains.api.runtime
 import kotlinx.cinterop.convert
 import platform.Foundation.*
 
+private fun fromISO8601String(date: String): NSDate {
+    val dateFormatter = createDateFormatter()
+    return dateFormatter.dateFromString(date)!!
+}
+
+private fun createDateFormatter(): NSDateFormatter {
+    val dateFormatter = NSDateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+    dateFormatter.timeZone = NSTimeZone.timeZoneForSecondsFromGMT(0)
+    return dateFormatter
+}
+
+private fun toISO8601String(date: NSDate): String {
+    val dateFormatter = createDateFormatter()
+    return dateFormatter.stringFromDate(date)
+}
+
 /** @param iso date in ISO8601 format (yyyy-MM-dd) */
 actual class SDate(val date: NSDate) : Comparable<SDate> {
-    actual constructor(iso: String) : this(NSISO8601DateFormatter().dateFromString(iso)!!)
+    actual constructor(iso: String) : this(fromISO8601String(iso))
 
     private val dateComponents = NSCalendar.currentCalendar.components(NSCalendarUnitYear + NSCalendarUnitMonth + NSCalendarUnitDay, date)
 
     /** This date in ISO8601 format (yyyy-MM-dd) */
-    actual val iso: String = date.toString()
+    actual val iso: String = toISO8601String(date)
 
     actual override fun equals(other: Any?): Boolean {
         if (other != null && other is NSDate) {
@@ -22,7 +39,7 @@ actual class SDate(val date: NSDate) : Comparable<SDate> {
     actual override fun hashCode(): Int = date.hashCode()
 
     /** [iso] */
-    actual override fun toString(): String = toString()
+    actual override fun toString(): String = iso
 
     actual val year = dateComponents.year.toInt()
     actual val month = dateComponents.month.toInt()
