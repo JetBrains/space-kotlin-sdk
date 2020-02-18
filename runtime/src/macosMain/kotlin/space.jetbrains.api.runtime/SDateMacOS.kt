@@ -30,8 +30,8 @@ actual class SDate(val date: NSDate) : Comparable<SDate> {
     actual val iso: String = toISO8601String(date)
 
     actual override fun equals(other: Any?): Boolean {
-        if (other != null && other is NSDate) {
-            return date.isEqualToDate(other)
+        if (other != null && other is SDate) {
+            return (other.year == year && other.dayOfMonth == dayOfMonth && other.month == month)
         }
         return false
     }

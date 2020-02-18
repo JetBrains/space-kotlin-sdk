@@ -28,4 +28,11 @@ class SDateMacOSTest {
         val date = SDate(NSCalendar.currentCalendar.dateFromComponents(components)!!)
         assertEquals("2005-06-27T07:10:20Z", date.toString())
     }
+
+    @Test
+    fun `two equal dates should return true on comparison of equality`() {
+        val date1 = SDate("2005-06-27T21:00:00Z")
+        val date2 = SDate("2005-06-27T21:00:00Z")
+        assertTrue(date1.equals(date2))
+    }
 }
