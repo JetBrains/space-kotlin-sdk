@@ -63,7 +63,11 @@ fun dateDifference(a: SDate, b: SDate, unit: NSCalendarUnit): Int {
     val date1 = NSCalendar.currentCalendar.startOfDayForDate(a.date)
     val date2 = NSCalendar.currentCalendar.startOfDayForDate(b.date)
     val components = NSCalendar.currentCalendar.components(unit, date1, date2, NSCalendarOptions.MIN_VALUE)
-    return components.day.convert()
+    return when (unit) {
+        NSCalendarUnitDay -> components.day.convert()
+        NSCalendarUnitMonth -> components.month.convert()
+        else -> -1
+    }
 
 }
 
