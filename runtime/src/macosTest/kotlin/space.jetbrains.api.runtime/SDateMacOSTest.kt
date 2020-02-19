@@ -7,18 +7,6 @@ import kotlin.test.*
 
 class SDateMacOSTest {
 
-    fun createNSDate(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int): NSDate {
-        val components = NSDateComponents()
-        components.year = year.convert()
-        components.month = month.convert()
-        components.day = day.convert()
-        components.hour = hour.convert()
-        components.minute = minute.convert()
-        components.second = second.convert()
-        components.setTimeZone(NSTimeZone.localTimeZone)
-        return NSCalendar.currentCalendar.dateFromComponents(components)!!
-    }
-
     @Test
     fun `date from ISO string returns valid date`() {
         val date = SDate("2005-06-27T21:00:00Z")

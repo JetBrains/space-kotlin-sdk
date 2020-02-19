@@ -3,22 +3,6 @@ package space.jetbrains.api.runtime
 import kotlinx.cinterop.convert
 import platform.Foundation.*
 
-private fun fromISO8601String(date: String): NSDate {
-    val dateFormatter = createDateFormatter()
-    return dateFormatter.dateFromString(date)!!
-}
-
-private fun createDateFormatter(): NSDateFormatter {
-    val dateFormatter = NSDateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-    dateFormatter.timeZone = NSTimeZone.timeZoneForSecondsFromGMT(0)
-    return dateFormatter
-}
-
-private fun toISO8601String(date: NSDate): String {
-    val dateFormatter = createDateFormatter()
-    return dateFormatter.stringFromDate(date)
-}
 
 /** @param iso date in ISO8601 format (yyyy-MM-dd) */
 actual class SDate(val date: NSDate) : Comparable<SDate> {

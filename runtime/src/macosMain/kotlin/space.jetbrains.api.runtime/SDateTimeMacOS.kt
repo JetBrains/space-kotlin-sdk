@@ -10,7 +10,7 @@ actual class SDateTime(val dateTime: NSDate) : Comparable<SDateTime> {
     actual constructor(timestamp: Long) : this(NSDate.dateWithTimeIntervalSince1970(timestamp.toDouble()))
 
     /** This date time in ISO8601 format (yyyy-MM-ddTHH:mm:ss.SSSZZ) */
-    actual val iso: String get() = dateTime.toString()
+    actual val iso: String get() = toISO8601String(dateTime)
 
     /** [iso] */
     actual override fun toString() = iso
@@ -29,8 +29,7 @@ actual class SDateTime(val dateTime: NSDate) : Comparable<SDateTime> {
     private fun getComponentsFromDateTime(): DateTimeComponents {
         val components = NSCalendar.currentCalendar.components(NSCalendarUnitYear + NSCalendarUnitMonth + NSCalendarUnitDay + NSCalendarUnitHour +
                 NSCalendarUnitMinute + NSCalendarUnitSecond + NSCalendarUnitTimeZone, dateTime)
-        // TODO - fix day of month
-        return DateTimeComponents(components.year, components.month, components.day, components.hour, components.minute, components.second, components.timeZone, components.minute + (components.hour * 60), 1)
+        return DateTimeComponents(components.year, components.month, components.day, components.hour, components.minute, components.second, components.timeZone, components.minute + (components.hour * 60))
     }
 
     val dateTimeComponents = getComponentsFromDateTime()
@@ -43,16 +42,16 @@ actual fun SDateTime.withZone(zone: STimeZone): SDateTime {
 
 actual fun SDateTime.plusDays(days: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitDay, days.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
 
-actual fun SDateTime.plusMonths(months: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitDay, months.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
+actual fun SDateTime.plusMonths(months: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitMonth, months.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
 
 
-actual fun SDateTime.plusYears(years: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitDay, years.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
+actual fun SDateTime.plusYears(years: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitYear, years.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
 
 
-actual fun SDateTime.plusMinutes(minutes: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitDay, minutes.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
+actual fun SDateTime.plusMinutes(minutes: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitMinute, minutes.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
 
 
-actual fun SDateTime.plusSeconds(seconds: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitDay, seconds.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
+actual fun SDateTime.plusSeconds(seconds: Int) = SDateTime(NSCalendar.currentCalendar.dateByAddingUnit(NSCalendarUnitSecond, seconds.convert(), dateTime, NSCalendarOptions.MIN_VALUE)!!)
 
 
 actual fun SDate.toDateTimeAtStartOfDay(zone: STimeZone): SDateTime {
@@ -113,8 +112,7 @@ data class DateTimeComponents(val year: NSInteger,
                               val minute: NSInteger,
                               val second: NSInteger,
                               val timezone: NSTimeZone?,
-                              val minuteOfDay: NSInteger,
-                              val dayOfMonth: NSInteger)
+                              val minuteOfDay: NSInteger)
 
 
 actual fun sDateTime(year: Int, month: Int, day: Int, hours: Int, minutes: Int, timezone: STimeZone): SDateTime {
@@ -138,7 +136,7 @@ actual val SDateTime.minuteOfDay: Int
 actual val SDateTime.hour: Int
     get() = dateTimeComponents.hour.convert()
 actual val SDateTime.dayOfMonth: Int
-    get() = TODO("dayOfMonth")
+    get() = dateTimeComponents.day.convert()
 actual val SDateTime.month: Int
     get() = dateTimeComponents.month.convert()
 actual val SDateTime.year: Int
