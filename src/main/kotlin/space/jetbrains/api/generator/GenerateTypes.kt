@@ -4,6 +4,7 @@ import space.jetbrains.api.generator.FieldState.*
 import space.jetbrains.api.generator.HierarchyRole.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import java.util.TreeMap
 
 
 inline fun <T> dfs(root: T, crossinline getChildren: (T) -> Iterable<T>): Sequence<T> = sequence {
@@ -56,6 +57,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                 val primaryConstructor = FunSpec.constructorBuilder()
                 val secondaryConstructor = FunSpec.constructorBuilder()
                 val constructorArgs = mutableListOf<CodeBlock>()
+                val superclassConstructorArgs = TreeMap<Int, String>()
 
                 val fields = fieldDescriptorsByDtoId.getValue(dto.id)
                 fields.forEach {
@@ -66,7 +68,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                         .addParameter(it.field.name, kotlinPoetType)
                     constructorArgs += CodeBlock.of("%T(${it.field.name})", propertyValueValueType)
 
-                    when (it.state) {
+                    when (val fieldsState = it.state) {
                         OwnFinal -> {
                             typeBuilder.addProperty(
                                 PropertySpec.builder(it.field.name, kotlinPoetType)
@@ -85,11 +87,11 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                             )
                         }
                         is Inherited -> {
-                            typeBuilder.addSuperclassConstructorParameter(it.field.name)
+                            superclassConstructorArgs[fieldsState.field.index] = it.field.name
                             null
                         }
                         is Overrides -> {
-                            typeBuilder.addSuperclassConstructorParameter(it.field.name)
+                            superclassConstructorArgs[fieldsState.field.index] = it.field.name
                             typeBuilder.addProperty(
                                 PropertySpec.builder(it.field.name, kotlinPoetType)
                                     .delegate(it.field.name)
@@ -100,6 +102,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                         }
                     }.let {}
                 }
+                superclassConstructorArgs.values.forEach { typeBuilder.addSuperclassConstructorParameter(it) }
 
                 if (dto.hierarchyRole != INTERFACE) {
                     typeBuilder.primaryConstructor(primaryConstructor.build())
@@ -149,14 +152,14 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
         val parentFields = dto.extends?.id?.let { result.getValue(it) }
         val fields = result.computeIfAbsent(dto.id) { mutableListOf() }
 
-        dto.fields.forEach { dtoField ->
-            fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField.field)
-                ?: FieldDescriptor(dtoField.field, OwnFinal, dtoField.extension)
+        dto.fields.forEachIndexed { index, dtoField ->
+            fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField.field, index)
+                ?: FieldDescriptor(dtoField.field, index, OwnFinal, dtoField.extension)
         }
 
-        parentFields?.forEach { parentField ->
+        parentFields?.forEachIndexed { parentIndex, parentField ->
             if (fields.none { it.field.name == parentField.field.name }) {
-                fields += FieldDescriptor(parentField.field, Inherited(parentField), parentField.isExtension)
+                fields += FieldDescriptor(parentField.field, parentIndex, Inherited(parentField), parentField.isExtension)
             }
         }
     }
@@ -164,15 +167,15 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
     return result
 }
 
-class FieldDescriptor(val field: HA_Field, var state: FieldState, val isExtension: Boolean) {
-    fun override(field: HA_Field): FieldDescriptor = when (val state = state) {
+class FieldDescriptor(val field: HA_Field, val index: Int, var state: FieldState, val isExtension: Boolean) {
+    fun override(field: HA_Field, index: Int): FieldDescriptor = when (val state = state) {
         OwnFinal -> {
             this.state = OwnOpen
-            FieldDescriptor(field, Overrides(this), false)
+            FieldDescriptor(field, index, Overrides(this), false)
         }
-        OwnOpen -> FieldDescriptor(field, Overrides(this), false)
-        is Inherited -> state.field.override(field)
-        is Overrides -> state.field.override(field)
+        OwnOpen -> FieldDescriptor(field, index, Overrides(this), false)
+        is Inherited -> state.field.override(field, index)
+        is Overrides -> state.field.override(field, index)
     }
 }
 
