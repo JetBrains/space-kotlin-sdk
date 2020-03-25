@@ -6,8 +6,6 @@ plugins {
 repositories {
     mavenCentral()
     maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
-    maven { url "https://kotlin.bintray.com/kotlinx" }
-    maven { url "https://kotlin.bintray.com/ktor"}
 }
 
 publishing {
@@ -90,10 +88,6 @@ kotlin {
         }
     }
 
-    macosX64("macos") {
-    //    compilations["main"].enableEndorsedLibs = true
-    }
-
     sourceSets {
         commonMain {
             dependencies {
@@ -131,16 +125,6 @@ kotlin {
                 implementation npm("text-encoding", "0.7.0")
                 implementation npm("abort-controller", "3.0.0")
             }
-        }
-
-        macosMain {
-            dependencies {
-                api "io.ktor:ktor-client-core-native:$ktor_version"
-            }
-        }
-
-        macosTest {
-
         }
     }
 }
