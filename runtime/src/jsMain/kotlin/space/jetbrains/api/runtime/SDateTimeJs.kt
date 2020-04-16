@@ -53,7 +53,7 @@ actual fun yearsBetween(a: SDateTime, b: SDateTime): Int = b.moment.diff(a.momen
 
 actual fun STimeZone.offsetOnTime(time: SDateTime): Int = time.moment.tz(id).utcOffset().toInt()
 
-actual val sNow: SDateTime get() = SDateTime(moment())
+actual val now: SDateTime get() = SDateTime(moment())
 
 actual fun sDateTime(iso: String): SDateTime = SDateTime(moment(iso).local())
 

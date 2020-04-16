@@ -46,5 +46,5 @@ expect val SDate.weekday: Weekday
 
 expect fun sDate(year: Int, month: Int, day: Int): SDate
 
-expect val sToday: SDate
-val sTomorrow get() = sToday.plusDays(1)
+expect val today: SDate
+val tomorrow get() = today.plusDays(1)

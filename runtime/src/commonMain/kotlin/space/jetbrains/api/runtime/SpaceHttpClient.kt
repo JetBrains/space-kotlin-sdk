@@ -40,6 +40,34 @@ class SpaceHttpClient(client: HttpClient) {
         expectSuccess = false
     }
 
+    internal suspend fun auth(url: String, methodBody: Parameters, authHeaderValue: String): ExpiringToken {
+        val httpMethod = HttpMethod.Post
+        val response = client.request<HttpResponse>(url) {
+            method = httpMethod
+            accept(ContentType.Application.Json)
+
+            header(HttpHeaders.Authorization, authHeaderValue)
+
+            methodBody.takeIf { !it.isEmpty() }?.let {
+                body = TextContent(it.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+            }
+        }
+        val responseTime = now
+
+        val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
+        handleErrors(response, tokenJson, httpMethod, url)
+
+        val deserialization = DeserializationContext<Any>(tokenJson, null, ReferenceChainLink("auth"))
+        return ExpiringToken(
+            accessToken = deserialization.child("access_token").let {
+                it.requireJson().asString(it.link)
+            },
+            expires = responseTime.plusSeconds(deserialization.child("expires_in").let {
+                it.requireJson().asNumber(it.link)
+            }.toInt())
+        )
+    }
+
     suspend fun call(
         functionName: String,
         context: SpaceHttpClientCallContext,
@@ -70,31 +98,35 @@ class SpaceHttpClient(client: HttpClient) {
             }
         }.let {
             val content = it.readText(Charsets.UTF_8).let(::parseJson)
-            if (!it.status.isSuccess()) {
-                val errorDescription = content?.get("error_description")?.asStringOrNull()
-                throw when (content?.get("error")?.asStringOrNull()) {
-                    VALIDATION_ERROR -> ValidationException(errorDescription, it)
-                    AUTHENTICATION_REQUIRED -> AuthenticationRequiredException(errorDescription, it)
-                    PERMISSION_DENIED -> PermissionDeniedException(errorDescription, it)
-                    DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, it)
-                    REQUEST_ERROR -> RequestException(errorDescription, it)
-                    NOT_FOUND -> NotFoundException(errorDescription, it)
-                    RATE_LIMITED -> RateLimitedException(errorDescription, it)
-                    PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, it)
-                    INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, it)
-                    else -> when (it.status) {
-                        BadRequest -> RequestException(BadRequest.description, it)
-                        Unauthorized -> AuthenticationRequiredException(BadRequest.description, it)
-                        Forbidden -> PermissionDeniedException(Forbidden.description, it)
-                        NotFound -> NotFoundException(NotFound.description, it)
-                        TooManyRequests -> RateLimitedException(TooManyRequests.description, it)
-                        PayloadTooLarge -> PayloadTooLargeException(PayloadTooLarge.description, it)
-                        InternalServerError -> InternalServerErrorException(InternalServerError.description, it)
-                        else -> IOException("${callMethod.value} request to $path failed")
-                    }
+            handleErrors(it, content, callMethod, path)
+            DeserializationContext(content, partial, ReferenceChainLink(functionName))
+        }
+    }
+
+    private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {
+        if (!response.status.isSuccess()) {
+            val errorDescription = responseContent?.get("error_description")?.asStringOrNull()
+            throw when (responseContent?.get("error")?.asStringOrNull()) {
+                VALIDATION_ERROR -> ValidationException(errorDescription, response)
+                AUTHENTICATION_REQUIRED -> AuthenticationRequiredException(errorDescription, response)
+                PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response)
+                DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, response)
+                REQUEST_ERROR -> RequestException(errorDescription, response)
+                NOT_FOUND -> NotFoundException(errorDescription, response)
+                RATE_LIMITED -> RateLimitedException(errorDescription, response)
+                PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, response)
+                INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response)
+                else -> when (response.status) {
+                    BadRequest -> RequestException(BadRequest.description, response)
+                    Unauthorized -> AuthenticationRequiredException(BadRequest.description, response)
+                    Forbidden -> PermissionDeniedException(Forbidden.description, response)
+                    NotFound -> NotFoundException(NotFound.description, response)
+                    TooManyRequests -> RateLimitedException(TooManyRequests.description, response)
+                    PayloadTooLarge -> PayloadTooLargeException(PayloadTooLarge.description, response)
+                    InternalServerError -> InternalServerErrorException(InternalServerError.description, response)
+                    else -> IOException("${callMethod.value} request to $path failed")
                 }
             }
-            DeserializationContext(content, partial, ReferenceChainLink(functionName))
         }
     }
 }

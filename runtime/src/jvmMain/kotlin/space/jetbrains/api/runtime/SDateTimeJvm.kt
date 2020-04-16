@@ -50,7 +50,7 @@ actual fun STimeZone.offsetOnTime(time: SDateTime): Int = time.joda.withZone(Dat
     MILLISECONDS.toMinutes(it.zone.getOffset(it.millis).toLong()).toInt()
 }
 
-actual val sNow: SDateTime get() = SDateTime(DateTime.now())
+actual val now: SDateTime get() = SDateTime(DateTime.now())
 
 actual fun sDateTime(iso: String): SDateTime = DateTime.parse(iso, ISODateTimeFormat.dateTimeParser()).sDateTime()
 

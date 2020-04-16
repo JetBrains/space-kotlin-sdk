@@ -36,11 +36,11 @@ expect fun yearsBetween(a: SDateTime, b: SDateTime): Int
 
 expect fun STimeZone.offsetOnTime(time: SDateTime): Int
 
-expect val sNow: SDateTime
+expect val now: SDateTime
 
 fun SDate.isSame(other: SDate) = year == other.year && month == other.month && dayOfMonth == other.dayOfMonth
-fun SDate.isToday() = isSame(sToday)
-fun SDate.isTomorrow() = isSame(sTomorrow)
+fun SDate.isToday() = isSame(today)
+fun SDate.isTomorrow() = isSame(tomorrow)
 
 fun SDateTime.minutesDifferenceAbs(other: SDateTime): Int {
     val first = timestamp / 1000 / 60

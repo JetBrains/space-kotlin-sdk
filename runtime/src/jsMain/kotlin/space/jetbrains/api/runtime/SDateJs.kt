@@ -59,4 +59,4 @@ actual val SDate.weekday: Weekday get() = Weekday.byIsoNumber(moment.weekday().t
 
 actual fun sDate(year: Int, month: Int, day: Int): SDate = moment(Date(year, month, day)).local().sDate()
 
-actual val sToday: SDate get() = SDate(moment().local().startOf("day"))
+actual val today: SDate get() = SDate(moment().local().startOf("day"))

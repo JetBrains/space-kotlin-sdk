@@ -64,7 +64,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'org.jetbrains'
             artifactId = 'space-api-client-generator'
-            version = "0.0.3"
+            version = "0.0.4"
             from components.java
 
             pom {

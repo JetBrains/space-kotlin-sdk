@@ -42,4 +42,4 @@ actual val SDate.weekday: Weekday get() = Weekday.byIsoNumber(joda.dayOfWeek)
 
 actual fun sDate(year: Int, month: Int, day: Int): SDate = LocalDate(year, month, day).sDate()
 
-actual val sToday: SDate get() = SDate(LocalDate.now())
+actual val today: SDate get() = SDate(LocalDate.now())
