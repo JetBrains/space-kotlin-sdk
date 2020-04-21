@@ -6,6 +6,7 @@ plugins {
 repositories {
     mavenCentral()
     maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+    maven { url "https://cache-redirector.jetbrains.com/plugins.gradle.org/m2" }
 }
 
 publishing {
@@ -14,7 +15,7 @@ publishing {
         kotlinMultiplatform {
             groupId = 'org.jetbrains'
             artifactId = 'space-api-client-runtime'
-            version = "0.0.4"
+            version = "0.0.6"
 
             pom {
                 name = 'Space API client runtime'
@@ -24,7 +25,7 @@ publishing {
         metadata {
             groupId = 'org.jetbrains'
             artifactId = 'space-api-client-runtime-metadata'
-            version = "0.0.4"
+            version = "0.0.6"
 
             pom {
                 name = 'Space API client runtime'
@@ -50,7 +51,7 @@ kotlin {
         mavenPublication {
             groupId = 'org.jetbrains'
             artifactId = 'space-api-client-runtime-jvm'
-            version = "0.0.4"
+            version = "0.0.6"
 
             pom {
                 name = 'Space API client runtime'
@@ -67,7 +68,7 @@ kotlin {
         mavenPublication {
             groupId = 'org.jetbrains'
             artifactId = 'space-api-client-runtime-js'
-            version = "0.0.4"
+            version = "0.0.6"
 
             pom {
                 name = 'Space API client runtime'
