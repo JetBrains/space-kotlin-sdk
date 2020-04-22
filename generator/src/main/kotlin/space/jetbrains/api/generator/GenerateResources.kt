@@ -1,6 +1,7 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.FunSpec.Builder
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import space.jetbrains.api.generator.HA_Method.*
 import space.jetbrains.api.generator.HA_PathSegment.*
@@ -62,34 +63,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     val partialStructure = partial?.let { structureCode(it, model) }
                     val hasUrlBatchInfo = urlParams.any { it.name == "\$skip" || it.name == "\$top" }
 
-                    val funcParams: List<ParameterSpec> = mutableListOf<ParameterSpec>().also { funcParams ->
-                        fun paramWithDefault(paramField: HA_Field): ParameterSpec {
-                            val parameter = ParameterSpec.builder(paramField.name, paramField.type.kotlinPoet(model))
-                            when {
-                                paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
-                                paramField.type.nullable -> parameter.defaultValue("null")
-                            }
-                            return parameter.build()
-                        }
-
-                        urlParams.forEach {
-                            if (it.name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
-                            funcParams.add(paramWithDefault(it))
-                        }
-                        funcParams.addAll(bodyParams.orEmpty().map { paramWithDefault(it) })
-                        if (hasUrlBatchInfo) {
-                            funcParams.add(ParameterSpec.builder("batchInfo", batchInfoType.copy(nullable = true))
-                                                .defaultValue("null")
-                                                .build())
-                        }
-                        if (partialStructure != null && partialKP != null) {
-                            funcParams.add(ParameterSpec.builder("buildPartial", LambdaTypeName.get(
-                                partialType.parameterizedBy(partialKP),
-                                listOf(),
-                                UNIT
-                            )).defaultValue("${partialStructure.first}.defaultPartialFull", *partialStructure.second).build())
-                        }
-                    }
+                    val funcParams: List<ParameterSpec> = getFuncParams(model, urlParams, bodyParams, hasUrlBatchInfo, partialStructure, partialKP)
 
                     val fullPath = endpoint.path.segments.asReversed().plus(
                         ancestors(model.resources.getValue(endpoint.resource.id), model)
@@ -114,47 +88,10 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                             )
                         }
 
-                        val (httpCallFuncName, httpMethod) = when (endpoint.method) {
-                            HTTP_POST,
-                            REST_CREATE -> "callWithBody" to "Post"
-
-                            HTTP_GET,
-                            REST_GET,
-                            REST_QUERY -> "callWithParameters" to "Get"
-
-                            HTTP_PATCH,
-                            REST_UPDATE -> "callWithBody" to "Patch"
-
-                            HTTP_DELETE,
-                            REST_DELETE -> "callWithParameters" to "Delete"
-
-                            HTTP_PUT -> "callWithBody" to "Put"
-                        }
+                        val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
 
                         endpoint.parameters.forEach {
-                            @Suppress("UNUSED_VARIABLE")
-                            val unused: Any? = when (val type = it.field.type) {
-                                is HA_Type.Primitive,
-                                is HA_Type.Enum -> {
-                                }
-
-                                is HA_Type.Ref -> if (type.nullable) {
-                                    funcBuilder.addStatement("val ${it.field.name} = ${it.field.name}?.id")
-                                }
-                                else {
-                                    funcBuilder.addStatement("val ${it.field.name} = ${it.field.name}.id")
-                                }
-
-                                is HA_Type.Array -> {
-                                    if (type.elementType is HA_Type.Ref) {
-                                        funcBuilder.addStatement("val ${it.field.name} = ${it.field.name}.map·{ it.id }")
-                                    }
-                                    Unit
-                                }
-
-                                is HA_Type.Object,
-                                is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
-                            }
+                            parameterConversion(it, funcBuilder)
                         }
 
                         val path = fullPath.joinToString("/") {
@@ -164,12 +101,12 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                 is PrefixedVar -> it.prefix + ":\${pathParam(" + it.name + ")}"
                             }
                         }
-                        val batchInfoQueryArg = if (hasUrlBatchInfo) "batchInfo.toParams()" else ""
-                        val parametersArgListOfNotNull = endpoint.parameters.asSequence()
+                        val batchInfoQueryArg = if (hasUrlBatchInfo) "\n${INDENT}appendBatchInfo(batchInfo)" else ""
+                        val parametersBody = endpoint.parameters.asSequence()
                             .filter { !it.path && !it.field.name.startsWith(META_PARAMETERS_PREFIX) }
                             .toList()
                             .takeIf { it.isNotEmpty() }
-                            ?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
+                            ?.joinToString("\n$INDENT", "\n$INDENT", "\n") {
                                 val name = it.field.name
                                 when (val type = it.field.type) {
                                     is HA_Type.Primitive,
@@ -181,40 +118,42 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                         else ".toString()"
 
                                         if (it.field.type.nullable) {
-                                            """$name?.let·{ "$name"·to it$toString }"""
-                                        }
-                                        else """"$name"·to $name$toString"""
+                                            """$name?.let·{ append("$name", it$toString) }"""
+                                        } else """append("$name", $name$toString)"""
                                     }
 
                                     is HA_Type.Array -> {
-                                        val toString = if (
-                                            type.elementType is HA_Type.Primitive &&
-                                            type.elementType.primitive == HA_Primitive.String) ""
-                                        else ".toString()"
-
                                         val orEmpty = if (type.nullable) ".orEmpty()" else ""
-                                        """*$name$orEmpty.map·{ "$name"·to it$toString }.toTypedArray()"""
+
+                                        if (
+                                            type.elementType is HA_Type.Primitive &&
+                                            type.elementType.primitive == HA_Primitive.String) {
+                                            """appendAll("$name", $name$orEmpty)"""
+                                        } else {
+                                            """appendAll("$name", $name$orEmpty.map·{ it.toString })"""
+                                        }
                                     }
 
 
                                     is HA_Type.Object,
                                     is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
                                 }
-                            }
-                            ?.let { (if (hasUrlBatchInfo) " + " else "") + "listOfNotNull($it)" } ?: ""
-
-                        val parametersArg = (batchInfoQueryArg + parametersArgListOfNotNull).takeIf {
-                            it.isNotEmpty()
-                        }?.let { ", parameters = $it" } ?: ""
+                            } ?: ""
 
                         val references = mutableListOf<Any>(httpMethodType)
+                        val parametersArg = (batchInfoQueryArg + parametersBody).takeIf {
+                            it.isNotEmpty()
+                        }?.let {
+                            references.add(parametersType)
+                            ", parameters = %T.build·{$it}"
+                        } ?: ""
+
                         val bodyArg = endpoint.requestBody?.fields?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
                             val typeDesc = buildString { appendType(it.type, references, model) }
                             val name = it.name
                             if (it.type.optional) {
                                 """$typeDesc.serialize($name)?.let·{ "$name"·to it }"""
-                            }
-                            else {
+                            } else {
                                 """"$name"·to $typeDesc.serialize($name)"""
                             }
                         }?.let {
@@ -242,6 +181,95 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                 })
             }.build())
         }.build()
+    }
+}
+
+private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String> {
+    return when (endpoint.method) {
+        HTTP_POST,
+        REST_CREATE -> "callWithBody" to "Post"
+
+        HTTP_GET,
+        REST_GET,
+        REST_QUERY -> "callWithParameters" to "Get"
+
+        HTTP_PATCH,
+        REST_UPDATE -> "callWithBody" to "Patch"
+
+        HTTP_DELETE,
+        REST_DELETE -> "callWithParameters" to "Delete"
+
+        HTTP_PUT -> "callWithBody" to "Put"
+    }
+}
+
+private fun parameterConversion(parameter: HA_Parameter, funcBuilder: Builder) {
+    @Suppress("UNUSED_VARIABLE")
+    val unused: Any? = when (val type = parameter.field.type) {
+        is HA_Type.Primitive,
+        is HA_Type.Enum -> {
+        }
+
+        is HA_Type.Ref -> if (type.nullable) {
+            funcBuilder.addStatement("val ${parameter.field.name} = ${parameter.field.name}?.id")
+        } else {
+            funcBuilder.addStatement("val ${parameter.field.name} = ${parameter.field.name}.id")
+        }
+
+        is HA_Type.Array -> {
+            if (type.elementType is HA_Type.Ref) {
+                funcBuilder.addStatement("val ${parameter.field.name} = ${parameter.field.name}.map·{ it.id }")
+            }
+            Unit
+        }
+
+        is HA_Type.Object,
+        is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
+    }
+}
+
+private fun getFuncParams(
+    model: HttpApiEntitiesById,
+    urlParams: List<HA_Field>,
+    bodyParams: List<HA_Field>?,
+    hasUrlBatchInfo: Boolean,
+    partialStructure: Pair<String, Array<ClassName>>?,
+    partialKP: TypeName? // must have the same nullability as `partialStructure`
+): MutableList<ParameterSpec> = mutableListOf<ParameterSpec>().also { funcParams ->
+    fun paramWithDefault(paramField: HA_Field): ParameterSpec {
+        val parameter = ParameterSpec.builder(paramField.name, paramField.type.kotlinPoet(model))
+        when {
+            paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
+            paramField.type.nullable -> parameter.defaultValue("null")
+        }
+        return parameter.build()
+    }
+
+    urlParams.forEach {
+        if (it.name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
+        funcParams.add(paramWithDefault(it))
+    }
+
+    funcParams.addAll(bodyParams.orEmpty().map { paramWithDefault(it) })
+
+    if (hasUrlBatchInfo) {
+        funcParams.add(
+            ParameterSpec.builder("batchInfo", batchInfoType.copy(nullable = true))
+                .defaultValue("null")
+                .build()
+        )
+    }
+
+    if (partialStructure != null) {
+        funcParams.add(
+            ParameterSpec.builder(
+                "buildPartial", LambdaTypeName.get(
+                    partialType.parameterizedBy(partialKP!!),
+                    listOf(),
+                    UNIT
+                )
+            ).defaultValue("${partialStructure.first}.defaultPartialFull", *partialStructure.second).build()
+        )
     }
 }
 

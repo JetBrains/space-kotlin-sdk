@@ -9,24 +9,26 @@ repositories {
     maven { url "https://cache-redirector.jetbrains.com/plugins.gradle.org/m2" }
 }
 
+@SuppressWarnings("GrMethodMayBeStatic") // IDEA-229168
+private void setGroupAndVersion(MavenPublication publication) {
+    publication.groupId = 'org.jetbrains'
+    publication.version = this.this_version
+}
+
 publishing {
     mavenForPublishing(delegate)
     publications {
         kotlinMultiplatform {
-            groupId = 'org.jetbrains'
+            setGroupAndVersion(delegate)
             artifactId = 'space-api-client-runtime'
-            version = "0.0.6"
-
             pom {
                 name = 'Space API client runtime'
                 description = 'Runtime for JetBrains Space API client'
             }
         }
         metadata {
-            groupId = 'org.jetbrains'
+            setGroupAndVersion(delegate)
             artifactId = 'space-api-client-runtime-metadata'
-            version = "0.0.6"
-
             pom {
                 name = 'Space API client runtime'
                 description = 'Runtime for JetBrains Space API client'
@@ -49,10 +51,8 @@ kotlin {
             }
         }
         mavenPublication {
-            groupId = 'org.jetbrains'
+            setGroupAndVersion(delegate)
             artifactId = 'space-api-client-runtime-jvm'
-            version = "0.0.6"
-
             pom {
                 name = 'Space API client runtime'
                 description = 'Runtime for JetBrains Space API client'
@@ -66,10 +66,8 @@ kotlin {
         nodejs {
         }
         mavenPublication {
-            groupId = 'org.jetbrains'
+            setGroupAndVersion(delegate)
             artifactId = 'space-api-client-runtime-js'
-            version = "0.0.6"
-
             pom {
                 name = 'Space API client runtime'
                 description = 'Runtime for JetBrains Space API client'

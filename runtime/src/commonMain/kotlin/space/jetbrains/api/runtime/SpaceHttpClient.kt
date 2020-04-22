@@ -74,18 +74,20 @@ class SpaceHttpClient(client: HttpClient) {
         callMethod: HttpMethod,
         path: String,
         partial: Partial<*>?,
-        parameters: List<Pair<String, String>> = emptyList(),
+        parameters: Parameters = Parameters.Empty,
         requestBody: JsonValue? = null
     ): DeserializationContext<*> {
         val token = context.tokenSource.token()
-        val url = URLBuilder(context.server.apiUrl + path).apply {
-            parameters.forEach {
-                this.parameters.append(it.first, it.second)
-            }
-            partial?.let { this.parameters.append("\$fields", it.buildQuery()) }
-        }.build()
 
-        return client.request<HttpResponse>(url) {
+        val response = client.request<HttpResponse> {
+            url {
+                takeFrom(context.server.apiUrl + path)
+                this.parameters.appendAll(parameters)
+                if (partial != null) {
+                    this.parameters.append("\$fields", partial.buildQuery())
+                }
+            }
+
             method = callMethod
             accept(ContentType.Application.Json)
 
@@ -96,11 +98,11 @@ class SpaceHttpClient(client: HttpClient) {
             requestBody?.let {
                 body = TextContent(it.print(), ContentType.Application.Json)
             }
-        }.let {
-            val content = it.readText(Charsets.UTF_8).let(::parseJson)
-            handleErrors(it, content, callMethod, path)
-            DeserializationContext(content, partial, ReferenceChainLink(functionName))
         }
+
+        val content = response.readText(Charsets.UTF_8).let(::parseJson)
+        handleErrors(response, content, callMethod, path)
+        return DeserializationContext(content, partial, ReferenceChainLink(functionName))
     }
 
     private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {

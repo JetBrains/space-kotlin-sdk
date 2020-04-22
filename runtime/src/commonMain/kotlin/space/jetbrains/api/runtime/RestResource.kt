@@ -19,16 +19,20 @@ abstract class RestResource(private val client: SpaceHttpClientWithCallContext) 
         functionName: String,
         path: String,
         method: HttpMethod,
-        parameters: List<Pair<String, String>> = emptyList(),
+        parameters: Parameters = Parameters.Empty,
         partial: Partial<*>? = null
     ): DeserializationContext<*> {
         return client.client.call(functionName, client.callContext, method, path, partial, parameters)
     }
 
-    protected fun BatchInfo?.toParams(): List<Pair<String, String>> = listOfNotNull(
-        this?.let { "\$top" to it.batchSize.toString() },
-        this?.offset?.let { "\$skip" to it }
-    )
+    protected fun ParametersBuilder.appendBatchInfo(batchInfo: BatchInfo?) {
+        batchInfo?.let {
+            append("\$top", it.batchSize.toString())
+        }
+        batchInfo?.offset?.let {
+            append("\$skip", it)
+        }
+    }
 
     protected fun pathParam(value: Any): String = value.toString().encodeURLParameter()
 }

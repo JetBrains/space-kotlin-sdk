@@ -64,6 +64,7 @@ val enumTypeType = typeType.nestedClass("EnumType")
 val clientWithContextType = ClassName(ROOT_PACKAGE, "SpaceHttpClientWithCallContext")
 
 val httpMethodType = ClassName("io.ktor.http", "HttpMethod")
+val parametersType = ClassName("io.ktor.http", "Parameters")
 
 const val INDENT = "    "
 

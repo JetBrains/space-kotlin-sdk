@@ -1,4 +1,6 @@
 buildscript {
+    ext.this_version = '0.0.6'
+
     ext.kotlin_version = "1.3.72"
     ext.jackson_version = '2.9.10'
     ext.kotlin_jackson_version = '2.9.10'
@@ -6,7 +8,7 @@ buildscript {
     ext.ktor_version = '1.3.2'
     ext.joda_time_version = '2.10.3'
 
-    ext.mavenForPublishing = { publishing ->
+    ext.mavenForPublishing = { PublishingExtension publishing ->
         publishing.repositories.maven {
             url = "https://maven.jetbrains.team/space"
             credentials {
@@ -21,56 +23,8 @@ buildscript {
 }
 
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.72'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.72' apply false
     id 'org.jetbrains.kotlin.multiplatform' version '1.3.72' apply false
     id 'application'
     id 'maven-publish'
-}
-
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-    maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
-}
-
-dependencies {
-    implementation "com.fasterxml.jackson.core:jackson-core:$jackson_version"
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$kotlin_jackson_version"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda:$kotlin_jackson_version"
-
-    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    api "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-
-    api 'com.squareup:kotlinpoet:1.4.4'
-}
-
-targetCompatibility = JavaVersion.VERSION_1_8
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-application {
-    mainClassName = 'space.jetbrains.api.generator.MainKt'
-}
-
-publishing {
-    mavenForPublishing(delegate)
-    publications {
-        maven(MavenPublication) {
-            groupId = 'org.jetbrains'
-            artifactId = 'space-api-client-generator'
-            version = "0.0.6"
-            from components.java
-
-            pom {
-                name = 'Space API client generator'
-                description = 'API client generator for JetBrains Space API'
-            }
-        }
-    }
 }

@@ -7,5 +7,6 @@ pluginManagement {
 }
 
 include 'runtime'
+include 'generator'
 
 enableFeaturePreview("GRADLE_METADATA")
