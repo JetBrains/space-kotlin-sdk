@@ -48,12 +48,12 @@ fun Moment.sDate(): SDate = SDate(this)
 
 actual fun SDate.withDay(day: Int): SDate = moment.clone().day(day).sDate()
 
-actual fun SDate.plusDays(days: Int): SDate = moment.clone().add(days, "days").sDate()
-actual fun SDate.plusMonths(months: Int) = moment.clone().add(months, "months").sDate()
-actual fun SDate.plusYears(years: Int) = moment.clone().add(years, "years").sDate()
+actual fun SDate.plusDays(days: Long): SDate = moment.clone().add(days.toDouble(), "days").sDate()
+actual fun SDate.plusMonths(months: Long) = moment.clone().add(months.toDouble(), "months").sDate()
+actual fun SDate.plusYears(years: Long) = moment.clone().add(years.toDouble(), "years").sDate()
 
-actual fun daysBetween(a: SDate, b: SDate) = b.moment.diff(a.moment, "days").toInt()
-actual fun monthsBetween(a: SDate, b: SDate) = b.moment.diff(a.moment, "months").toInt()
+actual fun daysBetween(a: SDate, b: SDate): Long = b.moment.diff(a.moment, "days").toLong()
+actual fun monthsBetween(a: SDate, b: SDate): Long = b.moment.diff(a.moment, "months").toLong()
 
 actual val SDate.weekday: Weekday get() = Weekday.byIsoNumber(moment.weekday().toInt())
 

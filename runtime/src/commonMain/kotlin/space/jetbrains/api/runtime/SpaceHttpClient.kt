@@ -64,7 +64,7 @@ class SpaceHttpClient(client: HttpClient) {
             },
             expires = responseTime.plusSeconds(deserialization.child("expires_in").let {
                 it.requireJson().asNumber(it.link)
-            }.toInt())
+            }.toLong())
         )
     }
 

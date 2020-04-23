@@ -35,12 +35,12 @@ enum class Weekday(val isoNumber: Int, val title: String) {
 
 expect fun SDate.withDay(day: Int): SDate
 
-expect fun SDate.plusDays(days: Int): SDate
-expect fun SDate.plusMonths(months: Int): SDate
-expect fun SDate.plusYears(years: Int): SDate
+expect fun SDate.plusDays(days: Long): SDate
+expect fun SDate.plusMonths(months: Long): SDate
+expect fun SDate.plusYears(years: Long): SDate
 
-expect fun daysBetween(a: SDate, b: SDate): Int
-expect fun monthsBetween(a: SDate, b: SDate): Int
+expect fun daysBetween(a: SDate, b: SDate): Long
+expect fun monthsBetween(a: SDate, b: SDate): Long
 
 expect val SDate.weekday: Weekday
 

@@ -1,70 +1,62 @@
 package space.jetbrains.api.runtime
 
-import org.joda.time.*
-import org.joda.time.format.ISODateTimeFormat
+import java.time.*
+import java.time.temporal.*
 import java.util.TimeZone
-import java.util.concurrent.TimeUnit.MILLISECONDS
 
-actual class SDateTime(val joda: DateTime) : Comparable<SDateTime> {
-    actual constructor(timestamp: Long) : this(DateTime(timestamp))
+actual class SDateTime(val javaDateTime: ZonedDateTime) : Comparable<SDateTime> {
+    actual constructor(timestamp: Long) : this(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC))
 
-    actual val iso: String get() = joda.toString()
+    actual val iso: String get() = javaDateTime.toString()
 
     actual override fun toString(): String = iso
 
-    override fun compareTo(other: SDateTime) = joda.compareTo(other.joda)
+    override fun compareTo(other: SDateTime) = javaDateTime.compareTo(other.javaDateTime)
 
     actual override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-        return joda == (other as SDateTime).joda
+        return javaDateTime == (other as SDateTime).javaDateTime
     }
 
-    actual override fun hashCode(): Int = joda.hashCode()
+    actual override fun hashCode(): Int = javaDateTime.hashCode()
 }
 
-fun DateTime.sDateTime(): SDateTime = SDateTime(this)
-fun STimeZone.joda(): DateTimeZone = DateTimeZone.forID(id)
+fun ZonedDateTime.sDateTime(): SDateTime = SDateTime(this)
+fun STimeZone.javaZoneId(): ZoneId = ZoneId.of(id)
 
-actual fun SDateTime.withZone(zone: STimeZone): SDateTime = joda.withZone(DateTimeZone.forID(zone.id)).sDateTime()
+actual fun SDateTime.withZone(zone: STimeZone): SDateTime = javaDateTime.withZoneSameInstant(ZoneId.of(zone.id)).sDateTime()
 
-actual fun SDateTime.plusDays(days: Int): SDateTime = joda.plusDays(days).sDateTime()
-actual fun SDateTime.plusMonths(months: Int): SDateTime = joda.plusMonths(months).sDateTime()
-actual fun SDateTime.plusYears(years: Int): SDateTime = joda.plusYears(years).sDateTime()
-actual fun SDateTime.plusMinutes(minutes: Int): SDateTime = joda.plusMinutes(minutes).sDateTime()
-actual fun SDateTime.plusSeconds(seconds: Int): SDateTime = joda.plusSeconds(seconds).sDateTime()
-actual fun SDate.toDateTimeAtStartOfDay(zone: STimeZone): SDateTime = joda.toDateTimeAtStartOfDay(zone.joda()).sDateTime()
-actual fun SDate.toDateTimeAtStartOfDay(): SDateTime = joda.toDateTimeAtStartOfDay().sDateTime()
-actual fun SDateTime.withTime(hours: Int, minutes: Int, seconds: Int, mills: Int): SDateTime =
-    joda.withTime(hours, minutes, seconds, mills).sDateTime()
+actual fun SDateTime.plusDays(days: Long): SDateTime = javaDateTime.plusDays(days).sDateTime()
+actual fun SDateTime.plusMonths(months: Long): SDateTime = javaDateTime.plusMonths(months).sDateTime()
+actual fun SDateTime.plusYears(years: Long): SDateTime = javaDateTime.plusYears(years).sDateTime()
+actual fun SDateTime.plusMinutes(minutes: Long): SDateTime = javaDateTime.plusMinutes(minutes).sDateTime()
+actual fun SDateTime.plusSeconds(seconds: Long): SDateTime = javaDateTime.plusSeconds(seconds).sDateTime()
+actual fun SDate.toDateTimeAtStartOfDay(zone: STimeZone): SDateTime = javaDate.atStartOfDay(zone.javaZoneId()).sDateTime()
 
-actual fun SDateTime.toDate(): SDate = joda.toLocalDate().sDate()
+actual fun SDateTime.toDate(): SDate = javaDateTime.toLocalDate().sDate()
 
-actual val SDateTime.timestamp: Long get() = joda.millis
+actual val SDateTime.timestamp: Long get() = javaDateTime.toInstant().toEpochMilli()
 
-actual fun daysBetween(a: SDateTime, b: SDateTime): Int = Days.daysBetween(a.joda, b.joda).days
-actual fun monthsBetween(a: SDateTime, b: SDateTime): Int = Months.monthsBetween(a.joda, b.joda).months
-actual fun yearsBetween(a: SDateTime, b: SDateTime): Int = Years.yearsBetween(a.joda, b.joda).years
+actual fun daysBetween(a: SDateTime, b: SDateTime): Long = ChronoUnit.DAYS.between(a.javaDateTime, b.javaDateTime)
+actual fun monthsBetween(a: SDateTime, b: SDateTime): Long = ChronoUnit.MONTHS.between(a.javaDateTime, b.javaDateTime)
+actual fun yearsBetween(a: SDateTime, b: SDateTime): Long = ChronoUnit.YEARS.between(a.javaDateTime, b.javaDateTime)
 
-actual fun STimeZone.offsetOnTime(time: SDateTime): Int = time.joda.withZone(DateTimeZone.forID(id)).let {
-    MILLISECONDS.toMinutes(it.zone.getOffset(it.millis).toLong()).toInt()
-}
+actual val now: SDateTime get() = SDateTime(ZonedDateTime.now())
 
-actual val now: SDateTime get() = SDateTime(DateTime.now())
-
-actual fun sDateTime(iso: String): SDateTime = DateTime.parse(iso, ISODateTimeFormat.dateTimeParser()).sDateTime()
+actual fun sDateTime(iso: String): SDateTime = ZonedDateTime.parse(iso).sDateTime()
 
 actual fun sDateTime(year: Int, month: Int, day: Int, hours: Int, minutes: Int, timezone: STimeZone): SDateTime {
-    return DateTime(year, month, day, hours, minutes, timezone.joda()).sDateTime()
+    return ZonedDateTime.of(year, month, day, hours, minutes, 0, 0, timezone.javaZoneId()).sDateTime()
 }
 
-actual val SDateTime.second: Int get() = joda.secondOfMinute
-actual val SDateTime.minute: Int get() = joda.minuteOfHour
-actual val SDateTime.minuteOfDay: Int get() = joda.minuteOfDay
-actual val SDateTime.hour: Int get() = joda.hourOfDay
-actual val SDateTime.dayOfMonth: Int get() = joda.dayOfMonth
-actual val SDateTime.month: Int get() = joda.monthOfYear
-actual val SDateTime.year: Int get() = joda.year
-actual val SDateTime.weekday: Weekday get() = Weekday.byIsoNumber(joda.dayOfWeek)
+actual val SDateTime.second: Int get() = javaDateTime.second
+actual val SDateTime.minute: Int get() = javaDateTime.minute
+actual val SDateTime.minuteOfDay: Int get() = javaDateTime.get(ChronoField.MINUTE_OF_DAY)
+actual val SDateTime.hour: Int get() = javaDateTime.hour
+actual val SDateTime.dayOfMonth: Int get() = javaDateTime.dayOfMonth
+actual val SDateTime.month: Int get() = javaDateTime.monthValue
+actual val SDateTime.year: Int get() = javaDateTime.year
+actual val SDateTime.weekday: Weekday get() = Weekday.byIsoNumber(javaDateTime.dayOfWeek.value)
 
 actual val clientTimeZone: STimeZone get() = STimeZone(TimeZone.getDefault().id)

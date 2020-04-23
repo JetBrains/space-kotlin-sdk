@@ -105,10 +105,6 @@ kotlin {
 
             api "com.fasterxml.jackson.core:jackson-core:$jackson_version"
             api "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
-            api "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jackson_version"
-            api "com.fasterxml.jackson.module:jackson-module-kotlin:$kotlin_jackson_version"
-
-            api "joda-time:joda-time:$joda_time_version"
         }
 
         jsMain {

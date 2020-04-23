@@ -28,30 +28,21 @@ fun Moment.sDateTime(): SDateTime = SDateTime(this)
 
 actual fun SDateTime.withZone(zone: STimeZone): SDateTime = SDateTime(moment.clone().tz(zone.id))
 
-actual fun SDateTime.plusDays(days: Int): SDateTime = moment.clone().add(days, "days").sDateTime()
-actual fun SDateTime.plusMonths(months: Int): SDateTime = moment.clone().add(months, "months").sDateTime()
-actual fun SDateTime.plusYears(years: Int): SDateTime = moment.clone().add(years, "years").sDateTime()
-actual fun SDateTime.plusMinutes(minutes: Int): SDateTime = moment.clone().add(minutes, "minutes").sDateTime()
-actual fun SDateTime.plusSeconds(seconds: Int): SDateTime = moment.clone().add(seconds, "seconds").sDateTime()
+actual fun SDateTime.plusDays(days: Long): SDateTime = moment.clone().add(days.toDouble(), "days").sDateTime()
+actual fun SDateTime.plusMonths(months: Long): SDateTime = moment.clone().add(months.toDouble(), "months").sDateTime()
+actual fun SDateTime.plusYears(years: Long): SDateTime = moment.clone().add(years.toDouble(), "years").sDateTime()
+actual fun SDateTime.plusMinutes(minutes: Long): SDateTime = moment.clone().add(minutes.toDouble(), "minutes").sDateTime()
+actual fun SDateTime.plusSeconds(seconds: Long): SDateTime = moment.clone().add(seconds.toDouble(), "seconds").sDateTime()
 
 actual fun SDate.toDateTimeAtStartOfDay(zone: STimeZone): SDateTime = moment.clone().tz(zone.id).startOf("day").sDateTime()
-actual fun SDate.toDateTimeAtStartOfDay(): SDateTime = moment.clone().startOf("day").sDateTime()
-actual fun SDateTime.withTime(hours: Int, minutes: Int, seconds: Int, mills: Int): SDateTime = moment.clone()
-    .hours(hours)
-    .minute(minutes)
-    .second(seconds)
-    .millisecond(mills)
-    .sDateTime()
 
 actual fun SDateTime.toDate(): SDate = moment.clone().sDate()
 
 actual val SDateTime.timestamp: Long get() = moment.valueOf().toLong()
 
-actual fun daysBetween(a: SDateTime, b: SDateTime): Int = b.moment.diff(a.moment, "days").toInt()
-actual fun monthsBetween(a: SDateTime, b: SDateTime): Int = b.moment.diff(a.moment, "months").toInt()
-actual fun yearsBetween(a: SDateTime, b: SDateTime): Int = b.moment.diff(a.moment, "years").toInt()
-
-actual fun STimeZone.offsetOnTime(time: SDateTime): Int = time.moment.tz(id).utcOffset().toInt()
+actual fun daysBetween(a: SDateTime, b: SDateTime): Long = b.moment.diff(a.moment, "days").toLong()
+actual fun monthsBetween(a: SDateTime, b: SDateTime): Long = b.moment.diff(a.moment, "months").toLong()
+actual fun yearsBetween(a: SDateTime, b: SDateTime): Long = b.moment.diff(a.moment, "years").toLong()
 
 actual val now: SDateTime get() = SDateTime(moment())
 

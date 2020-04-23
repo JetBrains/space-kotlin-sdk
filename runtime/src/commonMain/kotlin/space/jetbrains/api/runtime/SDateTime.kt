@@ -16,25 +16,21 @@ data class STimeZone(val id: String)
 
 expect fun SDateTime.withZone(zone: STimeZone): SDateTime
 
-expect fun SDateTime.plusDays(days: Int): SDateTime
-expect fun SDateTime.plusMonths(months: Int): SDateTime
-expect fun SDateTime.plusYears(years: Int): SDateTime
-expect fun SDateTime.plusMinutes(minutes: Int): SDateTime
-expect fun SDateTime.plusSeconds(seconds: Int): SDateTime
+expect fun SDateTime.plusDays(days: Long): SDateTime
+expect fun SDateTime.plusMonths(months: Long): SDateTime
+expect fun SDateTime.plusYears(years: Long): SDateTime
+expect fun SDateTime.plusMinutes(minutes: Long): SDateTime
+expect fun SDateTime.plusSeconds(seconds: Long): SDateTime
 
 expect fun SDate.toDateTimeAtStartOfDay(zone: STimeZone): SDateTime
-expect fun SDate.toDateTimeAtStartOfDay(): SDateTime
-expect fun SDateTime.withTime(hours: Int, minutes: Int, seconds: Int, mills: Int): SDateTime
 expect fun SDateTime.toDate(): SDate
 
 /** Milliseconds from 1970-01-01T00:00:00Z */
 expect val SDateTime.timestamp: Long
 
-expect fun daysBetween(a: SDateTime, b: SDateTime): Int
-expect fun monthsBetween(a: SDateTime, b: SDateTime): Int
-expect fun yearsBetween(a: SDateTime, b: SDateTime): Int
-
-expect fun STimeZone.offsetOnTime(time: SDateTime): Int
+expect fun daysBetween(a: SDateTime, b: SDateTime): Long
+expect fun monthsBetween(a: SDateTime, b: SDateTime): Long
+expect fun yearsBetween(a: SDateTime, b: SDateTime): Long
 
 expect val now: SDateTime
 
