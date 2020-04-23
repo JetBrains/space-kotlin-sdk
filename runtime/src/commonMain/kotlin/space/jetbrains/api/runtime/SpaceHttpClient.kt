@@ -81,7 +81,8 @@ class SpaceHttpClient(client: HttpClient) {
 
         val response = client.request<HttpResponse> {
             url {
-                takeFrom(context.server.apiUrl + path)
+                takeFrom(context.server.apiBaseUrl.removeSuffix("/") + "/" + path.removePrefix("/"))
+
                 this.parameters.appendAll(parameters)
                 if (partial != null) {
                     this.parameters.append("\$fields", partial.buildQuery())

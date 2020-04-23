@@ -38,19 +38,14 @@ class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : Token
     }
 }
 
-fun SpaceHttpClient.withPermanentToken(token: String, server: ServerLocation): SpaceHttpClientWithCallContext =
-    withCallContext(server, PermanentToken(token))
-
-fun SpaceHttpClient.withPermanentToken(token: String, serverUrl: String): SpaceHttpClientWithCallContext =
-    withPermanentToken(token, SpaceServerLocation(serverUrl))
-
-fun SpaceHttpClient.withServiceAccountTokenSource(
+class ServiceAccountTokenSource(
+    spaceClient: SpaceHttpClient,
     clientId: String,
     clientSecret: String,
-    server: ServerLocation
-): SpaceHttpClientWithCallContext = withCallContext(server, ExpiringTokenSource {
-    auth(
-        url = server.oauthUrl,
+    serverUrl: String
+) : TokenSource by ExpiringTokenSource(getToken = {
+    spaceClient.auth(
+        url = SpaceServerLocation(serverUrl).oauthUrl,
         methodBody = Parameters.build {
             append("grant_type", "client_credentials")
         },
@@ -58,8 +53,14 @@ fun SpaceHttpClient.withServiceAccountTokenSource(
     )
 })
 
+fun SpaceHttpClient.withPermanentToken(token: String, serverUrl: String): SpaceHttpClientWithCallContext =
+    withCallContext(serverUrl, PermanentToken(token))
+
 fun SpaceHttpClient.withServiceAccountTokenSource(
     clientId: String,
     clientSecret: String,
     serverUrl: String
-): SpaceHttpClientWithCallContext = withServiceAccountTokenSource(clientId, clientSecret, SpaceServerLocation(serverUrl))
+): SpaceHttpClientWithCallContext = withCallContext(SpaceHttpClientCallContext(
+    serverUrl = serverUrl,
+    tokenSource = ServiceAccountTokenSource(this, clientId, clientSecret, serverUrl)
+))
