@@ -9,7 +9,6 @@ interface TokenInfo {
 
 interface TokenSource {
     suspend fun token(): TokenInfo
-    fun lastToken(): TokenInfo
 }
 
 data class ExpiringToken(override val accessToken: String, override val expires: SDateTime) : TokenInfo
@@ -17,7 +16,6 @@ data class ExpiringToken(override val accessToken: String, override val expires:
 data class PermanentToken(override val accessToken: String) : TokenInfo, TokenSource {
     override val expires: SDateTime? get() = null
     override suspend fun token(): TokenInfo = this
-    override fun lastToken(): TokenInfo = this
 }
 
 private fun TokenInfo.expired(gapSeconds: Long = 5): Boolean {
@@ -26,8 +24,6 @@ private fun TokenInfo.expired(gapSeconds: Long = 5): Boolean {
 
 class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : TokenSource {
     private var currentToken: TokenInfo? = null
-
-    override fun lastToken(): TokenInfo = currentToken ?: error("Token wasn't acquired yet")
 
     override suspend fun token(): TokenInfo {
         val current = currentToken
