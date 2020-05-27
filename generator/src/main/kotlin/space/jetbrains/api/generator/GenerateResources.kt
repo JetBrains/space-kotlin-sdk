@@ -74,6 +74,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                     FunSpec.builder(funcName).also { funcBuilder ->
                         endpoint.doc?.let { funcBuilder.addKdoc(it) }
+                        funcBuilder.annotations.deprecation(endpoint.deprecation)
                         funcBuilder.addModifiers(KModifier.SUSPEND)
                         funcBuilder.addParameters(funcParams)
                         if (returnType != null) funcBuilder.returns(returnType)
@@ -242,6 +243,7 @@ private fun getFuncParams(
             paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
             paramField.type.nullable -> parameter.defaultValue("null")
         }
+        parameter.annotations.deprecation(paramField.deprecation)
         return parameter.build()
     }
 

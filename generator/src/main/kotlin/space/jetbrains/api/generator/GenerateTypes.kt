@@ -73,6 +73,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                             typeBuilder.addProperty(
                                 PropertySpec.builder(it.field.name, kotlinPoetType)
                                     .delegate(it.field.name)
+                                    .apply { annotations.deprecation(it.field.deprecation) }
                                     .build()
                             )
 
