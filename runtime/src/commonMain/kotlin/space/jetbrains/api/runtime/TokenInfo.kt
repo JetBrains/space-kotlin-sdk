@@ -39,15 +39,13 @@ class ServiceAccountTokenSource(
     clientId: String,
     clientSecret: String,
     serverUrl: String,
-    scope: String? = null
+    scope: String = "**"
 ) : TokenSource by ExpiringTokenSource(getToken = {
     spaceClient.auth(
         url = SpaceServerLocation(serverUrl).oauthUrl,
         methodBody = Parameters.build {
             append("grant_type", "client_credentials")
-            scope?.let {
-                append("scope", it)
-            }
+            append("scope", scope)
         },
         authHeaderValue = "Basic " + base64("$clientId:$clientSecret")
     )
@@ -60,7 +58,7 @@ fun SpaceHttpClient.withServiceAccountTokenSource(
     clientId: String,
     clientSecret: String,
     serverUrl: String,
-    scope: String? = null
+    scope: String = "**"
 ): SpaceHttpClientWithCallContext = withCallContext(SpaceHttpClientCallContext(
     serverUrl = serverUrl,
     tokenSource = ServiceAccountTokenSource(this, clientId, clientSecret, serverUrl, scope)
