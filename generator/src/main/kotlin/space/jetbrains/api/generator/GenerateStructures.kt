@@ -25,8 +25,7 @@ private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableLi
                 appendPropertyDelegate(elementType.keyType(), types, model)
                 append(", ")
                 appendPropertyDelegate(elementType.valueType(), types, model)
-            }
-            else {
+            } else {
                 append("list(")
                 appendPropertyDelegate(elementType, types, model)
             }
@@ -108,8 +107,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                         val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole.isAbstract) {
                             codeReferences += dtoClassName
                             createInstance
-                        }
-                        else {
+                        } else {
                             "when (val className = ${stringTypeType.simpleName}.deserialize(context.child(\"className\"))) {" +
                                 dto.inheritors.joinToString("\n$INDENT", "\n$INDENT", "\n") {
                                     val inheritor = model.resolveDto(it)
@@ -143,8 +141,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                         val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole.isAbstract) {
                             codeReferences += jsonObjectFunction
                             createJson
-                        }
-                        else {
+                        } else {
                             "when (value) {" +
                                 dto.inheritors.joinToString("\n$INDENT", "\n$INDENT", "\n") {
                                     val inheritor = model.resolveDto(it)
@@ -157,8 +154,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 if (!dto.hierarchyRole.isAbstract) {
                                     codeReferences += jsonObjectFunction
                                     createJson.indentNonFirst() + ".withClassName(\"${dtoClassName.simpleName}\")"
-                                }
-                                else {
+                                } else {
                                     "error(\"Unsupported class\")"
                                 } +
                                 "\n}"
@@ -167,46 +163,53 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                         addCode("return·$toReturn", *codeReferences.toTypedArray())
                     }.build())
 
-                    typeBuilder.addProperty(PropertySpec.builder("defaultPartialFull", LambdaTypeName.get(
-                        partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)),
-                        returnType = UNIT
-                    )).also { propBuilder ->
-                        propBuilder.addModifiers(KModifier.OVERRIDE)
+                    typeBuilder.addProperty(
+                        PropertySpec.builder(
+                            "defaultPartialFull", LambdaTypeName.get(
+                                partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)),
+                                returnType = UNIT
+                            )
+                        ).also { propBuilder ->
+                            propBuilder.addModifiers(KModifier.OVERRIDE)
 
-                        val codeReferences = mutableListOf<ClassName>()
-                        val inner = fields
-                            .filter { !it.isExtension }
-                            .joinToString("\n$INDENT", prefix = INDENT, postfix = "\n") {
-                                it.field.name + "()"
-                            } + if (dto.inheritors.isNotEmpty()) {
-                            dto.inheritors.joinToString("\n$INDENT", prefix = INDENT, postfix = "\n") {
-                                codeReferences += model.resolveDto(it).getClassName().getStructureClassName()
-                                "%T.defaultPartialFull(this)"
-                            }
-                        } else ""
-                        propBuilder.initializer("{\n$inner}", *codeReferences.toTypedArray())
-                    }.build())
+                            val codeReferences = mutableListOf<ClassName>()
+                            val inner = fields
+                                .filter { !it.isExtension }
+                                .joinToString("\n$INDENT", prefix = INDENT, postfix = "\n") {
+                                    it.field.name + "()"
+                                } + if (dto.inheritors.isNotEmpty()) {
+                                dto.inheritors.joinToString("\n$INDENT", prefix = INDENT, postfix = "\n") {
+                                    codeReferences += model.resolveDto(it).getClassName().getStructureClassName()
+                                    "%T.defaultPartialFull(this)"
+                                }
+                            } else ""
+                            propBuilder.initializer("{\n$inner}", *codeReferences.toTypedArray())
+                        }.build()
+                    )
 
 
                     if (dto.record) {
-                        typeBuilder.addProperty(PropertySpec.builder("defaultPartialCompact", LambdaTypeName.get(
-                            partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)),
-                            returnType = UNIT
-                        )).also { propBuilder ->
-                            propBuilder.addModifiers(KModifier.OVERRIDE)
-
-                            if (dto.inheritors.isNotEmpty()) {
-                                val codeReferences = mutableListOf<ClassName>()
-                                propBuilder.initializer(
-                                    dto.inheritors.joinToString("\n$INDENT", prefix = "{\n$INDENT", postfix = "\n}") {
-                                        codeReferences += model.resolveDto(it).getClassName().getStructureClassName()
-                                        "%T.defaultPartialCompact(this)"
-                                    }, *codeReferences.toTypedArray()
+                        typeBuilder.addProperty(
+                            PropertySpec.builder(
+                                "defaultPartialCompact", LambdaTypeName.get(
+                                    partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)),
+                                    returnType = UNIT
                                 )
-                            }
-                            else propBuilder.initializer("{ id() }")
+                            ).also { propBuilder ->
+                                propBuilder.addModifiers(KModifier.OVERRIDE)
 
-                        }.build())
+                                if (dto.inheritors.isNotEmpty()) {
+                                    val codeReferences = mutableListOf<ClassName>()
+                                    propBuilder.initializer(
+                                        dto.inheritors.joinToString("\n$INDENT", prefix = "{\n$INDENT", postfix = "\n}") {
+                                            codeReferences += model.resolveDto(it).getClassName().getStructureClassName()
+                                            "%T.defaultPartialCompact(this)"
+                                        }, *codeReferences.toTypedArray()
+                                    )
+                                } else propBuilder.initializer("{ id() }")
+
+                            }.build()
+                        )
                     }
 
                 }.build())
@@ -224,8 +227,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                     if (partial == null) {
                         funcBuilder.addStatement("add(%T.${it.field.name})", dtoStructureClassName)
-                    }
-                    else {
+                    } else {
                         addFunction(
                             FunSpec.builder(it.field.name)
                                 .receiver(partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)))
@@ -260,8 +262,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                             if (specialPartial != null) {
                                 addImport(partialSpecialType, specialPartial.name)
                                 ", $specialPartial)"
-                            }
-                            else ")"
+                            } else ")"
 
                         funcBuilder.addStatement(statement, dtoStructureClassName, *partialStructureTypes)
                     }
@@ -275,5 +276,4 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
 private fun String.indentNonFirst() = if ('\n' in this) {
     substringBefore('\n') + '\n' + substringAfter('\n').prependIndent(INDENT)
-}
-else this
+} else this
