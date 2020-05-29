@@ -63,7 +63,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     val partialStructure = partial?.let { structureCode(it, model) }
                     val hasUrlBatchInfo = urlParams.any { it.name == "\$skip" || it.name == "\$top" }
 
-                    val funcParams: List<ParameterSpec> = getFuncParams(model, urlParams, bodyParams, hasUrlBatchInfo, partialStructure, partialKP)
+                    val (funcParams, deprecationKDoc) = getFuncParamsAndDeprecationKDoc(model, urlParams, bodyParams, hasUrlBatchInfo, partialStructure, partialKP)
 
                     val fullPath = endpoint.path.segments.asReversed().plus(
                         ancestors(model.resources.getValue(endpoint.resource.id), model)
@@ -73,7 +73,12 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     val funcName = endpoint.displayName.displayNameToMemberName()
 
                     FunSpec.builder(funcName).also { funcBuilder ->
-                        endpoint.doc?.let { funcBuilder.addKdoc(it) }
+                        val kDoc = when {
+                            deprecationKDoc != null -> endpoint.doc?.let { "$it\n" }.orEmpty() + deprecationKDoc
+                            else -> endpoint.doc
+                        }
+
+                        kDoc?.let { funcBuilder.addKdoc(it) }
                         funcBuilder.annotations.deprecation(endpoint.deprecation)
                         funcBuilder.addModifiers(KModifier.SUSPEND)
                         funcBuilder.addParameters(funcParams)
@@ -229,50 +234,59 @@ private fun parameterConversion(parameter: HA_Parameter, funcBuilder: Builder) {
     }
 }
 
-private fun getFuncParams(
+private fun getFuncParamsAndDeprecationKDoc(
     model: HttpApiEntitiesById,
     urlParams: List<HA_Field>,
     bodyParams: List<HA_Field>?,
     hasUrlBatchInfo: Boolean,
     partialStructure: Pair<String, Array<ClassName>>?,
     partialKP: TypeName? // must have the same nullability as `partialStructure`
-): MutableList<ParameterSpec> = mutableListOf<ParameterSpec>().also { funcParams ->
-    fun paramWithDefault(paramField: HA_Field): ParameterSpec {
-        val parameter = ParameterSpec.builder(paramField.name, paramField.type.kotlinPoet(model))
-        when {
-            paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
-            paramField.type.nullable -> parameter.defaultValue("null")
-        }
-        parameter.annotations.deprecation(paramField.deprecation)
-        return parameter.build()
-    }
-
-    urlParams.forEach {
-        if (it.name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
-        funcParams.add(paramWithDefault(it))
-    }
-
-    funcParams.addAll(bodyParams.orEmpty().map { paramWithDefault(it) })
-
-    if (hasUrlBatchInfo) {
-        funcParams.add(
-            ParameterSpec.builder("batchInfo", batchInfoType.copy(nullable = true))
-                .defaultValue("null")
-                .build()
-        )
-    }
-
-    if (partialStructure != null) {
-        funcParams.add(
-            ParameterSpec.builder(
-                "buildPartial", LambdaTypeName.get(
-                    partialType.parameterizedBy(partialKP!!),
-                    listOf(),
-                    UNIT
+): Pair<List<ParameterSpec>, String?> {
+    val deprecation = StringBuilder()
+    val params = mutableListOf<ParameterSpec>().also { funcParams ->
+        fun paramWithDefault(paramField: HA_Field): ParameterSpec {
+            val parameter = ParameterSpec.builder(paramField.name, paramField.type.kotlinPoet(model))
+            when {
+                paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
+                paramField.type.nullable -> parameter.defaultValue("null")
+            }
+            paramField.deprecation?.run {
+                deprecation.append("@param ${paramField.name} deprecated since $since" +
+                    ", scheduled for removal".takeIf { forRemoval }.orEmpty() +
+                    ". $message\n"
                 )
-            ).defaultValue("${partialStructure.first}.defaultPartialFull", *partialStructure.second).build()
-        )
+            }
+            return parameter.build()
+        }
+
+        urlParams.forEach {
+            if (it.name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
+            funcParams.add(paramWithDefault(it))
+        }
+
+        funcParams.addAll(bodyParams.orEmpty().map { paramWithDefault(it) })
+
+        if (hasUrlBatchInfo) {
+            funcParams.add(
+                ParameterSpec.builder("batchInfo", batchInfoType.copy(nullable = true))
+                    .defaultValue("null")
+                    .build()
+            )
+        }
+
+        if (partialStructure != null) {
+            funcParams.add(
+                ParameterSpec.builder(
+                    "buildPartial", LambdaTypeName.get(
+                        partialType.parameterizedBy(partialKP!!),
+                        listOf(),
+                        UNIT
+                    )
+                ).defaultValue("${partialStructure.first}.defaultPartialFull", *partialStructure.second).build()
+            )
+        }
     }
+    return params to deprecation.toString().takeIf { it.isNotEmpty() }
 }
 
 private fun displayPath(it: HA_Resource, model: HttpApiEntitiesById) =
