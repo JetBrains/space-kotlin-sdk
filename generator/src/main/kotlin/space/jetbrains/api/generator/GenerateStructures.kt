@@ -40,6 +40,9 @@ private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableLi
             types += type.copy(nullable = false, optional = false).kotlinPoet(model)
             append("enum<%T>()")
         }
+        is HA_Type.UrlParam -> {
+            append("urlParam()") // TODO: Support UrlParam
+        }
     }.let {}
 
     if (type.nullable) append(".nullable()")

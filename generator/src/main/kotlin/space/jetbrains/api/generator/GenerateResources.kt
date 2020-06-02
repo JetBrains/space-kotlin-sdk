@@ -128,6 +128,10 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                         } else """append("$name", $name$toString)"""
                                     }
 
+                                    is HA_Type.UrlParam -> {
+                                        "" // TODO: Support UrlParam
+                                    }
+
                                     is HA_Type.Array -> {
                                         val orEmpty = if (type.nullable) ".orEmpty()" else ""
 
@@ -213,6 +217,7 @@ private fun parameterConversion(parameter: HA_Parameter, funcBuilder: Builder) {
     @Suppress("UNUSED_VARIABLE")
     val unused: Any? = when (val type = parameter.field.type) {
         is HA_Type.Primitive,
+        is HA_Type.UrlParam, // TODO: Support UrlParam
         is HA_Type.Enum -> {
         }
 

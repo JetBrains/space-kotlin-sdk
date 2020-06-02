@@ -12,6 +12,7 @@ typealias TID = String
 class HA_Model(
     val dto: List<HA_Dto>,
     val enums: List<HA_Enum>,
+    val urlParams: List<HA_UrlParameter>,
     val resources: List<HA_Resource>
 )
 
@@ -99,7 +100,8 @@ enum class HA_Primitive(val presentation: kotlin.String) {
     Type(value = HA_Type.Object::class, name = "HA_Type.Object"),
     Type(value = HA_Type.Dto::class, name = "HA_Type.Dto"),
     Type(value = HA_Type.Ref::class, name = "HA_Type.Ref"),
-    Type(value = HA_Type.Enum::class, name = "HA_Type.Enum")
+    Type(value = HA_Type.Enum::class, name = "HA_Type.Enum"),
+    Type(value = HA_Type.UrlParam::class, name = "HA_Type.UrlParam")
 )
 sealed class HA_Type {
     abstract val nullable: Boolean
@@ -117,6 +119,7 @@ sealed class HA_Type {
     data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
     data class Ref(val dto: HA_Dto.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
     data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
+    data class UrlParam(val urlParam: HA_UrlParameter.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
 
     fun copy(nullable: Boolean = this.nullable, optional: Boolean = this.optional): HA_Type = when (this) {
         is Primitive -> Primitive(primitive, nullable, optional)
@@ -125,6 +128,7 @@ sealed class HA_Type {
         is Dto -> Dto(dto, nullable, optional)
         is Ref -> Ref(dto, nullable, optional)
         is Enum -> Enum(enum, nullable, optional)
+        is UrlParam -> UrlParam(urlParam, nullable, optional)
     }
 }
 
@@ -165,4 +169,36 @@ class HA_Enum(
     val deprecation: HA_Deprecation?
 ) {
     class Ref(val id: TID)
+}
+
+class HA_UrlParameter(
+    val id: TID,
+    val name: String,
+    val options: List<HA_UrlParameterOption>,
+    val deprecation: HA_Deprecation?
+) {
+    class Ref(val id: TID)
+}
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
+@JsonSubTypes(
+    Type(value = HA_UrlParameterOption.Const::class, name = "HA_UrlParameterOption.Const"),
+    Type(value = HA_UrlParameterOption.Var::class, name = "HA_UrlParameterOption.Var")
+)
+sealed class HA_UrlParameterOption {
+    abstract val optionName: String
+    abstract val deprecation: HA_Deprecation?
+
+    class Const(
+        val value: String,
+        override val optionName: String,
+        override val deprecation: HA_Deprecation?
+    ) : HA_UrlParameterOption()
+
+    class Var(
+        val prefix: String,
+        val parameterType: HA_Type,
+        override val optionName: String,
+        override val deprecation: HA_Deprecation?
+    ) : HA_UrlParameterOption()
 }

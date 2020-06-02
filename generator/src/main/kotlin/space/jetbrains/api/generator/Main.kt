@@ -23,11 +23,13 @@ private val jackson: ObjectMapper = ObjectMapper()
 class HttpApiEntitiesById(
     val dto: Map<TID, HA_Dto>,
     val enums: Map<TID, HA_Enum>,
+    val urlParams: Map<TID, HA_UrlParameter>,
     val resources: Map<TID, HA_Resource>
 ) {
     constructor(model: HA_Model) : this(
         dto = model.dto.associateBy { it.id },
         enums = model.enums.associateBy { it.id },
+        urlParams = model.urlParams.associateBy { it.id },
         resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id }
     )
 }

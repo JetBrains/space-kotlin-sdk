@@ -124,6 +124,10 @@ fun StringBuilder.appendType(type: HA_Type, types: MutableList<in ClassName>, mo
             appendStructure(notNullType, types, model)
             append(')')
         }
+        is HA_Type.UrlParam -> {
+            // TODO: Support UrlParam
+            append(objectTypeType.simpleName, "()")
+        }
         is HA_Type.Object -> when (notNullType.kind) {
             PAIR, TRIPLE, MAP_ENTRY, MOD -> {
                 append(objectTypeType.simpleName, "(")

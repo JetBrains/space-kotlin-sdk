@@ -88,6 +88,7 @@ fun HA_Type?.partial(): PartialDetectionResult = when (this) {
         BATCH -> batchDataType().partial().copy(special = SpecialPartial.BATCH)
         REQUEST_BODY -> error("Objects of kind ${REQUEST_BODY.name} should not appear in output types")
     }
+    is HA_Type.UrlParam -> PartialDetectionResult(null, null, false) // TODO: Support UrlParam
     is HA_Type.Dto -> PartialDetectionResult(this, null, false)
     is HA_Type.Ref -> PartialDetectionResult(this, null, true)
 }.let { it.copy(partial = it.partial?.copy(nullable = false, optional = false)) }
@@ -131,6 +132,7 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById): TypeName = when (this) {
     is HA_Type.Dto -> model.dto.getValue(dto.id).getClassName()
     is HA_Type.Ref -> model.dto.getValue(dto.id).getClassName()
     is HA_Type.Enum -> ClassName(TYPES_PACKAGE, model.enums.getValue(enum.id).name.kotlinClassName())
+    is HA_Type.UrlParam -> ClassName(TYPES_PACKAGE, model.urlParams.getValue(urlParam.id).name.kotlinClassName()) // TODO: Support UrlParam
 }.copy(nullable, optional)
 
 private fun TypeName.copy(nullable: Boolean, optional: Boolean): TypeName {
