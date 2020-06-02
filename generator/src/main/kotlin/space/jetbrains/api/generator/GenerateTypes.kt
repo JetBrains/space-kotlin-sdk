@@ -133,6 +133,14 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                 annotationSpecs.deprecation(enumType.deprecation)
             }.build())
         }.build()
+    } + model.urlParams.values.map { urlParameter -> // TODO: Support UrlParam
+        val urlParamClassName = urlParameter.name.kotlinClassName()
+
+        FileSpec.builder(TYPES_PACKAGE, urlParamClassName).apply {
+            addType(TypeSpec.classBuilder(urlParamClassName).apply {
+                annotationSpecs.deprecation(urlParameter.deprecation)
+            }.build())
+        }.build()
     }
 }
 
