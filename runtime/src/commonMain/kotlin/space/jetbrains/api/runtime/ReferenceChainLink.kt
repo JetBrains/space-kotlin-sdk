@@ -12,9 +12,8 @@ data class ReferenceChainLink(val name: String, val parent: ReferenceChainLink? 
 
 fun ReferenceChainLink.child(name: String): ReferenceChainLink = ReferenceChainLink(name, this)
 
-data class DeserializationContext<T : Any>(
+data class DeserializationContext(
     val json: JsonValue?,
-    val partial: Partial<T>?,
     val link: ReferenceChainLink
 ) {
     fun requireJson() = json ?: error("Missing required property: ${link.referenceChain()}")
@@ -22,13 +21,12 @@ data class DeserializationContext<T : Any>(
     fun child(
         name: String,
         json: JsonValue? = requireJson()[name],
-        partial: Partial<*>? = this.partial?.requestedProperties?.get(name)?.partial,
         link: ReferenceChainLink = this.link.child(name)
-    ): DeserializationContext<*> = DeserializationContext(json, partial, link)
+    ): DeserializationContext = DeserializationContext(json, link)
 
-    fun elements(): Iterable<DeserializationContext<T>> = sequence {
+    fun elements(): Iterable<DeserializationContext> = sequence {
         for ((index, element) in requireJson().arrayElements(link).withIndex()) {
-            yield(DeserializationContext(element, partial, link.child("[$index]")))
+            yield(DeserializationContext(element, link.child("[$index]")))
         }
     }.asIterable()
 }

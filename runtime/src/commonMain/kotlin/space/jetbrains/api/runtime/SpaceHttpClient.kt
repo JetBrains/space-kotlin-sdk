@@ -57,7 +57,7 @@ class SpaceHttpClient(client: HttpClient) {
         val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
         handleErrors(response, tokenJson, httpMethod, url)
 
-        val deserialization = DeserializationContext<Any>(tokenJson, null, ReferenceChainLink("auth"))
+        val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"))
         return ExpiringToken(
             accessToken = deserialization.child("access_token").let {
                 it.requireJson().asString(it.link)
@@ -73,10 +73,10 @@ class SpaceHttpClient(client: HttpClient) {
         context: SpaceHttpClientCallContext,
         callMethod: HttpMethod,
         path: String,
-        partial: Partial<*>?,
+        partial: PartialBuilder?,
         parameters: Parameters = Parameters.Empty,
         requestBody: JsonValue? = null
-    ): DeserializationContext<*> {
+    ): DeserializationContext {
         val token = context.tokenSource.token()
 
         val response = client.request<HttpResponse> {
@@ -103,7 +103,7 @@ class SpaceHttpClient(client: HttpClient) {
 
         val content = response.readText(Charsets.UTF_8).let(::parseJson)
         handleErrors(response, content, callMethod, path)
-        return DeserializationContext(content, partial, ReferenceChainLink(functionName))
+        return DeserializationContext(content, ReferenceChainLink(functionName))
     }
 
     private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {

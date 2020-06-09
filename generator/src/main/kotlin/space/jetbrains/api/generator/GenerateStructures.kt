@@ -3,50 +3,46 @@ package space.jetbrains.api.generator
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
-private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableList<TypeName>, model: HttpApiEntitiesById): StringBuilder {
+private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpApiEntitiesById): CodeBlock.Builder {
     when (type) {
         is HA_Type.Primitive -> when (type.primitive) {
-            HA_Primitive.Byte -> append("byte()")
-            HA_Primitive.Short -> append("short()")
-            HA_Primitive.Int -> append("int()")
-            HA_Primitive.Long -> append("long()")
-            HA_Primitive.Float -> append("float()")
-            HA_Primitive.Double -> append("double()")
-            HA_Primitive.Boolean -> append("boolean()")
-            HA_Primitive.String -> append("string()")
-            HA_Primitive.Date -> append("date()")
-            HA_Primitive.DateTime -> append("datetime()")
+            HA_Primitive.Byte -> add("byte()")
+            HA_Primitive.Short -> add("short()")
+            HA_Primitive.Int -> add("int()")
+            HA_Primitive.Long -> add("long()")
+            HA_Primitive.Float -> add("float()")
+            HA_Primitive.Double -> add("double()")
+            HA_Primitive.Boolean -> add("boolean()")
+            HA_Primitive.String -> add("string()")
+            HA_Primitive.Date -> add("date()")
+            HA_Primitive.DateTime -> add("datetime()")
         }
 
         is HA_Type.Array -> {
             val elementType = type.elementType
             if (elementType is HA_Type.Object && elementType.kind == HA_Type.Object.Kind.MAP_ENTRY) {
-                append("map(")
-                appendPropertyDelegate(elementType.keyType(), types, model)
-                append(", ")
-                appendPropertyDelegate(elementType.valueType(), types, model)
+                add("map(")
+                appendPropertyDelegate(elementType.keyType(), model)
+                add(", ")
+                appendPropertyDelegate(elementType.valueType(), model)
             } else {
-                append("list(")
-                appendPropertyDelegate(elementType, types, model)
+                add("list(")
+                appendPropertyDelegate(elementType, model)
             }
-            append(')')
+            add(")")
         }
-        is HA_Type.Object, is HA_Type.Dto, is HA_Type.Ref -> {
-            append("obj(")
-            appendStructure(type, types, model)
-            append(')')
+        is HA_Type.Object, is HA_Type.Dto, is HA_Type.Ref, is HA_Type.UrlParam -> {
+            add("obj(")
+            appendStructure(type, model)
+            add(")")
         }
         is HA_Type.Enum -> {
-            types += type.copy(nullable = false, optional = false).kotlinPoet(model)
-            append("enum<%T>()")
-        }
-        is HA_Type.UrlParam -> {
-            append("urlParam()") // TODO: Support UrlParam
+            add("enum<%T>()", type.copy(nullable = false, optional = false).kotlinPoet(model))
         }
     }.let {}
 
-    if (type.nullable) append(".nullable()")
-    if (type.optional) append(".optional()")
+    if (type.nullable) add(".nullable()")
+    if (type.optional) add(".optional()")
 
     return this
 }
@@ -54,7 +50,7 @@ private fun StringBuilder.appendPropertyDelegate(type: HA_Type, types: MutableLi
 fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
 
-    return model.dto.values.mapNotNull { root ->
+    return model.dtoAndUrlParams.values.mapNotNull { root ->
         if (root.extends != null) return@mapNotNull null
 
         val rootClassName = root.getClassName()
@@ -65,14 +61,21 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
         FileSpec.builder(rootStructureClassName.packageName, rootStructureClassName.simpleName).apply {
             indent(INDENT)
 
-            necessaryImports.forEach {
-                addImport(it.packageName, it.simpleNames.joinToString("."))
-            }
+            addAnnotation(
+                AnnotationSpec.builder(Suppress::class)
+                    .addMember("%S", "ClassName")
+                    .addMember("%S", "UnusedImport")
+                    .addMember("%S", "REDUNDANT_ELSE_IN_WHEN")
+                    .addMember("%S", "RemoveExplicitTypeArguments")
+                    .build()
+            )
 
             root.subclasses(model).forEach { dto ->
                 val dtoClassName = dto.getClassName()
                 val dtoStructureClassName = dtoClassName.getStructureClassName()
-
+                Log.info {
+                    "Generating structure for '${dto.name}'"
+                }
                 addType(TypeSpec.objectBuilder(dtoStructureClassName).also { typeBuilder ->
 
                     typeBuilder.superclass(typeStructureType.parameterizedBy(dtoClassName))
@@ -80,24 +83,16 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
 
                     typeBuilder.addProperties(fields.map {
-                        val delegateTypes = mutableListOf<TypeName>()
-
-                        val pseudoPackageName = propertyType.packageName + "." + propertyType.simpleNames.dropLast(1).joinToString(".")
-                        val propertyTypePseudo = ClassName(pseudoPackageName, propertyType.simpleName)
-
-                        PropertySpec.builder(it.field.name, propertyTypePseudo.parameterizedBy(it.field.type.kotlinPoet(model)))
-                            .delegate(
-                                buildString { appendPropertyDelegate(it.field.type, delegateTypes, model) },
-                                *delegateTypes.toTypedArray()
-                            )
+                        PropertySpec.builder(
+                            name = it.field.name,
+                            type = propertyType.importNested().parameterizedBy(it.field.type.kotlinPoet(model))
+                        ).delegate(buildCodeBlock { appendPropertyDelegate(it.field.type, model) })
                             .build()
                     })
 
                     typeBuilder.addFunction(FunSpec.builder("deserialize").also { funcBuilder ->
                         funcBuilder.addModifiers(KModifier.OVERRIDE)
-                        funcBuilder.addParameter("context", deserializationContextType.parameterizedBy(
-                            WildcardTypeName.consumerOf(dtoClassName)
-                        ))
+                        funcBuilder.addParameter("context", deserializationContextType)
                         funcBuilder.returns(dtoClassName)
 
                         val codeReferences = mutableListOf<Any>()
@@ -111,7 +106,8 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                             codeReferences += dtoClassName
                             createInstance
                         } else {
-                            "when (val className = ${stringTypeType.simpleName}.deserialize(context.child(\"className\"))) {" +
+                            codeReferences += stringTypeType.importNested()
+                            "when (val className = %T.deserialize(context.child(\"className\"))) {" +
                                 dto.inheritors.joinToString("\n$INDENT", "\n$INDENT", "\n") {
                                     val inheritor = model.resolveDto(it)
                                     val inheritorClassName = inheritor.getClassName()
@@ -151,12 +147,12 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     val inheritorClassName = inheritor.getClassName()
                                     codeReferences += inheritorClassName
                                     codeReferences += inheritorClassName.getStructureClassName()
-                                    "is %T -> %T.serialize(value).withClassName(\"${inheritorClassName.simpleName}\")"
+                                    "is %T -> %T.serialize(value).withClassName(\"${inheritor.name}\")"
                                 } +
                                 "${INDENT}else -> " +
                                 if (!dto.hierarchyRole.isAbstract) {
                                     codeReferences += jsonObjectFunction
-                                    createJson.indentNonFirst() + ".withClassName(\"${dtoClassName.simpleName}\")"
+                                    createJson.indentNonFirst() + ".withClassName(\"${dto.name}\")"
                                 } else {
                                     "error(\"Unsupported class\")"
                                 } +
@@ -165,113 +161,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                         addCode("return·$toReturn", *codeReferences.toTypedArray())
                     }.build())
-
-                    typeBuilder.addProperty(
-                        PropertySpec.builder(
-                            "defaultPartialFull", LambdaTypeName.get(
-                                partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)),
-                                returnType = UNIT
-                            )
-                        ).also { propBuilder ->
-                            propBuilder.addModifiers(KModifier.OVERRIDE)
-
-                            val codeReferences = mutableListOf<ClassName>()
-                            val inner = fields
-                                .filter { !it.isExtension }
-                                .joinToString("\n$INDENT", prefix = INDENT, postfix = "\n") {
-                                    it.field.name + "()"
-                                } + if (dto.inheritors.isNotEmpty()) {
-                                dto.inheritors.joinToString("\n$INDENT", prefix = INDENT, postfix = "\n") {
-                                    codeReferences += model.resolveDto(it).getClassName().getStructureClassName()
-                                    "%T.defaultPartialFull(this)"
-                                }
-                            } else ""
-                            propBuilder.initializer("{\n$inner}", *codeReferences.toTypedArray())
-                        }.build()
-                    )
-
-
-                    if (dto.record) {
-                        typeBuilder.addProperty(
-                            PropertySpec.builder(
-                                "defaultPartialCompact", LambdaTypeName.get(
-                                    partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)),
-                                    returnType = UNIT
-                                )
-                            ).also { propBuilder ->
-                                propBuilder.addModifiers(KModifier.OVERRIDE)
-
-                                if (dto.inheritors.isNotEmpty()) {
-                                    val codeReferences = mutableListOf<ClassName>()
-                                    propBuilder.initializer(
-                                        dto.inheritors.joinToString("\n$INDENT", prefix = "{\n$INDENT", postfix = "\n}") {
-                                            codeReferences += model.resolveDto(it).getClassName().getStructureClassName()
-                                            "%T.defaultPartialCompact(this)"
-                                        }, *codeReferences.toTypedArray()
-                                    )
-                                } else propBuilder.initializer("{ id() }")
-
-                            }.build()
-                        )
-                    }
-
                 }.build())
-
-                dto.fields.forEach {
-                    val type = it.field.type
-                    val (partial, specialPartial, isRef) = type.partial()
-                    val funcBuilder = FunSpec.builder(it.field.name)
-                        .receiver(partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)))
-                        .addAnnotation(
-                            AnnotationSpec.builder(JvmName::class)
-                                .addMember("\"partial-${dtoClassName.simpleName}-${it.field.name}\"")
-                                .build()
-                        )
-
-                    if (partial == null) {
-                        funcBuilder.addStatement("add(%T.${it.field.name})", dtoStructureClassName)
-                    } else {
-                        addFunction(
-                            FunSpec.builder(it.field.name)
-                                .receiver(partialType.parameterizedBy(WildcardTypeName.consumerOf(dtoClassName)))
-                                .addAnnotation(
-                                    AnnotationSpec.builder(JvmName::class)
-                                        .addMember("\"partial-${dtoClassName.simpleName}-${it.field.name}-recursively\"")
-                                        .build()
-                                )
-                                .addParameter(
-                                    "recursiveAs",
-                                    partialType.parameterizedBy(WildcardTypeName.consumerOf(partial.kotlinPoet(model)))
-                                )
-                                .addStatement("addRecursively(%T.${it.field.name}, recursiveAs)", dtoStructureClassName)
-                                .build()
-                        )
-
-                        val (partialStructure, partialStructureTypes) = structureCode(partial, model)
-                        funcBuilder.addParameter(
-                            ParameterSpec.builder(
-                                "build",
-                                LambdaTypeName.get(
-                                    receiver = partialType.parameterizedBy(partial.kotlinPoet(model)),
-                                    returnType = UNIT
-                                )
-                            ).defaultValue(
-                                format = "$partialStructure.defaultPartial" + if (isRef) "Compact" else "Full",
-                                args = *partialStructureTypes
-                            ).build()
-                        )
-
-                        val statement = "add(%T.${it.field.name}, $partialStructure, build" +
-                            if (specialPartial != null) {
-                                addImport(partialSpecialType, specialPartial.name)
-                                ", $specialPartial)"
-                            } else ")"
-
-                        funcBuilder.addStatement(statement, dtoStructureClassName, *partialStructureTypes)
-                    }
-
-                    addFunction(funcBuilder.build())
-                }
             }
         }.build()
     }

@@ -23,7 +23,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
 
     Log.info { "Generating DTO classes for HTTP API Client" }
-    return model.dto.values.mapNotNull { root ->
+    return model.dtoAndUrlParams.values.mapNotNull { root ->
         if (root.extends != null) return@mapNotNull null
 
         val rootClassName = root.getClassName()
@@ -133,14 +133,6 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                 annotationSpecs.deprecation(enumType.deprecation)
             }.build())
         }.build()
-    } + model.urlParams.values.map { urlParameter -> // TODO: Support UrlParam
-        val urlParamClassName = urlParameter.name.kotlinClassName()
-
-        FileSpec.builder(TYPES_PACKAGE, urlParamClassName).apply {
-            addType(TypeSpec.classBuilder(urlParamClassName).apply {
-                annotationSpecs.deprecation(urlParameter.deprecation)
-            }.build())
-        }.build()
     }
 }
 
@@ -155,7 +147,7 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
     Log.info { "Generating field descriptors for DTOs" }
     val result: MutableMap<TID, MutableList<FieldDescriptor>> = mutableMapOf()
 
-    dto.values.asSequence().filter { it.extends == null }.flatMap {
+    dtoAndUrlParams.values.asSequence().filter { it.extends == null }.flatMap {
         it.subclasses(this)
     }.forEach { dto ->
         val parentFields = dto.extends?.id?.let { result.getValue(it) }
@@ -195,4 +187,4 @@ sealed class FieldState {
     class Overrides(val field: FieldDescriptor) : FieldState()
 }
 
-fun HA_Dto.superclass(model: HttpApiEntitiesById): HA_Dto? = extends?.let { model.dto.getValue(it.id) }
+fun HA_Dto.superclass(model: HttpApiEntitiesById): HA_Dto? = extends?.let { model.dtoAndUrlParams.getValue(it.id) }

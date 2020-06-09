@@ -4,150 +4,126 @@ import space.jetbrains.api.generator.HA_Type.Object.Kind.*
 import space.jetbrains.api.generator.HA_Type.Object.Kind.MAP_ENTRY
 import com.squareup.kotlinpoet.*
 
-fun structureCode(type: HA_Type, model: HttpApiEntitiesById): Pair<String, Array<ClassName>> {
-    val structures = mutableListOf<ClassName>()
-    return buildString { appendStructure(type, structures, model) } to structures.toTypedArray()
-}
-
-fun StringBuilder.appendStructure(type: HA_Type, structures: MutableList<in ClassName>, model: HttpApiEntitiesById): StringBuilder {
-    append("%T")
-    when (type) {
+fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById): CodeBlock.Builder {
+    return when (type) {
         is HA_Type.Primitive -> error("Primitives have no structure")
         is HA_Type.Array -> error("Arrays have no structure")
         is HA_Type.Object -> when (type.kind) {
             PAIR -> {
-                structures += apiPairStructureType
-                append('(')
-                appendType(type.firstType(), structures, model)
-                append(", ")
-                appendType(type.secondType(), structures, model)
-                append(')')
+                add("%T(", apiPairStructureType)
+                appendType(type.firstType(), model)
+                add(", ")
+                appendType(type.secondType(), model)
+                add(")")
             }
             TRIPLE -> {
-                structures += apiTripleStructureType
-                append('(')
-                appendType(type.firstType(), structures, model)
-                append(", ")
-                appendType(type.secondType(), structures, model)
-                append(", ")
-                appendType(type.thirdType(), structures, model)
-                append(')')
+                add("%T(", apiTripleStructureType)
+                appendType(type.firstType(), model)
+                add(", ")
+                appendType(type.secondType(), model)
+                add(", ")
+                appendType(type.thirdType(), model)
+                add(")")
             }
             MAP_ENTRY -> {
-                structures += apiMapEntryStructureType
-                append('(')
-                appendType(type.keyType(), structures, model)
-                append(", ")
-                appendType(type.valueType(), structures, model)
-                append(')')
+                add("%T(")
+                appendType(type.keyType(), model)
+                add(", ")
+                appendType(type.valueType(), model)
+                add(")")
             }
             BATCH -> error("Batches have no structure")
             MOD -> {
-                structures += modStructureType
-                append('(')
-                appendType(type.modSubjectType(), structures, model)
-                append(')')
+                add("%T(", modStructureType)
+                appendType(type.modSubjectType(), model)
+                add(")")
             }
             REQUEST_BODY -> error("Request bodies cannot appear in parameters")
         }
         is HA_Type.Dto -> {
-            structures += model.dto.getValue(type.dto.id).getClassName().getStructureClassName()
+            add("%T", model.dtoAndUrlParams.getValue(type.dto.id).getClassName().getStructureClassName())
         }
         is HA_Type.Ref -> {
-            structures += model.dto.getValue(type.dto.id).getClassName().getStructureClassName()
+            add("%T", model.dtoAndUrlParams.getValue(type.dto.id).getClassName().getStructureClassName())
         }
         is HA_Type.Enum -> error("Enums have no structure")
+        is HA_Type.UrlParam -> {
+            add("%T", model.urlParams.getValue(type.urlParam.id).getClassName().getStructureClassName())
+        }
     }
-
-    return this
 }
 
-val necessaryImports = listOf(
-    optionalType,
-    nullableType,
-
-    byteTypeType,
-    shortTypeType,
-    intTypeType,
-    longTypeType,
-    floatTypeType,
-    doubleTypeType,
-    booleanTypeType,
-    stringTypeType,
-    dateTypeType,
-    dateTimeTypeType,
-
-    mapTypeType,
-    arrayTypeType,
-    batchTypeType,
-
-    objectTypeType,
-    enumTypeType
+fun ClassName.importNested() = ClassName(
+    packageName = packageName + "." + simpleNames.dropLast(1).joinToString("."),
+    simpleNames = listOf(simpleName)
 )
 
-fun StringBuilder.appendType(type: HA_Type, types: MutableList<in ClassName>, model: HttpApiEntitiesById): StringBuilder {
-    if (type.optional) append(optionalType.simpleName, "(")
-    if (type.nullable) append(nullableType.simpleName, "(")
+fun CodeBlock.Builder.appendType(
+    type: HA_Type,
+    model: HttpApiEntitiesById
+): CodeBlock.Builder {
+    if (type.optional) add("%T(", optionalType.importNested())
+    if (type.nullable) add("%T(", nullableType.importNested())
     when (val notNullType = type.copy(nullable = false, optional = false)) {
         is HA_Type.Primitive -> {
-            append(
-                when (notNullType.primitive) {
-                    HA_Primitive.Byte -> byteTypeType
-                    HA_Primitive.Short -> shortTypeType
-                    HA_Primitive.Int -> intTypeType
-                    HA_Primitive.Long -> longTypeType
-                    HA_Primitive.Float -> floatTypeType
-                    HA_Primitive.Double -> doubleTypeType
-                    HA_Primitive.Boolean -> booleanTypeType
-                    HA_Primitive.String -> stringTypeType
-                    HA_Primitive.Date -> dateTypeType
-                    HA_Primitive.DateTime -> dateTimeTypeType
-                }.simpleName
+            add(
+                "%T", when (notNullType.primitive) {
+                    HA_Primitive.Byte -> byteTypeType.importNested()
+                    HA_Primitive.Short -> shortTypeType.importNested()
+                    HA_Primitive.Int -> intTypeType.importNested()
+                    HA_Primitive.Long -> longTypeType.importNested()
+                    HA_Primitive.Float -> floatTypeType.importNested()
+                    HA_Primitive.Double -> doubleTypeType.importNested()
+                    HA_Primitive.Boolean -> booleanTypeType.importNested()
+                    HA_Primitive.String -> stringTypeType.importNested()
+                    HA_Primitive.Date -> dateTypeType.importNested()
+                    HA_Primitive.DateTime -> dateTimeTypeType.importNested()
+                }
             )
         }
         is HA_Type.Array -> {
             val elementType = notNullType.elementType
             if (elementType is HA_Type.Object && elementType.kind == MAP_ENTRY) {
-                append(mapTypeType.simpleName, "(")
-                appendType(elementType.keyType(), types, model)
-                append(", ")
-                appendType(elementType.valueType(), types, model)
-                append(')')
+                add("%T(", mapTypeType.importNested())
+                appendType(elementType.keyType(), model)
+                add(", ")
+                appendType(elementType.valueType(), model)
+                add(")")
             } else {
-                append(arrayTypeType.simpleName, "(")
-                appendType(elementType, types, model)
-                append(')')
+                add("%T(", arrayTypeType.importNested())
+                appendType(elementType, model)
+                add(")")
             }
         }
         is HA_Type.Dto, is HA_Type.Ref -> {
-            append(objectTypeType.simpleName, "(")
-            appendStructure(notNullType, types, model)
-            append(')')
+            add("%T(", objectTypeType.importNested())
+            appendStructure(notNullType, model)
+            add(")")
         }
         is HA_Type.UrlParam -> {
-            // TODO: Support UrlParam
-            append(objectTypeType.simpleName, "()")
+            add("%T(", objectTypeType.importNested())
+            appendStructure(notNullType, model)
+            add(")")
         }
         is HA_Type.Object -> when (notNullType.kind) {
             PAIR, TRIPLE, MAP_ENTRY, MOD -> {
-                append(objectTypeType.simpleName, "(")
-                appendStructure(notNullType, types, model)
-                append(')')
+                add("%T(", objectTypeType.importNested())
+                appendStructure(notNullType, model)
+                add(")")
             }
             BATCH -> {
-                append(batchTypeType.simpleName, "(")
-                appendType(notNullType.batchDataType(), types, model)
-                append(')')
+                add("%T(", batchTypeType.importNested())
+                appendType(notNullType.batchDataType(), model)
+                add(")")
             }
             REQUEST_BODY -> error("Request bodies cannot appear in parameters")
         }
         is HA_Type.Enum -> {
-            types += notNullType.kotlinPoet(model) as ClassName
-            append(enumTypeType.simpleName, "<%T>()")
+            add("%T<%T>()", enumTypeType.importNested(), notNullType.kotlinPoet(model))
         }
     }.let {}
-    if (type.nullable) append(')')
-    if (type.optional) append(')')
+    if (type.nullable) add(")")
+    if (type.optional) add(")")
 
     return this
 }

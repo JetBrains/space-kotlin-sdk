@@ -10,8 +10,8 @@ abstract class RestResource(private val client: SpaceHttpClientWithCallContext) 
         path: String,
         method: HttpMethod,
         requestBody: JsonValue? = null,
-        partial: Partial<*>? = null
-    ): DeserializationContext<*> {
+        partial: PartialBuilder? = null
+    ): DeserializationContext {
         return client.client.call(functionName, client.callContext, method, path, partial, requestBody = requestBody)
     }
 
@@ -20,8 +20,8 @@ abstract class RestResource(private val client: SpaceHttpClientWithCallContext) 
         path: String,
         method: HttpMethod,
         parameters: Parameters = Parameters.Empty,
-        partial: Partial<*>? = null
-    ): DeserializationContext<*> {
+        partial: PartialBuilder? = null
+    ): DeserializationContext {
         return client.client.call(functionName, client.callContext, method, path, partial, parameters)
     }
 

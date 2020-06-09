@@ -5,13 +5,13 @@ import space.jetbrains.api.runtime.Type.NumberType.LongType
 import space.jetbrains.api.runtime.Type.PrimitiveType.StringType
 
 sealed class Type<T> {
-    abstract fun deserialize(context: DeserializationContext<*>): T
+    abstract fun deserialize(context: DeserializationContext): T
     abstract fun serialize(value: T): JsonValue?
 
     sealed class NumberType<T : Number> : Type<T>() {
         protected abstract fun fromNumber(number: Number): T
 
-        override fun deserialize(context: DeserializationContext<*>): T {
+        override fun deserialize(context: DeserializationContext): T {
             return fromNumber(context.requireJson().asNumber(context.link))
         }
 
@@ -44,17 +44,17 @@ sealed class Type<T> {
 
     sealed class PrimitiveType<T : Any> : Type<T>() {
         object BooleanType : PrimitiveType<Boolean>() {
-            override fun deserialize(context: DeserializationContext<*>): Boolean = context.requireJson().asBoolean(context.link)
+            override fun deserialize(context: DeserializationContext): Boolean = context.requireJson().asBoolean(context.link)
             override fun serialize(value: Boolean): JsonValue = jsonBoolean(value)
         }
 
         object StringType : PrimitiveType<String>() {
-            override fun deserialize(context: DeserializationContext<*>): String = context.requireJson().asString(context.link)
+            override fun deserialize(context: DeserializationContext): String = context.requireJson().asString(context.link)
             override fun serialize(value: String): JsonValue = jsonString(value)
         }
 
         object DateType : PrimitiveType<SDate>() {
-            override fun deserialize(context: DeserializationContext<*>): SDate {
+            override fun deserialize(context: DeserializationContext): SDate {
                 return SDate(StringType.deserialize(context.child("iso")))
             }
 
@@ -64,7 +64,7 @@ sealed class Type<T> {
         }
 
         object DateTimeType : PrimitiveType<SDateTime>() {
-            override fun deserialize(context: DeserializationContext<*>): SDateTime {
+            override fun deserialize(context: DeserializationContext): SDateTime {
                 return SDateTime(LongType.deserialize(context.child("timestamp")))
             }
 
@@ -75,7 +75,7 @@ sealed class Type<T> {
     }
 
     class Nullable<T : Any>(val type: Type<T>) : Type<T?>() {
-        override fun deserialize(context: DeserializationContext<*>): T? {
+        override fun deserialize(context: DeserializationContext): T? {
             return if (context.json != null && !context.json.isNull()) {
                 type.deserialize(context)
             }
@@ -88,7 +88,7 @@ sealed class Type<T> {
     }
 
     class Optional<T>(val type: Type<T>) : Type<Option<T>>() {
-        override fun deserialize(context: DeserializationContext<*>): Option<T> {
+        override fun deserialize(context: DeserializationContext): Option<T> {
             return if (context.json != null) {
                 Option.Value(type.deserialize(context))
             }
@@ -101,7 +101,7 @@ sealed class Type<T> {
     }
 
     class ArrayType<T>(val elementType: Type<T>) : Type<List<T>>() {
-        override fun deserialize(context: DeserializationContext<*>): List<T> = context.elements().map {
+        override fun deserialize(context: DeserializationContext): List<T> = context.elements().map {
             elementType.deserialize(it)
         }
 
@@ -113,18 +113,15 @@ sealed class Type<T> {
     class MapType<K, V>(private val keyType: Type<K>, val valueType: Type<V>) : Type<Map<K, V>>() {
         private val elementType = ObjectType(ApiMapEntryStructure(keyType, valueType))
 
-        override fun deserialize(context: DeserializationContext<*>): Map<K, V> {
+        override fun deserialize(context: DeserializationContext): Map<K, V> {
             return context.requireJson().arrayElements(context.link).associate { json ->
                 @Suppress("UNCHECKED_CAST")
                 val key = keyType.deserialize(context.child(
                     name = "<key>",
-                    json = json["key"],
-                    partial = keyType.partialStructure()?.let {
-                        Partial(it, parent = context.partial).apply(it.defaultPartialCompact as Partial<out Any>.() -> Unit)
-                    }
+                    json = json["key"]
                 ))
 
-                key to valueType.deserialize(context.child("[$key]", json["value"], context.partial))
+                key to valueType.deserialize(context.child("[$key]", json["value"]))
             }
         }
 
@@ -137,11 +134,11 @@ sealed class Type<T> {
     class BatchType<T>(val elementType: Type<T>) : Type<Batch<T>>() {
         private val arrayType = ArrayType(elementType)
 
-        override fun deserialize(context: DeserializationContext<*>): Batch<T> {
+        override fun deserialize(context: DeserializationContext): Batch<T> {
             return Batch(
                 StringType.deserialize(context.child("next")),
                 Nullable(IntType).deserialize(context.child("totalCount")),
-                arrayType.deserialize(context.child("data", partial = context.partial))
+                arrayType.deserialize(context.child("data"))
             )
         }
 
@@ -155,18 +152,18 @@ sealed class Type<T> {
     }
 
     class ObjectType<T : Any>(val structure: TypeStructure<T>) : Type<T>() {
-        override fun deserialize(context: DeserializationContext<*>): T {
+        override fun deserialize(context: DeserializationContext): T {
             context.requireJson()
             @Suppress("UNCHECKED_CAST")
-            return structure.deserialize(context as DeserializationContext<in T>)
+            return structure.deserialize(context)
         }
 
         override fun serialize(value: T): JsonValue = structure.serialize(value)
     }
 
     class EnumType<T : Enum<T>>(private val values: List<T>) : Type<T>() {
-        override fun deserialize(context: DeserializationContext<*>): T {
-            val name = PrimitiveType.StringType.deserialize(context)
+        override fun deserialize(context: DeserializationContext): T {
+            val name = StringType.deserialize(context)
             return values.first { it.name == name }
         }
 

@@ -1,30 +1,39 @@
 package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.TypeStructure.Property
-import space.jetbrains.api.runtime.Partial.Requested.*
-import space.jetbrains.api.runtime.Partial.Special.BATCH
-import space.jetbrains.api.runtime.Partial.Special.MAP
+import space.jetbrains.api.runtime.PartialBuilder.Requested.*
+import space.jetbrains.api.runtime.PartialBuilder.Special.BATCH
+import space.jetbrains.api.runtime.PartialBuilder.Special.MAP
 
 @DslMarker
 annotation class PartialQueryDsl
 
 @PartialQueryDsl
-class Partial<T : Any>(
-    val structure: TypeStructure<T>,
+interface Partial {
+    fun defaultPartial()
+}
+
+abstract class PartialImpl(protected val builder: PartialBuilder) : Partial {
+    override fun defaultPartial() {
+        builder.addDefault()
+    }
+}
+
+class PartialBuilder(
     private val special: Special? = null,
-    private val parent: Partial<*>? = null
+    private val parent: PartialBuilder? = null
 ) {
     sealed class Requested {
-        abstract val partial: Partial<*>?
+        abstract val partial: PartialBuilder?
 
-        class Partially(override val partial: Partial<*>) : Requested()
+        class Partially(override val partial: PartialBuilder) : Requested()
 
         object Full : Requested() {
             override val partial: Nothing? = null
         }
 
-        class Recursive(val depth: Int, sameAs: Partial<*>) : Requested() {
-            override val partial: Partial<*> = sameAs
+        class Recursive(val depth: Int, sameAs: PartialBuilder) : Requested() {
+            override val partial: PartialBuilder = sameAs
         }
     }
 
@@ -44,30 +53,35 @@ class Partial<T : Any>(
         }.let {}
     }
 
-    fun add(property: Property<*>): Unit = merge(property.name, Full)
+    fun add(propertyName: String): Unit = merge(propertyName, Full)
 
-    fun <U : Any> add(
-        property: Property<*>,
-        structure: TypeStructure<U>,
-        buildPartial: Partial<U>.() -> Unit,
+    fun add(
+        propertyName: String,
+        buildPartial: (PartialBuilder) -> Unit,
         special: Special? = null
     ) {
-        merge(property.name, Partially(Partial(structure, special, this).apply(buildPartial)))
+        merge(propertyName, Partially(PartialBuilder(special, this).also(buildPartial)))
+    }
+
+    fun <T : Partial> add(
+        propertyName: String,
+        providePartial: (PartialBuilder) -> T,
+        buildPartial: T.() -> Unit,
+        special: Special? = null
+    ) {
+        merge(propertyName, Partially(PartialBuilder(special, this).also {
+            providePartial(it).buildPartial()
+        }))
     }
 
     fun addRecursively(
-        property: Property<*>,
-        sameAs: Partial<*>
+        propertyName: String,
+        sameAs: PartialBuilder
     ) {
-        merge(property.name, Recursive(findAncestor(this, sameAs), sameAs))
+        merge(propertyName, Recursive(findAncestor(this, sameAs), sameAs))
     }
 
-    internal fun addImplicitPartial(property: Property<*>) {
-        @Suppress("UNCHECKED_CAST")
-        merge(property.name, (property.type.partialStructure() as TypeStructure<Any>?)?.let {
-            Partially(Partial(it, parent = this).apply(it.defaultPartialCompact))
-        } ?: Full)
-    }
+    fun addDefault() = add("*")
 
     fun buildQuery(): String {
         val query = requestedProperties.entries.joinToString(",") { (name, partial) ->
@@ -89,7 +103,7 @@ class Partial<T : Any>(
     }
 
     private companion object {
-        tailrec fun findAncestor(partial: Partial<*>, ancestor: Partial<*>, currentDepth: Int = 0): Int {
+        tailrec fun findAncestor(partial: PartialBuilder, ancestor: PartialBuilder, currentDepth: Int = 0): Int {
             return if (partial === ancestor) currentDepth
             else findAncestor(
                 partial = partial.parent ?: throw NoSuchElementException("Ancestor not found"),

@@ -4,6 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.kotlin.*
+import space.jetbrains.api.generator.HA_UrlParameterOption.Const
+import space.jetbrains.api.generator.HA_UrlParameterOption.Var
+import space.jetbrains.api.generator.HierarchyRole.FINAL
+import space.jetbrains.api.generator.HierarchyRole.SEALED
 import java.io.*
 
 object Log {
@@ -20,18 +24,49 @@ private val jackson: ObjectMapper = ObjectMapper()
     .registerModule(KotlinModule())
     .registerModule(JodaModule())
 
-class HttpApiEntitiesById(
-    val dto: Map<TID, HA_Dto>,
+class HttpApiEntitiesById private constructor(
+    val dtoAndUrlParams: Map<TID, HA_Dto>,
     val enums: Map<TID, HA_Enum>,
     val urlParams: Map<TID, HA_UrlParameter>,
     val resources: Map<TID, HA_Resource>
 ) {
     constructor(model: HA_Model) : this(
-        dto = model.dto.associateBy { it.id },
+        dtoAndUrlParams = model.dto.associateBy { it.id } + model.urlParams.flatMap { it.toDto() },
         enums = model.enums.associateBy { it.id },
         urlParams = model.urlParams.associateBy { it.id },
         resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id }
     )
+}
+
+private fun HA_UrlParameter.toDto(): Iterable<Pair<TID, HA_Dto>> {
+    val list = options.map {
+        val optionId = "$id/${it.optionName}"
+        optionId to HA_Dto(
+            id = optionId,
+            name = it.optionName,
+            fields = when (it) {
+                is Const -> emptyList()
+                is Var -> listOf(HA_DtoField(it.parameter, extension = false))
+            },
+            hierarchyRole = FINAL,
+            extends = HA_Dto.Ref(id),
+            implements = emptyList(),
+            inheritors = emptyList(),
+            deprecation = it.deprecation,
+            record = false
+        )
+    } + (id to HA_Dto(
+        id = id,
+        name = name,
+        fields = emptyList(),
+        hierarchyRole = SEALED,
+        extends = null,
+        implements = emptyList(),
+        inheritors = options.map { HA_Dto.Ref("$id/${it.optionName}") },
+        deprecation = deprecation,
+        record = false
+    ))
+    return list
 }
 
 fun main(vararg args: String) {
@@ -55,8 +90,10 @@ fun main(vararg args: String) {
     val generatedResources = generateResources(model)
     Log.info { "Generating structures for HTTP API Client" }
     val generatedStructures = generateStructures(model)
+    Log.info { "Generating partials for HTTP API Client" }
+    val generatedPartials = generatePartials(model)
 
-    (generatedTypes + generatedResources + generatedStructures).forEach {
+    (generatedTypes + generatedResources + generatedStructures + generatedPartials).forEach {
         it.writeTo(out)
     }
 }

@@ -16,7 +16,7 @@ object BatchInfoStructure : TypeStructure<BatchInfo>() {
     val offset by string().nullable()
     val batchSize by int()
 
-    override fun deserialize(context: DeserializationContext<in BatchInfo>): BatchInfo = BatchInfo(
+    override fun deserialize(context: DeserializationContext): BatchInfo = BatchInfo(
         offset = offset.deserialize(context),
         batchSize = batchSize.deserialize(context)
     )
@@ -25,9 +25,4 @@ object BatchInfoStructure : TypeStructure<BatchInfo>() {
         offset.serialize(value.offset),
         batchSize.serialize(value.batchSize)
     ))
-
-    override val defaultPartialFull: Partial<in BatchInfo>.() -> Unit = {
-        addImplicitPartial(offset)
-        addImplicitPartial(batchSize)
-    }
 }

@@ -7,25 +7,16 @@ import kotlin.properties.*
 import kotlin.reflect.*
 
 abstract class TypeStructure<D : Any> {
-    abstract fun deserialize(context: DeserializationContext<in D>): D
+    abstract fun deserialize(context: DeserializationContext): D
     abstract fun serialize(value: D): JsonValue
-
-    open val defaultPartialCompact: Partial<in D>.() -> Unit get() = defaultPartialFull
-    abstract val defaultPartialFull: Partial<in D>.() -> Unit
 
     private val properties = mutableMapOf<String, Property<*>>()
 
-    protected fun <T> Property<T>.deserialize(context: DeserializationContext<in D>): PropertyValue<T> {
+    protected fun <T> Property<T>.deserialize(context: DeserializationContext): PropertyValue<T> {
         val childContext = context.child(name)
-        return when {
-            // TODO
-            context.partial == null -> childContext.json?.let { PropertyValue.Value(type.deserialize(childContext)) }
-                ?: PropertyValue.None(childContext.link)
-
-            name in context.partial.requestedProperties -> PropertyValue.Value(type.deserialize(childContext))
-
-            else -> PropertyValue.None(childContext.link)
-        }
+        // TODO track which fields are requested and which are not
+        return childContext.json?.let { PropertyValue.Value(type.deserialize(childContext)) }
+            ?: PropertyValue.None(childContext.link)
     }
 
     protected fun <T> Property<T>.serialize(value: T): Pair<String, JsonValue>? {

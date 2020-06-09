@@ -13,13 +13,11 @@ internal class ApiMapEntryStructure<K, V>(keyType: Type<K>, valueType: Type<V>) 
     val key by property(keyType)
     val value by property(valueType)
 
-    override fun deserialize(context: DeserializationContext<in ApiMapEntry<K, V>>): Nothing
+    override fun deserialize(context: DeserializationContext): Nothing
         = throw UnsupportedOperationException("No partials for map entries")
 
     override fun serialize(value: ApiMapEntry<K, V>): JsonValue = jsonObject(listOfNotNull(
         key.serialize(value.key),
         this.value.serialize(value.value)
     ))
-
-    override val defaultPartialFull: Nothing get() = throw UnsupportedOperationException("No partials for map entries")
 }
