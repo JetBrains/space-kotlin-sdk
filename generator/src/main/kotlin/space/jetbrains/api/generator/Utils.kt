@@ -143,7 +143,7 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById): TypeName = when (this) {
     }
     is HA_Type.Dto -> model.resolveDto(dto).getClassName()
     is HA_Type.Ref -> model.resolveDto(dto).getClassName()
-    is HA_Type.Enum -> ClassName(TYPES_PACKAGE, model.enums.getValue(enum.id).name.kotlinClassName())
+    is HA_Type.Enum -> ClassName(TYPES_PACKAGE, model.enums.getValue(enum.id).name.kotlinClassNameJoined())
     is HA_Type.UrlParam -> model.dtoAndUrlParams.getValue(urlParam.id).getClassName() // TODO: Support UrlParam
 }.copy(nullable, optional)
 
@@ -170,7 +170,8 @@ fun String.displayNameToClassName(): String = split(' ')
     .capitalize()
 
 fun String.displayNameToMemberName(): String = displayNameToClassName().decapitalize()
-fun String.kotlinClassName() = replace(".", "")
+fun String.kotlinClassNameJoined(): String = replace(".", "")
+fun String.kotlinClassName(): List<String> = split(".")
 
 private fun HA_Type.Object.fieldTypeByName(name: String) = fields.first { it.name == name }.type
 fun HA_Type.Object.firstType() = fieldTypeByName("first")
@@ -182,11 +183,11 @@ fun HA_Type.Object.valueType() = fieldTypeByName("value")
 fun HA_Type.Object.batchDataType() = (fieldTypeByName("data") as HA_Type.Array).elementType
 
 fun ClassName.getStructureClassName() = if (this != batchInfoType) {
-    ClassName(STRUCTURES_PACKAGE, "${simpleName}Structure")
+    ClassName(STRUCTURES_PACKAGE, simpleNames.joinToString("") + "Structure")
 } else batchInfoStructureType
 
-fun ClassName.dtoToPartialInterface() = ClassName(PARTIALS_PACKAGE, "${simpleName}Partial")
-fun ClassName.dtoToPartialImpl() = ClassName(PARTIALS_PACKAGE, "${simpleName}PartialImpl")
+fun ClassName.dtoToPartialInterface() = ClassName(PARTIALS_PACKAGE, simpleNames.joinToString("") + "Partial")
+fun ClassName.dtoToPartialImpl() = ClassName(PARTIALS_PACKAGE, simpleNames.joinToString("") + "PartialImpl")
 fun ClassName.partialInterfaceToImpl() = ClassName(packageName, "${simpleName}Impl")
 
 fun HA_Dto.getClassName() = if (name != "BatchInfo") {
