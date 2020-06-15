@@ -214,6 +214,7 @@ private fun urlParam(model: HttpApiEntitiesById, expr: String, type: HA_Type.Url
             is HA_UrlParameterOption.Var -> {
                 funcCode.add("%S + $expr.", it.parameter.name + ":")
                 parameterConversion(model, it.parameter.name, it.parameter.type, funcCode)
+                funcCode.add("\n")
             }
         }
     }
