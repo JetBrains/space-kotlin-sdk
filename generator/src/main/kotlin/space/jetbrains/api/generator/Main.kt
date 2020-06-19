@@ -31,15 +31,15 @@ class HttpApiEntitiesById private constructor(
     val resources: Map<TID, HA_Resource>
 ) {
     constructor(model: HA_Model) : this(
-        dtoAndUrlParams = model.dto.associateBy { it.id } + model.urlParams.flatMap { it.toDto() },
+        dtoAndUrlParams = model.dto.associateBy { it.id } + model.urlParams.flatMap { it.toDtos() },
         enums = model.enums.associateBy { it.id },
         urlParams = model.urlParams.associateBy { it.id },
         resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id }
     )
 }
 
-private fun HA_UrlParameter.toDto(): Iterable<Pair<TID, HA_Dto>> {
-    val list = options.map {
+private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
+    return options.map {
         val optionId = "$id/${it.optionName}"
         optionId to HA_Dto(
             id = optionId,
@@ -66,7 +66,6 @@ private fun HA_UrlParameter.toDto(): Iterable<Pair<TID, HA_Dto>> {
         deprecation = deprecation,
         record = false
     ))
-    return list
 }
 
 fun main(vararg args: String) {

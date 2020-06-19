@@ -54,7 +54,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     val bodyParams = endpoint.requestBody?.fields
                     val returnType = endpoint.responseBody?.kotlinPoet(model)
                     val (partial, specialPartial) = endpoint.responseBody.partial()
-                    val partialInterface = endpoint.responseBody?.getPartialInterface(model)
+                    val partialInterface = partial?.getPartialInterface(model)
                     val hasUrlBatchInfo = queryParams.any {
                         it.name == META_PARAMETERS_PREFIX + "skip" || it.name == META_PARAMETERS_PREFIX + "top"
                     }
@@ -96,19 +96,31 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                             val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
 
-
-                            code.add(
-                                "val response = $httpCallFuncName(%S, %P, %T.$httpMethod",
-                                funcName,
-                                fullPath.joinToString("/") {
-                                    when (it) {
-                                        is Const -> it.value
-                                        is Var -> "\${pathParam(" + it.name + ")}"
-                                        is PrefixedVar -> it.prefix + ":\${pathParam(" + it.name + ")}"
+                            val pathParams = endpoint.parameters.filter { it.path }.associateBy { it.field.name }
+                            code.add("val response = $httpCallFuncName(%S, \"", funcName)
+                            val pathIterator = fullPath.iterator()
+                            pathIterator.forEach { segment ->
+                                fun pathParam(name: String) {
+                                    code.add("\${pathParam(")
+                                    val paramType = pathParams.getValue(name).field.type
+                                    if (paramType is HA_Type.UrlParam) {
+                                        urlParam(model, name, paramType, code)
+                                    } else {
+                                        code.add(name)
                                     }
-                                },
-                                httpMethodType
-                            )
+                                    code.add(")}")
+                                }
+                                when (segment) {
+                                    is Const -> code.add(segment.value)
+                                    is Var -> pathParam(segment.name)
+                                    is PrefixedVar -> {
+                                        code.add(segment.prefix + ":")
+                                        pathParam(segment.name)
+                                    }
+                                }
+                                if (pathIterator.hasNext()) code.add("/")
+                            }
+                            code.add("\", %T.$httpMethod", httpMethodType)
 
                             if (queryParams.isNotEmpty()) {
                                 code.add(", parameters = %T.build·{\n", parametersType)
