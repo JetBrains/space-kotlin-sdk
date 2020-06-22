@@ -145,7 +145,7 @@ fun HA_Type.getPartialInterface(model: HttpApiEntitiesById): TypeName? = when (t
             keyType().getPartialInterfaceOrNothing(model),
             valueType().getPartialInterfaceOrNothing(model)
         )
-        BATCH -> batchDataType().getPartialInterface(model)
+        BATCH -> batchDataElementType().getPartialInterface(model)
         MOD -> modPartialType.parameterizedBy(modSubjectType().getPartialInterfaceOrNothing(model))
         REQUEST_BODY -> error("Request bodies do not have partials")
     }

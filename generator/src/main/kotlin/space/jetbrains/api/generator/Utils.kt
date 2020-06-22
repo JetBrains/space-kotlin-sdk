@@ -98,15 +98,15 @@ fun HA_Type?.partial(): PartialDetectionResult = when (this) {
     is HA_Type.Object -> when (kind) {
         PAIR, TRIPLE, MOD -> PartialDetectionResult(this, null)
         MAP_ENTRY -> valueType().partial()
-        BATCH -> batchDataType().partial().copy(special = SpecialPartial.BATCH)
+        BATCH -> batchDataElementType().partial().copy(special = SpecialPartial.BATCH)
         REQUEST_BODY -> error("Objects of kind ${REQUEST_BODY.name} should not appear in output types")
     }
     is HA_Type.UrlParam -> PartialDetectionResult(null, null) // TODO: Support UrlParam
     is HA_Type.Dto -> PartialDetectionResult(this, null)
     is HA_Type.Ref -> PartialDetectionResult(this, null)
-}.let { it.copy(partial = it.partial?.copy(nullable = false, optional = false)) }
+}.let { it.copy(partial = it.partial?.copy(nullable = false)) }
 
-fun HA_Type.kotlinPoet(model: HttpApiEntitiesById): TypeName = when (this) {
+fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): TypeName = when (this) {
     is HA_Type.Primitive -> when (this.primitive) {
         HA_Primitive.Byte -> Byte::class.asClassName()
         HA_Primitive.Short -> Short::class.asClassName()
@@ -137,7 +137,7 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById): TypeName = when (this) {
             thirdType().kotlinPoet(model)
         )
         MAP_ENTRY -> apiMapEntryType.parameterizedBy(keyType().kotlinPoet(model), valueType().kotlinPoet(model))
-        BATCH -> batchType.parameterizedBy(batchDataType().kotlinPoet(model))
+        BATCH -> batchType.parameterizedBy(batchDataElementType().kotlinPoet(model))
         MOD -> modType.parameterizedBy(modSubjectType().kotlinPoet(model))
         REQUEST_BODY -> error("Request bodies are not representable with kotlin types")
     }
@@ -145,12 +145,12 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById): TypeName = when (this) {
     is HA_Type.Ref -> model.resolveDto(dto).getClassName()
     is HA_Type.Enum -> ClassName(TYPES_PACKAGE, model.enums.getValue(enum.id).name.kotlinClassNameJoined())
     is HA_Type.UrlParam -> model.dtoAndUrlParams.getValue(urlParam.id).getClassName() // TODO: Support UrlParam
-}.copy(nullable, optional)
+}.copy(nullable, option)
 
-private fun TypeName.copy(nullable: Boolean, optional: Boolean): TypeName {
+private fun TypeName.copy(nullable: Boolean, option: Boolean): TypeName {
     val type = if (isNullable != nullable) copy(nullable) else this
 
-    return if (optional) {
+    return if (option) {
         optionType.parameterizedBy(type)
     } else type
 }
@@ -173,14 +173,27 @@ fun String.displayNameToMemberName(): String = displayNameToClassName().decapita
 fun String.kotlinClassNameJoined(): String = replace(".", "")
 fun String.kotlinClassName(): List<String> = split(".")
 
-private fun HA_Type.Object.fieldTypeByName(name: String) = fields.first { it.name == name }.type
-fun HA_Type.Object.firstType() = fieldTypeByName("first")
-fun HA_Type.Object.secondType() = fieldTypeByName("second")
-fun HA_Type.Object.thirdType() = fieldTypeByName("third")
-fun HA_Type.Object.modSubjectType() = fieldTypeByName("old").copy(nullable = false)
-fun HA_Type.Object.keyType() = fieldTypeByName("key")
-fun HA_Type.Object.valueType() = fieldTypeByName("value")
-fun HA_Type.Object.batchDataType() = (fieldTypeByName("data") as HA_Type.Array).elementType
+private fun HA_Type.Object.fieldByName(name: String) = fields.first { it.name == name }
+
+fun HA_Type.Object.firstField() = fieldByName("first")
+fun HA_Type.Object.firstType() = firstField().type
+
+fun HA_Type.Object.secondField() = fieldByName("second")
+fun HA_Type.Object.secondType() = secondField().type
+
+fun HA_Type.Object.thirdField() = fieldByName("third")
+fun HA_Type.Object.thirdType() = thirdField().type
+
+fun HA_Type.Object.modSubjectType() = fieldByName("old").type.copy(nullable = false)
+
+fun HA_Type.Object.keyField() = fieldByName("key")
+fun HA_Type.Object.keyType() = keyField().type
+
+fun HA_Type.Object.valueField() = fieldByName("value")
+fun HA_Type.Object.valueType() = valueField().type
+
+fun HA_Type.Object.batchDataField() = fieldByName("data")
+fun HA_Type.Object.batchDataElementType() = (batchDataField().type as HA_Type.Array).elementType
 
 fun ClassName.getStructureClassName() = if (this != batchInfoType) {
     ClassName(STRUCTURES_PACKAGE, simpleNames.joinToString("") + "Structure")

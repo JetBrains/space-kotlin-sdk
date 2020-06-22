@@ -11,31 +11,31 @@ fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById)
         is HA_Type.Object -> when (type.kind) {
             PAIR -> {
                 add("%T(", apiPairStructureType)
-                appendType(type.firstType(), model)
+                appendFieldType(type.firstField(), model)
                 add(", ")
-                appendType(type.secondType(), model)
+                appendFieldType(type.secondField(), model)
                 add(")")
             }
             TRIPLE -> {
                 add("%T(", apiTripleStructureType)
-                appendType(type.firstType(), model)
+                appendFieldType(type.firstField(), model)
                 add(", ")
-                appendType(type.secondType(), model)
+                appendFieldType(type.secondField(), model)
                 add(", ")
-                appendType(type.thirdType(), model)
+                appendFieldType(type.thirdField(), model)
                 add(")")
             }
             MAP_ENTRY -> {
                 add("%T(")
-                appendType(type.keyType(), model)
+                appendFieldType(type.keyField(), model)
                 add(", ")
-                appendType(type.valueType(), model)
+                appendFieldType(type.valueField(), model)
                 add(")")
             }
             BATCH -> error("Batches have no structure")
             MOD -> {
                 add("%T(", modStructureType)
-                appendType(type.modSubjectType(), model)
+                appendType(type.modSubjectType(), model, false)
                 add(")")
             }
             REQUEST_BODY -> error("Request bodies cannot appear in parameters")
@@ -58,13 +58,17 @@ fun ClassName.importNested() = ClassName(
     simpleNames = listOf(simpleName)
 )
 
+fun CodeBlock.Builder.appendFieldType(field: HA_Field, model: HttpApiEntitiesById) =
+    appendType(field.type, model, field.requiresOption)
+
 fun CodeBlock.Builder.appendType(
     type: HA_Type,
-    model: HttpApiEntitiesById
+    model: HttpApiEntitiesById,
+    option: Boolean
 ): CodeBlock.Builder {
-    if (type.optional) add("%T(", optionalType.importNested())
+    if (option) add("%T(", optionalType.importNested())
     if (type.nullable) add("%T(", nullableType.importNested())
-    when (val notNullType = type.copy(nullable = false, optional = false)) {
+    when (val notNullType = type.copy(nullable = false)) {
         is HA_Type.Primitive -> {
             add(
                 "%T", when (notNullType.primitive) {
@@ -85,13 +89,13 @@ fun CodeBlock.Builder.appendType(
             val elementType = notNullType.elementType
             if (elementType is HA_Type.Object && elementType.kind == MAP_ENTRY) {
                 add("%T(", mapTypeType.importNested())
-                appendType(elementType.keyType(), model)
+                appendFieldType(elementType.keyField(), model)
                 add(", ")
-                appendType(elementType.valueType(), model)
+                appendFieldType(elementType.valueField(), model)
                 add(")")
             } else {
                 add("%T(", arrayTypeType.importNested())
-                appendType(elementType, model)
+                appendType(elementType, model, false)
                 add(")")
             }
         }
@@ -113,7 +117,7 @@ fun CodeBlock.Builder.appendType(
             }
             BATCH -> {
                 add("%T(", batchTypeType.importNested())
-                appendType(notNullType.batchDataType(), model)
+                appendType(notNullType.batchDataElementType(), model, false)
                 add(")")
             }
             REQUEST_BODY -> error("Request bodies cannot appear in parameters")
@@ -123,7 +127,7 @@ fun CodeBlock.Builder.appendType(
         }
     }.let {}
     if (type.nullable) add(")")
-    if (type.optional) add(")")
+    if (option) add(")")
 
     return this
 }

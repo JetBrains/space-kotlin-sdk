@@ -54,22 +54,6 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     }
 }
 
-sealed class AddTypeTarget {
-    abstract fun addType(typeSpec: TypeSpec)
-
-    class FileSpecBuilder(val builder: FileSpec.Builder) : AddTypeTarget() {
-        override fun addType(typeSpec: TypeSpec) {
-            builder.addType(typeSpec)
-        }
-    }
-
-    class TypeSpecBuilder(val builder: TypeSpec.Builder) : AddTypeTarget() {
-        override fun addType(typeSpec: TypeSpec) {
-            builder.addType(typeSpec)
-        }
-    }
-}
-
 private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescriptorsByDtoId: Map<TID, List<FieldDescriptor>>): TypeSpec {
     Log.info { "Generating DTO class for '${dto.name}'" }
     val dtoClassName = dto.getClassName()
@@ -96,7 +80,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
 
     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
     fields.forEach {
-        val kotlinPoetType = it.field.type.kotlinPoet(model)
+        val kotlinPoetType = it.field.type.kotlinPoet(model, it.field.requiresOption)
         primaryConstructor
             .addParameter(it.field.name, propertyValueType.parameterizedBy(kotlinPoetType))
         secondaryConstructor
@@ -154,7 +138,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
 
     typeBuilder.annotationSpecs.deprecation(dto.deprecation)
 
-    dto.nestedClasses(model).forEach {
+    dto.directlyNestedClasses(model).forEach {
         typeBuilder.addType(dtoDeclaration(it, model, fieldDescriptorsByDtoId))
     }
 
@@ -168,8 +152,10 @@ fun HA_Dto.subclasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {
     else sequenceOf(this)
 }
 
-fun HA_Dto.nestedClasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {
-    return model.dtoAndUrlParams.values.asSequence().filter { it.name.startsWith("$name.") }
+fun HA_Dto.directlyNestedClasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {
+    return model.dtoAndUrlParams.values.asSequence().filter {
+        it.name.startsWith("$name.") && '.' !in it.name.removePrefix("$name.")
+    }
 }
 
 fun HA_Dto.topLevelSubclasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {

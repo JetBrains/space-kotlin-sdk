@@ -137,7 +137,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                             parameterConversion(model, param.name, param.type, code)
                                             code.add("?.let·{ appendAll(%S, it) }\n", param.name)
                                         }
-                                        param.type.nullable -> {
+                                        param.parameterHaType().nullable -> {
                                             code.add(param.name + "?.let·{ append(%S, ", param.name)
                                             parameterConversion(model, "it", param.type, code)
                                             code.add(") }\n", param.name)
@@ -160,10 +160,10 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                 while (fieldIterator.hasNext()) {
                                     val field = fieldIterator.next()
                                     fun serialize() {
-                                        code.appendType(field.type, model)
+                                        code.appendType(field.parameterHaType(), model, field.requiresOption)
                                         code.add(".serialize(${field.name})")
                                     }
-                                    if (field.type.optional) {
+                                    if (field.requiresOption) {
                                         serialize()
                                         code.add("?.let·{ %S·to it }", field.name)
                                     } else {
@@ -185,7 +185,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                             if (endpoint.responseBody != null) {
                                 code.add("return·")
-                                code.appendType(endpoint.responseBody, model)
+                                code.appendType(endpoint.responseBody, model, false)
                                 code.add(".deserialize(response)")
                             }
                         }.build())
@@ -194,6 +194,14 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
             }.build())
         }.build()
     }
+}
+
+val HA_Field.requiresOption get() = optional && defaultValue == null && type.nullable
+
+private val HA_Field.requiresAddedNullability get() = optional && defaultValue == null && !type.nullable
+
+private fun HA_Field.parameterHaType() = type.let {
+    if (requiresAddedNullability) it.copy(nullable = true) else it
 }
 
 private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String> {
@@ -266,6 +274,28 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
     }
 }
 
+fun CodeBlock.Builder.default(type: HA_Type, model: HttpApiEntitiesById, defaultValue: HA_DefaultValue) {
+    when (defaultValue) {
+        is HA_DefaultValue.Const.Primitive -> add(defaultValue.expression)
+        is HA_DefaultValue.Const.EnumEntry -> {
+            type as HA_Type.Enum
+            val className = ClassName(TYPES_PACKAGE, model.enums.getValue(type.enum.id).name.kotlinClassNameJoined())
+            add("%T." + defaultValue.entryName, className)
+        }
+        is HA_DefaultValue.Collection -> {
+            type as HA_Type.Array
+            add(if (type.isMap()) "mapOf(" else "listOf(")
+            val elements = defaultValue.elements.iterator()
+            elements.forEach {
+                default(type.elementType, model, it)
+                if (elements.hasNext()) add(", ")
+            }
+            add(")")
+        }
+        is HA_DefaultValue.Reference -> add(defaultValue.paramName)
+    }
+}
+
 private fun getFuncParamsAndDeprecationKDoc(
     model: HttpApiEntitiesById,
     urlParams: List<HA_Field>,
@@ -276,10 +306,16 @@ private fun getFuncParamsAndDeprecationKDoc(
     val deprecation = StringBuilder()
     val params = mutableListOf<ParameterSpec>().also { funcParams ->
         fun paramWithDefault(paramField: HA_Field): ParameterSpec {
-            val parameter = ParameterSpec.builder(paramField.name, paramField.type.kotlinPoet(model))
+            val parameter = ParameterSpec.builder(
+                paramField.name,
+                paramField.parameterHaType().kotlinPoet(model, paramField.requiresOption)
+            )
             when {
-                paramField.type.optional -> parameter.defaultValue("%T", optionNoneType)
-                paramField.type.nullable -> parameter.defaultValue("null")
+                paramField.requiresOption -> parameter.defaultValue("%T", optionNoneType)
+                paramField.requiresAddedNullability -> parameter.defaultValue("null")
+                paramField.defaultValue != null -> parameter.defaultValue(buildCodeBlock {
+                    default(paramField.type, model, paramField.defaultValue)
+                })
             }
             paramField.deprecation?.run {
                 deprecation.append(

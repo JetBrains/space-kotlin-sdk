@@ -3,7 +3,10 @@ package space.jetbrains.api.generator
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
-private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpApiEntitiesById): CodeBlock.Builder {
+private fun CodeBlock.Builder.appendPropertyDelegate(field: HA_Field, model: HttpApiEntitiesById) =
+    appendPropertyDelegate(field.type, model, field.requiresOption)
+
+private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpApiEntitiesById, option: Boolean): CodeBlock.Builder {
     when (type) {
         is HA_Type.Primitive -> when (type.primitive) {
             HA_Primitive.Byte -> add("byte()")
@@ -22,12 +25,12 @@ private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpA
             val elementType = type.elementType
             if (elementType is HA_Type.Object && elementType.kind == HA_Type.Object.Kind.MAP_ENTRY) {
                 add("map(")
-                appendPropertyDelegate(elementType.keyType(), model)
+                appendPropertyDelegate(elementType.keyField(), model)
                 add(", ")
-                appendPropertyDelegate(elementType.valueType(), model)
+                appendPropertyDelegate(elementType.valueField(), model)
             } else {
                 add("list(")
-                appendPropertyDelegate(elementType, model)
+                appendPropertyDelegate(elementType, model, false)
             }
             add(")")
         }
@@ -37,12 +40,12 @@ private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpA
             add(")")
         }
         is HA_Type.Enum -> {
-            add("enum<%T>()", type.copy(nullable = false, optional = false).kotlinPoet(model))
+            add("enum<%T>()", type.copy(nullable = false).kotlinPoet(model))
         }
     }.let {}
 
     if (type.nullable) add(".nullable()")
-    if (type.optional) add(".optional()")
+    if (option) add(".optional()")
 
     return this
 }
@@ -86,7 +89,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                         PropertySpec.builder(
                             name = it.field.name,
                             type = propertyType.importNested().parameterizedBy(it.field.type.kotlinPoet(model))
-                        ).delegate(buildCodeBlock { appendPropertyDelegate(it.field.type, model) })
+                        ).delegate(buildCodeBlock { appendPropertyDelegate(it.field, model) })
                             .build()
                     })
 

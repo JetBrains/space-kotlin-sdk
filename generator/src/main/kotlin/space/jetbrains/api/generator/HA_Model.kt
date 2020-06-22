@@ -5,7 +5,6 @@ package space.jetbrains.api.generator
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import space.jetbrains.api.generator.HA_PathSegment.*
 
 typealias TID = String
 
@@ -18,9 +17,9 @@ class HA_Model(
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
 @JsonSubTypes(
-    Type(value = Var::class, name = "HA_PathSegment.Var"),
-    Type(value = PrefixedVar::class, name = "HA_PathSegment.PrefixedVar"),
-    Type(value = Const::class, name = "HA_PathSegment.Const")
+    Type(value = HA_PathSegment.Var::class, name = "HA_PathSegment.Var"),
+    Type(value = HA_PathSegment.PrefixedVar::class, name = "HA_PathSegment.PrefixedVar"),
+    Type(value = HA_PathSegment.Const::class, name = "HA_PathSegment.Const")
 )
 sealed class HA_PathSegment {
     data class Var(val name: String) : HA_PathSegment()
@@ -105,38 +104,55 @@ enum class HA_Primitive(val presentation: kotlin.String) {
 )
 sealed class HA_Type {
     abstract val nullable: Boolean
-    abstract val optional: Boolean
 
-    data class Primitive(val primitive: HA_Primitive, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
-    data class Array(val elementType: HA_Type, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
+    data class Primitive(val primitive: HA_Primitive, override val nullable: Boolean) : HA_Type()
+    data class Array(val elementType: HA_Type, override val nullable: Boolean) : HA_Type()
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
-    data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean, override val optional: Boolean) : HA_Type() {
+    data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean) : HA_Type() {
         enum class Kind {
             PAIR, TRIPLE, MAP_ENTRY, BATCH, MOD, REQUEST_BODY
         }
     }
-    data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
-    data class Ref(val dto: HA_Dto.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
-    data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
-    data class UrlParam(val urlParam: HA_UrlParameter.Ref, override val nullable: Boolean, override val optional: Boolean) : HA_Type()
+    data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
+    data class Ref(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
+    data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean) : HA_Type()
+    data class UrlParam(val urlParam: HA_UrlParameter.Ref, override val nullable: Boolean) : HA_Type()
 
-    fun copy(nullable: Boolean = this.nullable, optional: Boolean = this.optional): HA_Type = when (this) {
-        is Primitive -> Primitive(primitive, nullable, optional)
-        is Array -> Array(elementType, nullable, optional)
-        is Object -> Object(fields, kind, nullable, optional)
-        is Dto -> Dto(dto, nullable, optional)
-        is Ref -> Ref(dto, nullable, optional)
-        is Enum -> Enum(enum, nullable, optional)
-        is UrlParam -> UrlParam(urlParam, nullable, optional)
+    fun copy(nullable: Boolean = this.nullable): HA_Type = when (this) {
+        is Primitive -> Primitive(primitive, nullable)
+        is Array -> Array(elementType, nullable)
+        is Object -> Object(fields, kind, nullable)
+        is Dto -> Dto(dto, nullable)
+        is Ref -> Ref(dto, nullable)
+        is Enum -> Enum(enum, nullable)
+        is UrlParam -> UrlParam(urlParam, nullable)
     }
 }
 
 data class HA_Field(
     val name: String,
     val type: HA_Type,
-    val deprecation: HA_Deprecation?
+    val deprecation: HA_Deprecation?,
+    val optional: Boolean,
+    val defaultValue: HA_DefaultValue?
 )
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
+@JsonSubTypes(
+    Type(value = HA_DefaultValue.Const.Primitive::class, name = "HA_DefaultValue.Const.Primitive"),
+    Type(value = HA_DefaultValue.Const.EnumEntry::class, name = "HA_DefaultValue.Const.EnumEntry"),
+    Type(value = HA_DefaultValue.Collection::class, name = "HA_DefaultValue.Collection"),
+    Type(value = HA_DefaultValue.Reference::class, name = "HA_DefaultValue.Reference")
+)
+sealed class HA_DefaultValue {
+    sealed class Const : HA_DefaultValue() {
+        data class Primitive(val expression: String) : Const()
+        data class EnumEntry(val entryName: String) : Const()
+    }
+    data class Collection(val elements: List<HA_DefaultValue>) : HA_DefaultValue()
+    data class Reference(val paramName: String): HA_DefaultValue()
+}
 
 class HA_DtoField(val field: HA_Field, val extension: Boolean)
 
