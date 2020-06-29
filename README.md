@@ -224,83 +224,42 @@ await foreach (var issueDto in _projectClient.Planning.Issues.GetAllIssuesAsyncE
 We can cast these types, use `switch` expressions on their type, and more.
 // TODO END UNTIL HERE
 
-### Batch and `IAsyncEnumerable`
-
-// @Arkady does something similar exist in the Kotlin client now, or drop this section?
+### Batch
 
 Many operations in the Space API return a collection of results. To guarantee performance, these responses will be paginated, and can be retrieved in batches.
 
 A batch will always return the total count of items that will be returned after fetching all pages, and contains the data as well:
 
-```csharp
-public class Batch<T>
-{
-    List<T>? Data { get; }
-    string? Next { get; }
-    int? TotalCount { get; }
-
-    bool HasNext();
-}
+```kotlin
+class Batch<out T>(
+    val next: String,
+    val totalCount: Int?,
+    val data: List<T>)
 ```
 
-We have to specify the properties of the `Batch` type to retrieve, and all the fields of the data type we need
+We have to specify the properties of the data type we need. As an example, let's retrieve the current user's To-Do items for this week, with their `id`, `content` and `status`:
 
-As an example, let's retrieve the current user's To-Do items for this week, skipping the first 10 items, with their `Id`, `Content` and `Status`:
+```kotlin
+    // Get all To-Do
+    var todoBatchInfo = BatchInfo("0", 100)
+    do {
+        val todoBatch = spaceClient.todoItems
+                .getAllTodoItems(from = SDate("2020-01-01"), batchInfo = todoBatchInfo) {
+                    id()
+                    content()
+                    _status()
+                }
 
-```csharp
-var batch = await _todoClient.GetAllToDoItemsAsync(
-    from: weekStart.AsSpaceDate(),
-    partial: _ => _
-        .WithData(data => data
-            .WithId()
-            .WithContent(content => content
-                .ForInherited<TodoItemContentMdTextDto>(md => md
-                .WithAllFieldsWildcard()))
-            .WithStatus())
-        .WithTotalCount()
-        .WithNext());
+        todoBatch.data.forEach { todo ->
+            // ...
+        }
 
-do
-{
-    foreach (var todoDto in batch.Data)
-    {
-        // ...
-    }
-    
-    batch = await _todoClient.GetAllToDoItemsAsync(
-        from: weekStart.AsSpaceDate(),
-        skip: batch.Next,
-        partial: _ => _ /* ... */);
-}
-while (batch.HasNext());
+        todoBatchInfo = BatchInfo(todoBatch.next, 100)
+    } while (todoBatch.hasNext())
 ```
 
-The resulting `batch` will contain one page of results. To retrieve more To-Do items, we will have to make additional API calls. This gets cumbersome rather quickly, which is why API endpoints that return a `Batch<T>` also have an overload that supports `IAsyncEnumerable`.
-
-With the `IAsyncEnumerable` overload for these endpoints, we can iterate over items that are returned. The underlying Space API client implementation will handle pagination and additional API calls for us. The same example as before, using the `IAsyncEnumerable` overload:
-
-```csharp
-await foreach (var todoDto in _todoClient.GetAllToDoItemsAsyncEnumerable(
-    from: weekStart.AsSpaceDate(),
-    partial: _ => _
-        .WithId()
-        .WithContent(content => content
-            .ForInherited<TodoItemContentMdTextDto>(md => md
-                .WithAllFieldsWildcard()))
-        .WithStatus()))
-{
-    // ...
-}
-```
-
-The [`System.Linq.Async`](https://www.nuget.org/packages/System.Linq.Async) NuGet package may assist in using `IAsyncEnumerable`, with utilities like `FirstOrDefaultAsync()` and more.
-
-> **Tip:** To retrieve the total result count, without any other properties, don't use the `IAsyncEnumerable` overload. 
+> **Note:** This code example makes use of an extension method `hasNext()` to determine whethr more results need to be retrieved:
 >
-> Instead, retrieve just the `TotalCount` property for this batch:
->
-> ```csharp
-> var batch = await _todoClient.GetAllToDoItemsAsync(
->     from: weekStart.AsSpaceDate(), partial: _ => _.WithTotalCount());
-> var numberOfResults = batch.TotalCount;
-> ```
+> `fun Batch<*>.hasNext() = totalCount != null && next != totalCount.toString()`
+
+The resulting `batch` will contain one page of results. To retrieve more To-Do items, we will have to make additional API calls.
