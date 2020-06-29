@@ -240,22 +240,22 @@ class Batch<out T>(
 We have to specify the properties of the data type we need. As an example, let's retrieve the current user's To-Do items for this week, with their `id`, `content` and `status`:
 
 ```kotlin
-    // Get all To-Do
-    var todoBatchInfo = BatchInfo("0", 100)
-    do {
-        val todoBatch = spaceClient.todoItems
-                .getAllTodoItems(from = SDate("2020-01-01"), batchInfo = todoBatchInfo) {
-                    id()
-                    content()
-                    _status()
-                }
+// Get all To-Do
+var todoBatchInfo = BatchInfo("0", 100)
+do {
+    val todoBatch = spaceClient.todoItems
+            .getAllTodoItems(from = SDate("2020-01-01"), batchInfo = todoBatchInfo) {
+                id()
+                content()
+                _status()
+            }
 
-        todoBatch.data.forEach { todo ->
-            // ...
-        }
+    todoBatch.data.forEach { todo ->
+        // ...
+    }
 
-        todoBatchInfo = BatchInfo(todoBatch.next, 100)
-    } while (todoBatch.hasNext())
+    todoBatchInfo = BatchInfo(todoBatch.next, 100)
+} while (todoBatch.hasNext())
 ```
 
 > **Note:** This code example makes use of an extension method `hasNext()` to determine whethr more results need to be retrieved:
