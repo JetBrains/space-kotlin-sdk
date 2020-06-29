@@ -247,7 +247,7 @@ do {
             .getAllTodoItems(from = SDate("2020-01-01"), batchInfo = todoBatchInfo) {
                 id()
                 content()
-                _status()
+                status()
             }
 
     todoBatch.data.forEach { todo ->
