@@ -22,9 +22,9 @@ After installing `org.jetbrains:space-api-client-jvm` in our project, we can use
 ```kotlin
 val spaceClient = SpaceHttpClient(HttpClient())
     .withServiceAccountTokenSource(
-        "client-id-value",
-        "client-secret-value",
-        "https://<organization>.jetbrains.space/")
+        clientId,         // from settings/secrets
+        clientSecret,     // from settings/secrets
+        organizationUrl)  // i.e. "https://<organization>.jetbrains.space/"
 ```
 
 We can then use the Space HTTP client in `spaceClient` to access the various Space API endpoint.
@@ -130,9 +130,7 @@ val memberProfile = spaceClient.teamDirectory.profiles
     }
 ```
 
-All of the builder methods (such as `id()`) come from the package `space.jetbrains.api.runtime.types`, and should be automatically included by the IDE we are using.
-
-Space API client will help with defining properties to include. Let's say we want to retrieve only the `id` and `username` properties for a profile:
+The Space API client will help with defining properties to include. Let's say we want to retrieve only the `id` and `username` properties for a profile:
 
 ```kotlin
 val memberProfile = spaceClient.teamDirectory.profiles
@@ -145,13 +143,10 @@ val memberProfile = spaceClient.teamDirectory.profiles
 When we try to access the `name` property for this profile, which we did not request, Space API client will throw an `IllegalStateException` with additional information.
 
 ```kotlin
-try
-{
+try {
     // This will fail...
     println("${memberProfile.name.firstName} ${memberProfile.name.lastName}")
-}
-catch (e: IllegalStateException)
-{
+} catch (e: IllegalStateException) {
     // ...and we'll get a pointer about why it fails:
     // Property 'name' was not requested. Reference chain: getAllProfiles->data->[0]->name
     println("The Space API client tells us which partial query should be added to access the property:");
