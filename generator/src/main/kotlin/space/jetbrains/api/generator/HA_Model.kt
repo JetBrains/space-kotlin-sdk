@@ -167,7 +167,7 @@ class HA_Dto(
     val deprecation: HA_Deprecation?,
     val record: Boolean
 ) {
-    class Ref(val id: TID)
+    data class Ref(val id: TID)
 }
 
 enum class HierarchyRole(val isAbstract: Boolean) {

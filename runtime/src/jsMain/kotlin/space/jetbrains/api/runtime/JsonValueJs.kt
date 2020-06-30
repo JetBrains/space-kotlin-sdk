@@ -19,7 +19,7 @@ internal actual fun jsonBoolean(boolean: Boolean): JsonValue = boolean.asJsonVal
 internal actual fun jsonNull(): JsonValue = null.asJsonValue()
 internal actual fun JsonValue.isNull(): Boolean = asDynamic() == null
 
-internal actual operator fun JsonValue.get(key: String): JsonValue? {
+internal actual fun JsonValue.getField(key: String): JsonValue? {
     require(jsTypeOf(this) == "object")
     return asDynamic()[key]?.unsafeCast<JsonValue>()
 }

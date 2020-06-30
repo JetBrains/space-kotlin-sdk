@@ -72,7 +72,7 @@ abstract class TypeStructure<D : Any> {
 
     @JsName("with_className")
     protected fun JsonValue.withClassName(className: String): JsonValue = also {
-        if (it["className"] == null) {
+        if (it.getField("className") == null) {
             it["className"] = jsonString(className)
         }
     }

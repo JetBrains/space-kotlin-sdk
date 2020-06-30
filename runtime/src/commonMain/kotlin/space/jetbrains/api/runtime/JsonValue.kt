@@ -25,7 +25,7 @@ internal expect fun JsonValue.isNull(): Boolean
 
 expect fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue
 internal fun jsonObject(vararg properties: Pair<String, JsonValue>): JsonValue = jsonObject(properties.asIterable())
-internal expect operator fun JsonValue.get(key: String): JsonValue?
+internal expect fun JsonValue.getField(key: String): JsonValue?
 internal expect operator fun JsonValue.set(property: String, value: JsonValue)
 
 internal expect fun jsonArray(vararg elements: JsonValue): JsonValue

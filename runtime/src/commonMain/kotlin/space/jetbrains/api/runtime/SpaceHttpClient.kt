@@ -108,8 +108,8 @@ class SpaceHttpClient(client: HttpClient) {
 
     private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {
         if (!response.status.isSuccess()) {
-            val errorDescription = responseContent?.get("error_description")?.asStringOrNull()
-            throw when (responseContent?.get("error")?.asStringOrNull()) {
+            val errorDescription = responseContent?.getField("error_description")?.asStringOrNull()
+            throw when (responseContent?.getField("error")?.asStringOrNull()) {
                 VALIDATION_ERROR -> ValidationException(errorDescription, response)
                 AUTHENTICATION_REQUIRED -> AuthenticationRequiredException(errorDescription, response)
                 PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response)

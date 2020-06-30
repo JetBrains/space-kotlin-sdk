@@ -69,18 +69,19 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
 }
 
 fun main(vararg args: String) {
-    require(args.size == 2) {
+    require(args.size in 2..3 && args.getOrNull(2)?.equals("--no-cleanup") != false) {
         // GET /api/http/http-api-model?$fields=dto(id,deprecation,extends,fields,hierarchyRole,implements,inheritors,
         // name,record),enums(id,deprecation,name,values),resources(id,displayPlural,displaySingular,endpoints,
         // nestedResources!,parentResource,path)
-        "HTTP Client Generator accepts a two arguments: path to HTTP model and path to output directory"
+        "HTTP Client Generator accepts two or three arguments: path to HTTP model, path to output directory and, " +
+            "optionally, '--no-cleanup'"
     }
 
     Log.info { "Parsing HTTP model" }
     val model = HttpApiEntitiesById(jackson.readValue(File(args[0])))
 
     val out = File(args[1])
-    if (out.exists()) out.deleteRecursively()
+    if (out.exists() && args.size != 3) out.deleteRecursively()
     out.mkdirs()
 
     Log.info { "Generating types for HTTP API Client" }

@@ -36,8 +36,7 @@ internal actual fun JsonValue.isNull(): Boolean = isNull
 
 internal actual fun jsonNull(): JsonValue = jsonNodes.nullNode()
 
-@Suppress("EXTENSION_SHADOWED_BY_MEMBER")
-internal actual operator fun JsonValue.get(key: String): JsonValue? {
+internal actual fun JsonValue.getField(key: String): JsonValue? {
     require(isObject) { "Value is expected to be an object" }
     return this[key]
 }

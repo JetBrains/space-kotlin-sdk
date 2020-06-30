@@ -41,14 +41,14 @@ fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById)
             REQUEST_BODY -> error("Request bodies cannot appear in parameters")
         }
         is HA_Type.Dto -> {
-            add("%T", model.dtoAndUrlParams.getValue(type.dto.id).getClassName().getStructureClassName())
+            add("%T", model.resolveDto(type).getClassName().getStructureClassName())
         }
         is HA_Type.Ref -> {
-            add("%T", model.dtoAndUrlParams.getValue(type.dto.id).getClassName().getStructureClassName())
+            add("%T", model.resolveDto(type).getClassName().getStructureClassName())
         }
         is HA_Type.Enum -> error("Enums have no structure")
         is HA_Type.UrlParam -> {
-            add("%T", model.urlParams.getValue(type.urlParam.id).getClassName().getStructureClassName())
+            add("%T", model.resolveUrlParam(type).getClassName().getStructureClassName())
         }
     }
 }

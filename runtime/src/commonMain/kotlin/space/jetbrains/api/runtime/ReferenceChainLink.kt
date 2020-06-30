@@ -20,7 +20,7 @@ data class DeserializationContext(
 
     fun child(
         name: String,
-        json: JsonValue? = requireJson()[name],
+        json: JsonValue? = requireJson().getField(name),
         link: ReferenceChainLink = this.link.child(name)
     ): DeserializationContext = DeserializationContext(json, link)
 

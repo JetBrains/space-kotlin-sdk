@@ -27,7 +27,6 @@ val apiTriplePartialType = ClassName(ROOT_PACKAGE, "ApiTriplePartial")
 
 val apiMapEntryType = ClassName(ROOT_PACKAGE, "ApiMapEntry")
 val apiMapEntryStructureType = ClassName(ROOT_PACKAGE, "ApiMapEntryStructure")
-val apiMapEntryPartialType = ClassName(ROOT_PACKAGE, "ApiMapEntryPartial")
 
 val modType = ClassName(ROOT_PACKAGE, "Mod")
 val modStructureType = ClassName(ROOT_PACKAGE, "ModStructure")
@@ -101,7 +100,7 @@ fun HA_Type?.partial(): PartialDetectionResult = when (this) {
         BATCH -> batchDataElementType().partial().copy(special = SpecialPartial.BATCH)
         REQUEST_BODY -> error("Objects of kind ${REQUEST_BODY.name} should not appear in output types")
     }
-    is HA_Type.UrlParam -> PartialDetectionResult(null, null) // TODO: Support UrlParam
+    is HA_Type.UrlParam -> PartialDetectionResult(this, null)
     is HA_Type.Dto -> PartialDetectionResult(this, null)
     is HA_Type.Ref -> PartialDetectionResult(this, null)
 }.let { it.copy(partial = it.partial?.copy(nullable = false)) }
@@ -211,3 +210,6 @@ fun HA_UrlParameter.getClassName() = ClassName(TYPES_PACKAGE, name.kotlinClassNa
 fun HA_UrlParameterOption.getClassName() = ClassName(TYPES_PACKAGE, optionName.kotlinClassName())
 
 fun HttpApiEntitiesById.resolveDto(dto: HA_Dto.Ref): HA_Dto = this.dtoAndUrlParams.getValue(dto.id)
+fun HttpApiEntitiesById.resolveDto(type: HA_Type.Dto): HA_Dto = resolveDto(type.dto)
+fun HttpApiEntitiesById.resolveDto(type: HA_Type.Ref): HA_Dto = resolveDto(type.dto)
+fun HttpApiEntitiesById.resolveUrlParam(type: HA_Type.UrlParam): HA_Dto = this.dtoAndUrlParams.getValue(type.urlParam.id)

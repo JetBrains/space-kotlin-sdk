@@ -54,7 +54,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     val bodyParams = endpoint.requestBody?.fields
                     val returnType = endpoint.responseBody?.kotlinPoet(model)
                     val (partial, specialPartial) = endpoint.responseBody.partial()
-                    val partialInterface = partial?.getPartialInterface(model)
+                    val partialInterface = partial?.partialToPartialInterface(model)
                     val hasUrlBatchInfo = queryParams.any {
                         it.name == META_PARAMETERS_PREFIX + "skip" || it.name == META_PARAMETERS_PREFIX + "top"
                     }

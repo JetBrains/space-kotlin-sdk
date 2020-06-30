@@ -1,9 +1,6 @@
 package space.jetbrains.api.runtime
 
-import space.jetbrains.api.runtime.TypeStructure.Property
 import space.jetbrains.api.runtime.PartialBuilder.Requested.*
-import space.jetbrains.api.runtime.PartialBuilder.Special.BATCH
-import space.jetbrains.api.runtime.PartialBuilder.Special.MAP
 
 @DslMarker
 annotation class PartialQueryDsl
@@ -16,6 +13,10 @@ interface Partial {
 abstract class PartialImpl(protected val builder: PartialBuilder) : Partial {
     override fun defaultPartial() {
         builder.addDefault()
+    }
+
+    protected companion object {
+        fun getPartialBuilder(partial: Partial): PartialBuilder = (partial as PartialImpl).builder
     }
 }
 
@@ -92,8 +93,8 @@ class PartialBuilder(
             }
         }
         return when (special) {
-            MAP -> "key,value($query)"
-            BATCH -> "next,totalCount,data($query)"
+            Special.MAP -> "key,value($query)"
+            Special.BATCH -> "next,totalCount,data($query)"
             null -> query
         }
     }
@@ -104,8 +105,9 @@ class PartialBuilder(
 
     private companion object {
         tailrec fun findAncestor(partial: PartialBuilder, ancestor: PartialBuilder, currentDepth: Int = 0): Int {
-            return if (partial === ancestor) currentDepth
-            else findAncestor(
+            return if (partial === ancestor) {
+                currentDepth
+            } else findAncestor(
                 partial = partial.parent ?: throw NoSuchElementException("Ancestor not found"),
                 ancestor = ancestor,
                 currentDepth = currentDepth + if (partial.special != null) 2 else 1

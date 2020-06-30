@@ -118,10 +118,10 @@ sealed class Type<T> {
                 @Suppress("UNCHECKED_CAST")
                 val key = keyType.deserialize(context.child(
                     name = "<key>",
-                    json = json["key"]
+                    json = json.getField("key")
                 ))
 
-                key to valueType.deserialize(context.child("[$key]", json["value"]))
+                key to valueType.deserialize(context.child("[$key]", json.getField("value")))
             }
         }
 
