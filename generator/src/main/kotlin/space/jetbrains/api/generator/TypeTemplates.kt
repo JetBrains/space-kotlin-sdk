@@ -1,13 +1,13 @@
 package space.jetbrains.api.generator
 
 import space.jetbrains.api.generator.HA_Type.Object.Kind.*
-import space.jetbrains.api.generator.HA_Type.Object.Kind.MAP_ENTRY
 import com.squareup.kotlinpoet.*
 
 fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById): CodeBlock.Builder {
     return when (type) {
         is HA_Type.Primitive -> error("Primitives have no structure")
         is HA_Type.Array -> error("Arrays have no structure")
+        is HA_Type.Map -> error("Maps have no structure")
         is HA_Type.Object -> when (type.kind) {
             PAIR -> {
                 add("%T(", apiPairStructureType)
@@ -23,13 +23,6 @@ fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById)
                 appendFieldType(type.secondField(), model)
                 add(", ")
                 appendFieldType(type.thirdField(), model)
-                add(")")
-            }
-            MAP_ENTRY -> {
-                add("%T(")
-                appendFieldType(type.keyField(), model)
-                add(", ")
-                appendFieldType(type.valueField(), model)
                 add(")")
             }
             BATCH -> error("Batches have no structure")
@@ -86,18 +79,14 @@ fun CodeBlock.Builder.appendType(
             )
         }
         is HA_Type.Array -> {
-            val elementType = notNullType.elementType
-            if (elementType is HA_Type.Object && elementType.kind == MAP_ENTRY) {
-                add("%T(", mapTypeType.importNested())
-                appendFieldType(elementType.keyField(), model)
-                add(", ")
-                appendFieldType(elementType.valueField(), model)
-                add(")")
-            } else {
-                add("%T(", arrayTypeType.importNested())
-                appendType(elementType, model, false)
-                add(")")
-            }
+            add("%T(", arrayTypeType.importNested())
+            appendType(notNullType.elementType, model, false)
+            add(")")
+        }
+        is HA_Type.Map -> {
+            add("%T(", mapTypeType.importNested())
+            appendType(notNullType.valueType, model, false)
+            add(")")
         }
         is HA_Type.Dto, is HA_Type.Ref -> {
             add("%T(", objectTypeType.importNested())
@@ -110,7 +99,7 @@ fun CodeBlock.Builder.appendType(
             add(")")
         }
         is HA_Type.Object -> when (notNullType.kind) {
-            PAIR, TRIPLE, MAP_ENTRY, MOD -> {
+            PAIR, TRIPLE, MOD -> {
                 add("%T(", objectTypeType.importNested())
                 appendStructure(notNullType, model)
                 add(")")

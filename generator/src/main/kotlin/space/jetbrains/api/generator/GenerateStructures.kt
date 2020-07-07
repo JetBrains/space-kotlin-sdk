@@ -20,18 +20,14 @@ private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpA
             HA_Primitive.Date -> add("date()")
             HA_Primitive.DateTime -> add("datetime()")
         }
-
         is HA_Type.Array -> {
-            val elementType = type.elementType
-            if (elementType is HA_Type.Object && elementType.kind == HA_Type.Object.Kind.MAP_ENTRY) {
-                add("map(")
-                appendPropertyDelegate(elementType.keyField(), model)
-                add(", ")
-                appendPropertyDelegate(elementType.valueField(), model)
-            } else {
-                add("list(")
-                appendPropertyDelegate(elementType, model, false)
-            }
+            add("list(")
+            appendPropertyDelegate(type.elementType, model, false)
+            add(")")
+        }
+        is HA_Type.Map -> {
+            add("map(")
+            appendPropertyDelegate(type.valueType, model, false)
             add(")")
         }
         is HA_Type.Object, is HA_Type.Dto, is HA_Type.Ref, is HA_Type.UrlParam -> {

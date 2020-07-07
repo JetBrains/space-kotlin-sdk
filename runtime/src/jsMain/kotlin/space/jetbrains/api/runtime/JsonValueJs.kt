@@ -36,6 +36,16 @@ internal actual operator fun JsonValue.set(property: String, value: JsonValue) {
     asDynamic()[property] = value
 }
 
+internal actual fun JsonValue.getFieldsOrNull(): Iterable<Map.Entry<String, JsonValue>>? {
+    require(jsTypeOf(this) == "object")
+    return js("Object.getOwnPropertyNames")(this).unsafeCast<Array<String>>().map {
+        object : Map.Entry<String, JsonValue> {
+            override val key: String get() = it
+            override val value: JsonValue get() = getField(it).asJsonValue()
+        }
+    }
+}
+
 internal actual fun jsonArray(vararg elements: JsonValue): JsonValue = arrayOf(elements).asJsonValue()
 
 internal actual fun JsonValue.arrayElementsOrNull(): Iterable<JsonValue>? {

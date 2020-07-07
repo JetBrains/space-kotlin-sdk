@@ -96,6 +96,7 @@ enum class HA_Primitive(val presentation: kotlin.String) {
 @JsonSubTypes(
     Type(value = HA_Type.Primitive::class, name = "HA_Type.Primitive"),
     Type(value = HA_Type.Array::class, name = "HA_Type.Array"),
+    Type(value = HA_Type.Map::class, name = "HA_Type.Map"),
     Type(value = HA_Type.Object::class, name = "HA_Type.Object"),
     Type(value = HA_Type.Dto::class, name = "HA_Type.Dto"),
     Type(value = HA_Type.Ref::class, name = "HA_Type.Ref"),
@@ -107,11 +108,12 @@ sealed class HA_Type {
 
     data class Primitive(val primitive: HA_Primitive, override val nullable: Boolean) : HA_Type()
     data class Array(val elementType: HA_Type, override val nullable: Boolean) : HA_Type()
+    data class Map(val valueType: HA_Type, override val nullable: Boolean) : HA_Type()
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
     data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean) : HA_Type() {
         enum class Kind {
-            PAIR, TRIPLE, MAP_ENTRY, BATCH, MOD, REQUEST_BODY
+            PAIR, TRIPLE, BATCH, MOD, REQUEST_BODY
         }
     }
     data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
@@ -119,9 +121,10 @@ sealed class HA_Type {
     data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean) : HA_Type()
     data class UrlParam(val urlParam: HA_UrlParameter.Ref, override val nullable: Boolean) : HA_Type()
 
-    fun copy(nullable: Boolean = this.nullable): HA_Type = when (this) {
+    fun copy(nullable: Boolean): HA_Type = when (this) {
         is Primitive -> Primitive(primitive, nullable)
         is Array -> Array(elementType, nullable)
+        is Map -> Map(valueType, nullable)
         is Object -> Object(fields, kind, nullable)
         is Dto -> Dto(dto, nullable)
         is Ref -> Ref(dto, nullable)
@@ -151,6 +154,7 @@ sealed class HA_DefaultValue {
         data class EnumEntry(val entryName: String) : Const()
     }
     data class Collection(val elements: List<HA_DefaultValue>) : HA_DefaultValue()
+    data class Map(val elements: kotlin.collections.Map<String, HA_DefaultValue>) : HA_DefaultValue()
     data class Reference(val paramName: String): HA_DefaultValue()
 }
 

@@ -269,6 +269,8 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
             Unit
         }
 
+        is HA_Type.Map -> error("Maps cannot occur in URL parameters")
+
         is HA_Type.Object,
         is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
     }
@@ -283,17 +285,26 @@ fun CodeBlock.Builder.default(type: HA_Type, model: HttpApiEntitiesById, default
             add("%T." + defaultValue.entryName, className)
         }
         is HA_DefaultValue.Collection -> {
-            type as HA_Type.Array
-            add(if (type.isMap()) "mapOf(" else "listOf(")
+            add("listOf(")
             val elements = defaultValue.elements.iterator()
             elements.forEach {
-                default(type.elementType, model, it)
+                default((type as HA_Type.Array).elementType, model, it)
+                if (elements.hasNext()) add(", ")
+            }
+            add(")")
+        }
+        is HA_DefaultValue.Map -> {
+            add("mapOf(")
+            val elements = defaultValue.elements.iterator()
+            elements.forEach {
+                add("%S·to ", it.key)
+                default((type as HA_Type.Map).valueType, model, it.value)
                 if (elements.hasNext()) add(", ")
             }
             add(")")
         }
         is HA_DefaultValue.Reference -> add(defaultValue.paramName)
-    }
+    }.let {}
 }
 
 private fun getFuncParamsAndDeprecationKDoc(

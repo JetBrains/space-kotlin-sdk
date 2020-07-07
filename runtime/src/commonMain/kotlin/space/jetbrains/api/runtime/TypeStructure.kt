@@ -51,8 +51,8 @@ abstract class TypeStructure<D : Any> {
     @JsName("list_property")
     protected fun <T> list(prop: PropertyProvider<T>): PropertyProvider<List<T>> = property(ArrayType(prop.type))
     @JsName("map_property")
-    protected fun <K, V> map(keyProp: PropertyProvider<K>, valueProp: PropertyProvider<V>): PropertyProvider<Map<K, V>> {
-        return property(MapType(keyProp.type, valueProp.type))
+    protected fun <V> map(valueProp: PropertyProvider<V>): PropertyProvider<Map<String, V>> {
+        return property(MapType(valueProp.type))
     }
 
     @JsName("obj_property")

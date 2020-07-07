@@ -1,6 +1,5 @@
 package space.jetbrains.api.generator
 
-import space.jetbrains.api.generator.HA_Type.Object.Kind.MAP_ENTRY
 import space.jetbrains.api.generator.HA_Type.Object.Kind.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -24,9 +23,6 @@ val apiPairPartialType = ClassName(ROOT_PACKAGE, "ApiPairPartial")
 val apiTripleType = ClassName(ROOT_PACKAGE, "ApiTriple")
 val apiTripleStructureType = ClassName(ROOT_PACKAGE, "ApiTripleStructure")
 val apiTriplePartialType = ClassName(ROOT_PACKAGE, "ApiTriplePartial")
-
-val apiMapEntryType = ClassName(ROOT_PACKAGE, "ApiMapEntry")
-val apiMapEntryStructureType = ClassName(ROOT_PACKAGE, "ApiMapEntryStructure")
 
 val modType = ClassName(ROOT_PACKAGE, "Mod")
 val modStructureType = ClassName(ROOT_PACKAGE, "ModStructure")
@@ -81,22 +77,18 @@ val parametersType = ClassName("io.ktor.http", "Parameters")
 const val INDENT = "    "
 
 enum class SpecialPartial {
-    MAP, BATCH
+    BATCH
 }
-
-fun HA_Type.isMap(): Boolean = this is HA_Type.Array && elementType.let { it is HA_Type.Object && it.kind == MAP_ENTRY }
 
 data class PartialDetectionResult(val partial: HA_Type?, val special: SpecialPartial?)
 
 // TODO nested partials
 fun HA_Type?.partial(): PartialDetectionResult = when (this) {
     is HA_Type.Primitive, is HA_Type.Enum, null -> PartialDetectionResult(null, null)
-    is HA_Type.Array -> elementType.partial().let {
-        it.copy(special = if (isMap()) SpecialPartial.MAP else it.special)
-    }
+    is HA_Type.Array -> elementType.partial()
+    is HA_Type.Map -> valueType.partial()
     is HA_Type.Object -> when (kind) {
         PAIR, TRIPLE, MOD -> PartialDetectionResult(this, null)
-        MAP_ENTRY -> valueType().partial()
         BATCH -> batchDataElementType().partial().copy(special = SpecialPartial.BATCH)
         REQUEST_BODY -> error("Objects of kind ${REQUEST_BODY.name} should not appear in output types")
     }
@@ -119,15 +111,9 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): Typ
         HA_Primitive.DateTime -> sDateTimeType
     }
 
-    is HA_Type.Array -> {
-        val elementType = elementType
-        if ((elementType as? HA_Type.Object)?.kind == MAP_ENTRY) {
-            Map::class.asClassName().parameterizedBy(
-                elementType.keyType().kotlinPoet(model),
-                elementType.valueType().kotlinPoet(model)
-            )
-        } else List::class.asClassName().parameterizedBy(elementType.kotlinPoet(model))
-    }
+    is HA_Type.Array -> List::class.asClassName().parameterizedBy(elementType.kotlinPoet(model))
+    is HA_Type.Map -> Map::class.asClassName().parameterizedBy(STRING, valueType.kotlinPoet(model))
+
     is HA_Type.Object -> when (kind) {
         PAIR -> apiPairType.parameterizedBy(firstType().kotlinPoet(model), secondType().kotlinPoet(model))
         TRIPLE -> apiTripleType.parameterizedBy(
@@ -135,7 +121,6 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): Typ
             secondType().kotlinPoet(model),
             thirdType().kotlinPoet(model)
         )
-        MAP_ENTRY -> apiMapEntryType.parameterizedBy(keyType().kotlinPoet(model), valueType().kotlinPoet(model))
         BATCH -> batchType.parameterizedBy(batchDataElementType().kotlinPoet(model))
         MOD -> modType.parameterizedBy(modSubjectType().kotlinPoet(model))
         REQUEST_BODY -> error("Request bodies are not representable with kotlin types")
@@ -184,12 +169,6 @@ fun HA_Type.Object.thirdField() = fieldByName("third")
 fun HA_Type.Object.thirdType() = thirdField().type
 
 fun HA_Type.Object.modSubjectType() = fieldByName("old").type.copy(nullable = false)
-
-fun HA_Type.Object.keyField() = fieldByName("key")
-fun HA_Type.Object.keyType() = keyField().type
-
-fun HA_Type.Object.valueField() = fieldByName("value")
-fun HA_Type.Object.valueType() = valueField().type
 
 fun HA_Type.Object.batchDataField() = fieldByName("data")
 fun HA_Type.Object.batchDataElementType() = (batchDataField().type as HA_Type.Array).elementType

@@ -27,6 +27,9 @@ expect fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue
 internal fun jsonObject(vararg properties: Pair<String, JsonValue>): JsonValue = jsonObject(properties.asIterable())
 internal expect fun JsonValue.getField(key: String): JsonValue?
 internal expect operator fun JsonValue.set(property: String, value: JsonValue)
+internal expect fun JsonValue.getFieldsOrNull(): Iterable<Map.Entry<String, JsonValue>>?
+internal fun JsonValue.getFields(link: ReferenceChainLink): Iterable<Map.Entry<String, JsonValue>> = getFieldsOrNull()
+    ?: error("Value is expected to be an object: " + link.referenceChain())
 
 internal expect fun jsonArray(vararg elements: JsonValue): JsonValue
 internal expect fun JsonValue.arrayElementsOrNull(): Iterable<JsonValue>?

@@ -5,7 +5,6 @@ import com.squareup.kotlinpoet.KModifier.ABSTRACT
 import com.squareup.kotlinpoet.KModifier.OVERRIDE
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import space.jetbrains.api.generator.HA_Type.Object.Kind.*
-import space.jetbrains.api.generator.HA_Type.Object.Kind.MAP_ENTRY
 
 fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
     val childFieldsById = getChildFields(model)
@@ -238,7 +237,7 @@ fun HA_Type.partialToPartialInterface(model: HttpApiEntitiesById): TypeName {
     fun HA_Type.recurse() = partial().partial?.partialToPartialInterface(model).orNothing()
 
     return when (this) {
-        is HA_Type.Primitive, is HA_Type.Enum, is HA_Type.Array -> error("Such partials should not be returned")
+        is HA_Type.Primitive, is HA_Type.Enum, is HA_Type.Array, is HA_Type.Map -> error("Such partials should not be returned")
         is HA_Type.Object -> when (kind) {
             PAIR -> apiPairPartialType.parameterizedBy(
                 firstType().recurse(),
@@ -250,7 +249,7 @@ fun HA_Type.partialToPartialInterface(model: HttpApiEntitiesById): TypeName {
                 thirdType().recurse()
             )
             MOD -> modPartialType.parameterizedBy(modSubjectType().recurse())
-            MAP_ENTRY, BATCH, REQUEST_BODY -> error("Such partials should not be returned")
+            BATCH, REQUEST_BODY -> error("Such partials should not be returned")
         }
         is HA_Type.Dto -> model.resolveDto(this).getClassName().dtoToPartialInterface()
         is HA_Type.Ref -> model.resolveDto(this).getClassName().dtoToPartialInterface()
@@ -277,7 +276,7 @@ private fun getChildFields(model: HttpApiEntitiesById): Map<TID, ChildFields> {
         }
         return ChildFields(childFieldNamesToPartials = childFields, ownFieldNamesToPartials = dto.fields.associate {
             val partialDetectionResult = it.field.type.partial()
-            require(partialDetectionResult.special == null) { "Batch and map fields are currently not supported" }
+            require(partialDetectionResult.special == null) { "Batch fields are currently not supported" }
             it.field.name to partialDetectionResult.partial
         }).also { result[dto.id] = it }
     }

@@ -49,6 +49,10 @@ internal actual operator fun JsonValue.set(property: String, value: JsonValue) {
     (this as ObjectNode)[property] = value
 }
 
+internal actual fun JsonValue.getFieldsOrNull(): Iterable<Map.Entry<String, JsonValue>>? = if (this is ObjectNode) {
+    Iterable(this::fields)
+} else null
+
 internal actual fun jsonArray(vararg elements: JsonValue): JsonValue = ArrayNode(jsonNodes, elements.asList())
 
 internal actual fun JsonValue.arrayElementsOrNull(): Iterable<JsonValue>? = if (isArray) this else null

@@ -110,24 +110,17 @@ sealed class Type<T> {
         }
     }
 
-    class MapType<K, V>(private val keyType: Type<K>, val valueType: Type<V>) : Type<Map<K, V>>() {
-        private val elementType = ObjectType(ApiMapEntryStructure(keyType, valueType))
-
-        override fun deserialize(context: DeserializationContext): Map<K, V> {
-            return context.requireJson().arrayElements(context.link).associate { json ->
-                @Suppress("UNCHECKED_CAST")
-                val key = keyType.deserialize(context.child(
-                    name = "<key>",
-                    json = json.getField("key")
-                ))
-
-                key to valueType.deserialize(context.child("[$key]", json.getField("value")))
+    class MapType<V>(val valueType: Type<V>) : Type<Map<String, V>>() {
+        override fun deserialize(context: DeserializationContext): Map<String, V> {
+            return context.requireJson().getFields(context.link).associate { (key, json) ->
+                key to valueType.deserialize(context.child("[\"$key\"]", json))
             }
         }
 
-        override fun serialize(value: Map<K, V>): JsonValue {
-            val entries = value.map { ApiMapEntry(it.key, it.value) }
-            return jsonArray(*Array(entries.size) { elementType.serialize(entries[it]) })
+        override fun serialize(value: Map<String, V>): JsonValue {
+            return jsonObject(value.map {
+                it.key to (valueType.serialize(it.value) ?: error("Map values cannot be optional"))
+            })
         }
     }
 
@@ -179,7 +172,7 @@ sealed class Type<T> {
         is Nullable<*> -> type.partialStructure()
         is Optional<*> -> type.partialStructure()
         is ArrayType<*> -> elementType.partialStructure()
-        is MapType<*, *> -> valueType.partialStructure()
+        is MapType<*> -> valueType.partialStructure()
         is BatchType<*> -> elementType.partialStructure()
         is ObjectType -> structure
     }
