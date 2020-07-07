@@ -186,43 +186,48 @@ One such example is `spaceClient.projects.planning.issues.getAllIssues()`, where
 * `CUserWithEmailPrincipalDetails`, when the issue was created by a user that has an e-mail address.
 * `CUserPrincipalDetails`, when the issue was created by a user.
 
-// TODO FROM HERE - Arkady how can these be retrieved?
-By default, these instances will only contain properties from the `CPrincipalDetails` interface. To retrieve specific properties of inherited types, we have to use the `.ForInherited<TInherited>()` extension method, and build the partial response for that specific inheritor.
+The partial builder contains properties for all of these classes.
 
-Here's an example retrieving issues from a project. For the `CreatedBy` property, we are defining that the response should contain:
+Here's an example retrieving issues from a project. For the `createdBy` property, we are defining that the response should contain:
 
-* `CUserPrincipalDetailsDto` with the `User.Id` property.
-* `CUserWithEmailPrincipalDetailsDto` with the `Name` and `Email` properties.
+* `CUserPrincipalDetails` with the `user.id` property.
+* `CUserWithEmailPrincipalDetails` with the `name` and `email` properties.
 
-```csharp
-await foreach (var issueDto in _projectClient.Planning.Issues.GetAllIssuesAsyncEnumerable(
-    ProjectIdentifier.Key("ABC"), IssuesSorting.UPDATED,
-    partial: _ => _
-        .WithAllFieldsWildcard()
-        .WithCreationTime()
-        .WithCreatedBy(createdBy => createdBy
-            .WithDetails(details => details
-                .ForInherited<CUserPrincipalDetailsDto>(detailsDto => detailsDto
-                    .WithUser(user => user
-                        .WithId()))
-                .ForInherited<CUserWithEmailPrincipalDetailsDto>(detailsDto => detailsDto
-                    .WithName()
-                    .WithEmail())))
-        .WithStatus()))
-{
-    if (issueDto.CreatedBy.Details is CUserPrincipalDetailsDto userPrincipal)
-    {
-        // ... work with CUserPrincipalDetailsDto ...
-    }
-    if (issueDto.CreatedBy.Details is CUserWithEmailPrincipalDetailsDto userWithEmailPrincipal)
-    {
-        // ... work with CUserWithEmailPrincipalDetailsDto ...
+```kotlin
+val issueStatuses = spaceClient.projects.planning.issues.statuses
+    .getAllIssueStatuses(ProjectIdentifier.Key("CRL")).map { it.id }
+
+val issues = spaceClient.projects.planning.issues
+    .getAllIssues(ProjectIdentifier.Key("CRL"), sorting = IssuesSorting.UPDATED, descending = true, statuses = issueStatuses) {
+        defaultPartial()
+        creationTime()
+        createdBy {
+            details {
+                // Available on CUserPrincipalDetails
+                user {
+                    id()
+                }
+
+                // Available on CUserWithEmailPrincipalDetails,
+                // CAutomationTaskPrincipalDetails, CBuiltInServicePrincipalDetails
+                name()
+                email()
+            }
+        }
+        status()
+}.data.forEach { issue ->
+    when (issue.createdBy.details) {
+        is CUserPrincipalDetails -> {
+            // ...
+        }
+        is CUserWithEmailPrincipalDetails -> {
+            // ...
+        }
     }
 }
 ```
 
-We can cast these types, use `switch` expressions on their type, and more.
-// TODO END UNTIL HERE
+We can cast these types, use `when` expressions on their type, and more.
 
 ### Batch
 
