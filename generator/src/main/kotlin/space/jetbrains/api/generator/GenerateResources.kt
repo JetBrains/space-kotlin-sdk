@@ -261,9 +261,15 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
             funcCode.add(expr)
             if (type.nullable) funcCode.add("?")
             funcCode.add(".takeIf·{ it.isNotEmpty() }")
-            if (type.elementType !is HA_Type.Primitive || type.elementType.primitive != HA_Primitive.String) {
+            if (type.elementType !is HA_Type.Primitive || type.elementType.primitive != HA_Primitive.String || type.elementType.nullable) {
                 funcCode.add("?.map·{ ")
-                parameterConversion(model, "it", type.elementType, funcCode)
+                if (type.elementType.nullable) {
+                    funcCode.add("it?.let·{ ")
+                    parameterConversion(model, "it", type.elementType, funcCode)
+                    funcCode.add(" }.orEmpty()")
+                } else {
+                    parameterConversion(model, "it", type.elementType, funcCode)
+                }
                 funcCode.add(" }")
             }
             Unit
