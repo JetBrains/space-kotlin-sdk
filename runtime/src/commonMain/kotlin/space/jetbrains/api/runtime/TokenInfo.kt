@@ -19,7 +19,7 @@ data class PermanentToken(override val accessToken: String) : TokenInfo, TokenSo
 }
 
 private fun TokenInfo.expired(gapSeconds: Long = 5): Boolean {
-    return expires?.let { now.plusSeconds(gapSeconds) < it } ?: false
+    return expires?.let { now.plusSeconds(gapSeconds) > it } ?: false
 }
 
 class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : TokenSource {
