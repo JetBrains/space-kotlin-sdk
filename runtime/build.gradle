@@ -92,12 +92,12 @@ kotlin {
             dependencies {
                 api kotlin('stdlib-common')
                 api "io.ktor:ktor-client-core:$ktor_version"
+                api "org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$kotlinx_coroutines_version"
             }
         }
 
         jvmMain.dependencies {
             api "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-            api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
 
             api "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
@@ -110,7 +110,6 @@ kotlin {
         jsMain {
             dependencies {
                 api "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
-                api "org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$kotlinx_coroutines_version"
 
                 api "io.ktor:ktor-client-core-js:$ktor_version"
                 api "io.ktor:ktor-client-js:$ktor_version"

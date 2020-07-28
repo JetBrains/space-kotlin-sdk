@@ -1,13 +1,14 @@
 package space.jetbrains.api.runtime
 
 import java.time.*
+import java.time.format.DateTimeFormatter
 import java.time.temporal.*
 import java.util.TimeZone
 
 actual class SDateTime(val javaDateTime: ZonedDateTime) : Comparable<SDateTime> {
     actual constructor(timestamp: Long) : this(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneOffset.UTC))
 
-    actual val iso: String get() = javaDateTime.toString()
+    actual val iso: String get() = DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(javaDateTime)
 
     actual override fun toString(): String = iso
 
