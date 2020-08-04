@@ -10,7 +10,7 @@ buildscript {
 
     ext.mavenForPublishing = { PublishingExtension publishing ->
         publishing.repositories.maven {
-            url = "https://maven.jetbrains.team/space"
+            url = "https://packages.jetbrains.team/maven/p/crl/maven"
             credentials {
                 def props = rootProject.extensions.extraProperties
                 def spaceUsername = "spaceUsername"
