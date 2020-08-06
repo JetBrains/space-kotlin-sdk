@@ -137,7 +137,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                             parameterConversion(model, param.name, param.type, code)
                                             code.add("?.let·{ appendAll(%S, it) }\n", param.name)
                                         }
-                                        param.parameterHaType().nullable -> {
+                                        param.funcParameterHaType().nullable -> {
                                             code.add(param.name + "?.let·{ append(%S, ", param.name)
                                             parameterConversion(model, "it", param.type, code)
                                             code.add(") }\n", param.name)
@@ -159,16 +159,24 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                 val fieldIterator = endpoint.requestBody.fields.iterator()
                                 while (fieldIterator.hasNext()) {
                                     val field = fieldIterator.next()
-                                    fun serialize() {
-                                        code.appendType(field.parameterHaType(), model, field.requiresOption)
-                                        code.add(".serialize(${field.name})")
+                                    fun serialize(expr: String = field.name) {
+                                        code.appendType(field.type, model, field.requiresOption)
+                                        code.add(".serialize($expr)")
                                     }
-                                    if (field.requiresOption) {
-                                        serialize()
-                                        code.add("?.let·{ %S·to it }", field.name)
-                                    } else {
-                                        code.add("%S·to ", field.name)
-                                        serialize()
+                                    when {
+                                        field.requiresOption -> {
+                                            serialize()
+                                            code.add("?.let·{ %S·to it }", field.name)
+                                        }
+                                        field.requiresAddedNullability -> {
+                                            code.add("${field.name}?.let·{ %S·to ", field.name)
+                                            serialize("it")
+                                            code.add(" }")
+                                        }
+                                        else -> {
+                                            code.add("%S·to ", field.name)
+                                            serialize()
+                                        }
                                     }
                                     if (fieldIterator.hasNext()) code.add(",")
                                     code.add("\n")
@@ -200,7 +208,7 @@ val HA_Field.requiresOption get() = optional && defaultValue == null && type.nul
 
 private val HA_Field.requiresAddedNullability get() = optional && defaultValue == null && !type.nullable
 
-private fun HA_Field.parameterHaType() = type.let {
+private fun HA_Field.funcParameterHaType() = type.let {
     if (requiresAddedNullability) it.copy(nullable = true) else it
 }
 
@@ -325,7 +333,7 @@ private fun getFuncParamsAndDeprecationKDoc(
         fun paramWithDefault(paramField: HA_Field): ParameterSpec {
             val parameter = ParameterSpec.builder(
                 paramField.name,
-                paramField.parameterHaType().kotlinPoet(model, paramField.requiresOption)
+                paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
             )
             when {
                 paramField.requiresOption -> parameter.defaultValue("%T", optionNoneType)
