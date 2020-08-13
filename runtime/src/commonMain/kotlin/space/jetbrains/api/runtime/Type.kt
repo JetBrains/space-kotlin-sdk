@@ -1,5 +1,7 @@
 package space.jetbrains.api.runtime
 
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import space.jetbrains.api.runtime.Type.NumberType.IntType
 import space.jetbrains.api.runtime.Type.NumberType.LongType
 import space.jetbrains.api.runtime.Type.PrimitiveType.StringType
@@ -53,23 +55,23 @@ sealed class Type<T> {
             override fun serialize(value: String): JsonValue = jsonString(value)
         }
 
-        object DateType : PrimitiveType<SDate>() {
-            override fun deserialize(context: DeserializationContext): SDate {
-                return SDate(StringType.deserialize(context.child("iso")))
+        object DateType : PrimitiveType<LocalDate>() {
+            override fun deserialize(context: DeserializationContext): LocalDate {
+                return LocalDate.parse(StringType.deserialize(context.child("iso")))
             }
 
-            override fun serialize(value: SDate): JsonValue {
-                return jsonObject("iso" to jsonString(value.iso))
+            override fun serialize(value: LocalDate): JsonValue {
+                return jsonObject("iso" to jsonString(value.toString()))
             }
         }
 
-        object DateTimeType : PrimitiveType<SDateTime>() {
-            override fun deserialize(context: DeserializationContext): SDateTime {
-                return SDateTime(LongType.deserialize(context.child("timestamp")))
+        object DateTimeType : PrimitiveType<Instant>() {
+            override fun deserialize(context: DeserializationContext): Instant {
+                return Instant.fromEpochMilliseconds(LongType.deserialize(context.child("timestamp")))
             }
 
-            override fun serialize(value: SDateTime): JsonValue {
-                return jsonObject("timestamp" to jsonNumber(value.timestamp))
+            override fun serialize(value: Instant): JsonValue {
+                return jsonObject("timestamp" to jsonNumber(value.toEpochMilliseconds()))
             }
         }
     }

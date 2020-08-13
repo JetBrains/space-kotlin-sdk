@@ -5,7 +5,7 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+    maven { url "https://kotlin.bintray.com/kotlinx" }
     maven { url "https://cache-redirector.jetbrains.com/plugins.gradle.org/m2" }
 }
 
@@ -90,18 +90,14 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api kotlin('stdlib-common')
                 api "io.ktor:ktor-client-core:$ktor_version"
-                api "org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$kotlinx_coroutines_version"
+                api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
+                api "org.jetbrains.kotlinx:kotlinx-datetime:0.1.0"
             }
         }
 
         jvmMain.dependencies {
-            api "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-
             api "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-
-            api "io.ktor:ktor-client-core-jvm:$ktor_version"
 
             api "com.fasterxml.jackson.core:jackson-core:$jackson_version"
             api "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
@@ -109,15 +105,12 @@ kotlin {
 
         jsMain {
             dependencies {
-                api "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
-
-                api "io.ktor:ktor-client-core-js:$ktor_version"
                 api "io.ktor:ktor-client-js:$ktor_version"
-
-                api npm("moment", "2.24.0")
-                api npm("moment-timezone", "0.5.27")
-                implementation npm("text-encoding", "0.7.0")
-                implementation npm("abort-controller", "3.0.0")
+            }
+        }
+        all {
+            languageSettings {
+                useExperimentalAnnotation('kotlin.time.ExperimentalTime')
             }
         }
     }

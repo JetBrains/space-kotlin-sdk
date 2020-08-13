@@ -10,8 +10,8 @@ const val RESOURCES_PACKAGE = "$ROOT_PACKAGE.resources"
 const val STRUCTURES_PACKAGE = "$TYPES_PACKAGE.structure"
 const val PARTIALS_PACKAGE = "$TYPES_PACKAGE.partials"
 
-private val sDateType = ClassName(ROOT_PACKAGE, "SDate")
-private val sDateTimeType = ClassName(ROOT_PACKAGE, "SDateTime")
+private val localDateType = ClassName("kotlinx.datetime", "LocalDate")
+private val instantType = ClassName("kotlinx.datetime", "Instant")
 val batchType = ClassName(ROOT_PACKAGE, "Batch")
 val batchInfoType = ClassName(ROOT_PACKAGE, "BatchInfo")
 val batchInfoStructureType = ClassName(ROOT_PACKAGE, "BatchInfoStructure")
@@ -107,8 +107,8 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): Typ
         HA_Primitive.Double -> Double::class.asClassName()
         HA_Primitive.Boolean -> Boolean::class.asClassName()
         HA_Primitive.String -> String::class.asClassName()
-        HA_Primitive.Date -> sDateType
-        HA_Primitive.DateTime -> sDateTimeType
+        HA_Primitive.Date -> localDateType
+        HA_Primitive.DateTime -> instantType
     }
 
     is HA_Type.Array -> List::class.asClassName().parameterizedBy(elementType.kotlinPoet(model))
@@ -185,7 +185,6 @@ fun HA_Dto.getClassName() = if (name != "BatchInfo") {
     ClassName(TYPES_PACKAGE, name.kotlinClassName())
 } else batchInfoType
 
-fun HA_UrlParameter.getClassName() = ClassName(TYPES_PACKAGE, name.kotlinClassName())
 fun HA_UrlParameterOption.getClassName() = ClassName(TYPES_PACKAGE, optionName.kotlinClassName())
 
 fun HttpApiEntitiesById.resolveDto(dto: HA_Dto.Ref): HA_Dto = this.dtoAndUrlParams.getValue(dto.id)

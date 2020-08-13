@@ -1,5 +1,7 @@
 package space.jetbrains.api.runtime
 
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import space.jetbrains.api.runtime.Type.*
 import space.jetbrains.api.runtime.Type.PrimitiveType.*
 import kotlin.js.*
@@ -38,9 +40,9 @@ abstract class TypeStructure<D : Any> {
     @JsName("boolean_property")
     protected fun boolean(): PropertyProvider<Boolean> = property(BooleanType)
     @JsName("date_property")
-    protected fun date(): PropertyProvider<SDate> = property(DateType)
+    protected fun date(): PropertyProvider<LocalDate> = property(DateType)
     @JsName("datetime_property")
-    protected fun datetime(): PropertyProvider<SDateTime> = property(DateTimeType)
+    protected fun datetime(): PropertyProvider<Instant> = property(DateTimeType)
     @JsName("string_property")
     protected fun string(): PropertyProvider<String> = property(StringType)
 

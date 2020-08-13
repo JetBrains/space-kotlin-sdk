@@ -1,5 +1,21 @@
 package space.jetbrains.api.runtime
 
+import io.ktor.client.HttpClient
+import io.ktor.client.request.*
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.readText
+import io.ktor.http.*
+import io.ktor.http.HttpStatusCode.Companion.BadRequest
+import io.ktor.http.HttpStatusCode.Companion.Forbidden
+import io.ktor.http.HttpStatusCode.Companion.InternalServerError
+import io.ktor.http.HttpStatusCode.Companion.NotFound
+import io.ktor.http.HttpStatusCode.Companion.PayloadTooLarge
+import io.ktor.http.HttpStatusCode.Companion.TooManyRequests
+import io.ktor.http.HttpStatusCode.Companion.Unauthorized
+import io.ktor.http.content.TextContent
+import io.ktor.utils.io.charsets.Charsets
+import io.ktor.utils.io.errors.IOException
+import kotlinx.datetime.Clock.System
 import space.jetbrains.api.runtime.ErrorCodes.AUTHENTICATION_REQUIRED
 import space.jetbrains.api.runtime.ErrorCodes.DUPLICATED_ENTITY
 import space.jetbrains.api.runtime.ErrorCodes.INTERNAL_SERVER_ERROR
@@ -9,20 +25,7 @@ import space.jetbrains.api.runtime.ErrorCodes.PERMISSION_DENIED
 import space.jetbrains.api.runtime.ErrorCodes.RATE_LIMITED
 import space.jetbrains.api.runtime.ErrorCodes.REQUEST_ERROR
 import space.jetbrains.api.runtime.ErrorCodes.VALIDATION_ERROR
-import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.http.HttpStatusCode.Companion.BadRequest
-import io.ktor.http.HttpStatusCode.Companion.Forbidden
-import io.ktor.http.HttpStatusCode.Companion.InternalServerError
-import io.ktor.http.HttpStatusCode.Companion.NotFound
-import io.ktor.http.HttpStatusCode.Companion.PayloadTooLarge
-import io.ktor.http.HttpStatusCode.Companion.TooManyRequests
-import io.ktor.http.HttpStatusCode.Companion.Unauthorized
-import io.ktor.http.content.*
-import io.ktor.utils.io.charsets.*
-import io.ktor.utils.io.errors.*
+import kotlin.time.seconds
 
 open class RequestException(message: String?, val response: HttpResponse) : Exception(message)
 
@@ -52,7 +55,7 @@ class SpaceHttpClient(client: HttpClient) {
                 body = TextContent(it.formUrlEncode(), ContentType.Application.FormUrlEncoded)
             }
         }
-        val responseTime = now
+        val responseTime = System.now()
 
         val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
         handleErrors(response, tokenJson, httpMethod, url)
@@ -62,9 +65,9 @@ class SpaceHttpClient(client: HttpClient) {
             accessToken = deserialization.child("access_token").let {
                 it.requireJson().asString(it.link)
             },
-            expires = responseTime.plusSeconds(deserialization.child("expires_in").let {
+            expires = responseTime.plus(deserialization.child("expires_in").let {
                 it.requireJson().asNumber(it.link)
-            }.toLong())
+            }.toLong().seconds)
         )
     }
 

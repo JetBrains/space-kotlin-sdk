@@ -1,25 +1,28 @@
 package space.jetbrains.api.runtime
 
 import io.ktor.http.Parameters
+import kotlinx.datetime.Clock.System
+import kotlinx.datetime.Instant
+import kotlin.time.seconds
 
 interface TokenInfo {
     val accessToken: String
-    val expires: SDateTime?
+    val expires: Instant?
 }
 
 interface TokenSource {
     suspend fun token(): TokenInfo
 }
 
-data class ExpiringToken(override val accessToken: String, override val expires: SDateTime) : TokenInfo
+data class ExpiringToken(override val accessToken: String, override val expires: Instant) : TokenInfo
 
 data class PermanentToken(override val accessToken: String) : TokenInfo, TokenSource {
-    override val expires: SDateTime? get() = null
+    override val expires: Instant? get() = null
     override suspend fun token(): TokenInfo = this
 }
 
 private fun TokenInfo.expired(gapSeconds: Long = 5): Boolean {
-    return expires?.let { now.plusSeconds(gapSeconds) > it } ?: false
+    return expires?.let { System.now() + gapSeconds.seconds > it } ?: false
 }
 
 class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : TokenSource {
