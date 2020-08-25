@@ -1,8 +1,8 @@
 package space.jetbrains.api.runtime
 
-data class ReferenceChainLink(val name: String, val parent: ReferenceChainLink? = null) {
+public data class ReferenceChainLink(val name: String, val parent: ReferenceChainLink? = null) {
 
-    fun referenceChain(): String = buildString { referenceChain(this) }
+    public fun referenceChain(): String = buildString { referenceChain(this) }
 
     private fun referenceChain(sb: StringBuilder): StringBuilder {
         parent?.referenceChain(sb)?.append("->")
@@ -10,21 +10,21 @@ data class ReferenceChainLink(val name: String, val parent: ReferenceChainLink? 
     }
 }
 
-fun ReferenceChainLink.child(name: String): ReferenceChainLink = ReferenceChainLink(name, this)
+public fun ReferenceChainLink.child(name: String): ReferenceChainLink = ReferenceChainLink(name, this)
 
-data class DeserializationContext(
+public data class DeserializationContext(
     val json: JsonValue?,
     val link: ReferenceChainLink
 ) {
-    fun requireJson() = json ?: error("Missing required property: ${link.referenceChain()}")
+    public fun requireJson(): JsonValue = json ?: error("Missing required property: ${link.referenceChain()}")
 
-    fun child(
+    public fun child(
         name: String,
         json: JsonValue? = requireJson().getField(name),
         link: ReferenceChainLink = this.link.child(name)
     ): DeserializationContext = DeserializationContext(json, link)
 
-    fun elements(): Iterable<DeserializationContext> = sequence {
+    public fun elements(): Iterable<DeserializationContext> = sequence {
         for ((index, element) in requireJson().arrayElements(link).withIndex()) {
             yield(DeserializationContext(element, link.child("[$index]")))
         }

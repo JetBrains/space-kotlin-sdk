@@ -2,26 +2,26 @@ package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
-class ApiTriple<out A, out B, out C>(first: PropertyValue<A>, second: PropertyValue<B>, third: PropertyValue<C>) {
-    val first by first
-    val second by second
-    val third by third
+public class ApiTriple<out A, out B, out C>(first: PropertyValue<A>, second: PropertyValue<B>, third: PropertyValue<C>) {
+    public val first: A by first
+    public val second: B by second
+    public val third: C by third
 
-    constructor(first: A, second: B, third: C) : this(
+    public constructor(first: A, second: B, third: C) : this(
         Value(first),
         Value(second),
         Value(third)
     )
 
-    fun toTriple(): Triple<A, B, C> = Triple(first, second, third)
+    public fun toTriple(): Triple<A, B, C> = Triple(first, second, third)
 }
 
-fun <A, B, C> Triple<A, B, C>.toApiTriple(): ApiTriple<A, B, C> = ApiTriple(first, second, third)
+public fun <A, B, C> Triple<A, B, C>.toApiTriple(): ApiTriple<A, B, C> = ApiTriple(first, second, third)
 
-class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: Type<C>) : TypeStructure<ApiTriple<A, B, C>>() {
-    val first by property(typeA)
-    val second by property(typeB)
-    val third by property(typeC)
+public class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: Type<C>) : TypeStructure<ApiTriple<A, B, C>>() {
+    public val first: Property<A> by property(typeA)
+    public val second: Property<B> by property(typeB)
+    public val third: Property<C> by property(typeC)
 
     override fun deserialize(context: DeserializationContext): ApiTriple<A, B, C> = ApiTriple(
         first.deserialize(context),
@@ -37,16 +37,16 @@ class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: Type<C>
 }
 
 
-interface ApiTriplePartial<out A : Partial, out B : Partial, out C : Partial> : Partial {
-    fun first()
-    fun first(buildPartial: A.() -> Unit)
-    fun second()
-    fun second(buildPartial: B.() -> Unit)
-    fun third()
-    fun third(buildPartial: C.() -> Unit)
+public interface ApiTriplePartial<out A : Partial, out B : Partial, out C : Partial> : Partial {
+    public fun first()
+    public fun first(buildPartial: A.() -> Unit)
+    public fun second()
+    public fun second(buildPartial: B.() -> Unit)
+    public fun third()
+    public fun third(buildPartial: C.() -> Unit)
 }
 
-class ApiTriplePartialImpl<out A : Partial, out B : Partial, out C : Partial>(
+public class ApiTriplePartialImpl<out A : Partial, out B : Partial, out C : Partial>(
     private val a: (PartialBuilder) -> A,
     private val b: (PartialBuilder) -> B,
     private val c: (PartialBuilder) -> C,

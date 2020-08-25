@@ -3,42 +3,42 @@ package space.jetbrains.api.runtime
 import space.jetbrains.api.runtime.PartialBuilder.Requested.*
 
 @DslMarker
-annotation class PartialQueryDsl
+private annotation class PartialQueryDsl
 
 @PartialQueryDsl
-interface Partial {
-    fun defaultPartial()
+public interface Partial {
+    public fun defaultPartial()
 }
 
-abstract class PartialImpl(protected val builder: PartialBuilder) : Partial {
+public abstract class PartialImpl(protected val builder: PartialBuilder) : Partial {
     override fun defaultPartial() {
         builder.addDefault()
     }
 
     protected companion object {
-        fun getPartialBuilder(partial: Partial): PartialBuilder = (partial as PartialImpl).builder
+        public fun getPartialBuilder(partial: Partial): PartialBuilder = (partial as PartialImpl).builder
     }
 }
 
-class PartialBuilder(
+public class PartialBuilder(
     private val special: Special? = null,
     private val parent: PartialBuilder? = null
 ) {
-    sealed class Requested {
-        abstract val partial: PartialBuilder?
+    public sealed class Requested {
+        public abstract val partial: PartialBuilder?
 
-        class Partially(override val partial: PartialBuilder) : Requested()
+        public class Partially(override val partial: PartialBuilder) : Requested()
 
-        object Full : Requested() {
+        public object Full : Requested() {
             override val partial: Nothing? = null
         }
 
-        class Recursive(val depth: Int, sameAs: PartialBuilder) : Requested() {
+        public class Recursive(public val depth: Int, sameAs: PartialBuilder) : Requested() {
             override val partial: PartialBuilder = sameAs
         }
     }
 
-    val requestedProperties: MutableMap<String, Requested> = mutableMapOf()
+    private val requestedProperties: MutableMap<String, Requested> = mutableMapOf()
 
     private fun merge(name: String, requested: Requested) {
         when (val old = requestedProperties[name]) {
@@ -54,9 +54,9 @@ class PartialBuilder(
         }.let {}
     }
 
-    fun add(propertyName: String): Unit = merge(propertyName, Full)
+    public fun add(propertyName: String): Unit = merge(propertyName, Full)
 
-    fun add(
+    public fun add(
         propertyName: String,
         buildPartial: (PartialBuilder) -> Unit,
         special: Special? = null
@@ -64,7 +64,7 @@ class PartialBuilder(
         merge(propertyName, Partially(PartialBuilder(special, this).also(buildPartial)))
     }
 
-    fun <T : Partial> add(
+    public fun <T : Partial> add(
         propertyName: String,
         providePartial: (PartialBuilder) -> T,
         buildPartial: T.() -> Unit,
@@ -75,16 +75,16 @@ class PartialBuilder(
         }))
     }
 
-    fun addRecursively(
+    public fun addRecursively(
         propertyName: String,
         sameAs: PartialBuilder
     ) {
         merge(propertyName, Recursive(findAncestor(this, sameAs), sameAs))
     }
 
-    fun addDefault() = add("*")
+    public fun addDefault(): Unit = add("*")
 
-    fun buildQuery(): String {
+    public fun buildQuery(): String {
         val query = requestedProperties.entries.joinToString(",") { (name, partial) ->
             name + when (partial) {
                 is Partially -> "(" + partial.partial.buildQuery() + ")"
@@ -99,7 +99,7 @@ class PartialBuilder(
         }
     }
 
-    enum class Special {
+    public enum class Special {
         MAP, BATCH
     }
 

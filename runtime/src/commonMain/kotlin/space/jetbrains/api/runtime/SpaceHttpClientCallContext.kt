@@ -1,18 +1,18 @@
 package space.jetbrains.api.runtime
 
-class SpaceHttpClientCallContext(serverUrl: String, val tokenSource: TokenSource) {
-    val server = SpaceServerLocation(serverUrl)
+public class SpaceHttpClientCallContext(serverUrl: String, public val tokenSource: TokenSource) {
+    public val server: SpaceServerLocation = SpaceServerLocation(serverUrl)
 }
 
-class SpaceHttpClientWithCallContext(val client: SpaceHttpClient, val callContext: SpaceHttpClientCallContext)
+public class SpaceHttpClientWithCallContext(public val client: SpaceHttpClient, public val callContext: SpaceHttpClientCallContext)
 
-fun SpaceHttpClient.withCallContext(callContext: SpaceHttpClientCallContext): SpaceHttpClientWithCallContext =
+public fun SpaceHttpClient.withCallContext(callContext: SpaceHttpClientCallContext): SpaceHttpClientWithCallContext =
     SpaceHttpClientWithCallContext(this, callContext)
 
-fun SpaceHttpClient.withCallContext(serverUrl: String, tokenSource: TokenSource): SpaceHttpClientWithCallContext =
+public fun SpaceHttpClient.withCallContext(serverUrl: String, tokenSource: TokenSource): SpaceHttpClientWithCallContext =
     withCallContext(SpaceHttpClientCallContext(serverUrl, tokenSource))
 
-class SpaceServerLocation(serverUrl: String) {
-    val apiBaseUrl = "${serverUrl.trimEnd('/')}/api/http/"
-    val oauthUrl = "${serverUrl.trimEnd('/')}/oauth/token"
+public class SpaceServerLocation(serverUrl: String) {
+    public val apiBaseUrl: String = "${serverUrl.trimEnd('/')}/api/http/"
+    public val oauthUrl: String = "${serverUrl.trimEnd('/')}/oauth/token"
 }

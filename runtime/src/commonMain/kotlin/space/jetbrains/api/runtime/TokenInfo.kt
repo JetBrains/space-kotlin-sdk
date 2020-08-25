@@ -5,18 +5,18 @@ import kotlinx.datetime.Clock.System
 import kotlinx.datetime.Instant
 import kotlin.time.seconds
 
-interface TokenInfo {
-    val accessToken: String
-    val expires: Instant?
+public interface TokenInfo {
+    public val accessToken: String
+    public val expires: Instant?
 }
 
-interface TokenSource {
-    suspend fun token(): TokenInfo
+public interface TokenSource {
+    public suspend fun token(): TokenInfo
 }
 
-data class ExpiringToken(override val accessToken: String, override val expires: Instant) : TokenInfo
+public data class ExpiringToken(override val accessToken: String, override val expires: Instant) : TokenInfo
 
-data class PermanentToken(override val accessToken: String) : TokenInfo, TokenSource {
+public data class PermanentToken(override val accessToken: String) : TokenInfo, TokenSource {
     override val expires: Instant? get() = null
     override suspend fun token(): TokenInfo = this
 }
@@ -25,7 +25,7 @@ private fun TokenInfo.expired(gapSeconds: Long = 5): Boolean {
     return expires?.let { System.now() + gapSeconds.seconds > it } ?: false
 }
 
-class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : TokenSource {
+public class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : TokenSource {
     private var currentToken: TokenInfo? = null
 
     override suspend fun token(): TokenInfo {
@@ -37,7 +37,7 @@ class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : Token
     }
 }
 
-class ServiceAccountTokenSource(
+public class ServiceAccountTokenSource(
     spaceClient: SpaceHttpClient,
     clientId: String,
     clientSecret: String,
@@ -54,10 +54,10 @@ class ServiceAccountTokenSource(
     )
 })
 
-fun SpaceHttpClient.withPermanentToken(token: String, serverUrl: String): SpaceHttpClientWithCallContext =
+public fun SpaceHttpClient.withPermanentToken(token: String, serverUrl: String): SpaceHttpClientWithCallContext =
     withCallContext(serverUrl, PermanentToken(token))
 
-fun SpaceHttpClient.withServiceAccountTokenSource(
+public fun SpaceHttpClient.withServiceAccountTokenSource(
     clientId: String,
     clientSecret: String,
     serverUrl: String,

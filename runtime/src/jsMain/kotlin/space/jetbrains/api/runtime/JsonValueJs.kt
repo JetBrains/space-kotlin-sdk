@@ -1,6 +1,6 @@
 package space.jetbrains.api.runtime
 
-actual abstract external class JsonValue
+public actual abstract external class JsonValue
 
 internal actual fun parseJson(json: String): JsonValue? = json.takeIf { it.isNotEmpty() }?.let(JSON::parse)
 internal actual fun JsonValue.print(): String = JSON.stringify(this)
@@ -24,7 +24,7 @@ internal actual fun JsonValue.getField(key: String): JsonValue? {
     return asDynamic()[key]?.unsafeCast<JsonValue>()
 }
 
-actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
+public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
     val result = js("{}")
     for ((key, value) in properties) {
         result[key] = value

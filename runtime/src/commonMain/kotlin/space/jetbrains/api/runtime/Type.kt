@@ -6,11 +6,11 @@ import space.jetbrains.api.runtime.Type.NumberType.IntType
 import space.jetbrains.api.runtime.Type.NumberType.LongType
 import space.jetbrains.api.runtime.Type.PrimitiveType.StringType
 
-sealed class Type<T> {
-    abstract fun deserialize(context: DeserializationContext): T
-    abstract fun serialize(value: T): JsonValue?
+public sealed class Type<T> {
+    public abstract fun deserialize(context: DeserializationContext): T
+    public abstract fun serialize(value: T): JsonValue?
 
-    sealed class NumberType<T : Number> : Type<T>() {
+    public sealed class NumberType<T : Number> : Type<T>() {
         protected abstract fun fromNumber(number: Number): T
 
         override fun deserialize(context: DeserializationContext): T {
@@ -19,43 +19,43 @@ sealed class Type<T> {
 
         override fun serialize(value: T): JsonValue = jsonNumber(value)
 
-        object ByteType : NumberType<Byte>() {
+        public object ByteType : NumberType<Byte>() {
             override fun fromNumber(number: Number): Byte = number.toByte()
         }
 
-        object ShortType : NumberType<Short>() {
+        public object ShortType : NumberType<Short>() {
             override fun fromNumber(number: Number): Short = number.toShort()
         }
 
-        object IntType : NumberType<Int>() {
+        public object IntType : NumberType<Int>() {
             override fun fromNumber(number: Number): Int = number.toInt()
         }
 
-        object LongType : NumberType<Long>() {
+        public object LongType : NumberType<Long>() {
             override fun fromNumber(number: Number): Long = number.toLong()
         }
 
-        object FloatType : NumberType<Float>() {
+        public object FloatType : NumberType<Float>() {
             override fun fromNumber(number: Number): Float = number.toFloat()
         }
 
-        object DoubleType : NumberType<Double>() {
+        public object DoubleType : NumberType<Double>() {
             override fun fromNumber(number: Number): Double = number.toDouble()
         }
     }
 
-    sealed class PrimitiveType<T : Any> : Type<T>() {
-        object BooleanType : PrimitiveType<Boolean>() {
+    public sealed class PrimitiveType<T : Any> : Type<T>() {
+        public object BooleanType : PrimitiveType<Boolean>() {
             override fun deserialize(context: DeserializationContext): Boolean = context.requireJson().asBoolean(context.link)
             override fun serialize(value: Boolean): JsonValue = jsonBoolean(value)
         }
 
-        object StringType : PrimitiveType<String>() {
+        public object StringType : PrimitiveType<String>() {
             override fun deserialize(context: DeserializationContext): String = context.requireJson().asString(context.link)
             override fun serialize(value: String): JsonValue = jsonString(value)
         }
 
-        object DateType : PrimitiveType<LocalDate>() {
+        public object DateType : PrimitiveType<LocalDate>() {
             override fun deserialize(context: DeserializationContext): LocalDate {
                 return LocalDate.parse(StringType.deserialize(context.child("iso")))
             }
@@ -65,7 +65,7 @@ sealed class Type<T> {
             }
         }
 
-        object DateTimeType : PrimitiveType<Instant>() {
+        public object DateTimeType : PrimitiveType<Instant>() {
             override fun deserialize(context: DeserializationContext): Instant {
                 return Instant.fromEpochMilliseconds(LongType.deserialize(context.child("timestamp")))
             }
@@ -76,7 +76,7 @@ sealed class Type<T> {
         }
     }
 
-    class Nullable<T : Any>(val type: Type<T>) : Type<T?>() {
+    public class Nullable<T : Any>(public val type: Type<T>) : Type<T?>() {
         override fun deserialize(context: DeserializationContext): T? {
             return if (context.json != null && !context.json.isNull()) {
                 type.deserialize(context)
@@ -89,7 +89,7 @@ sealed class Type<T> {
         }
     }
 
-    class Optional<T>(val type: Type<T>) : Type<Option<T>>() {
+    public class Optional<T>(public val type: Type<T>) : Type<Option<T>>() {
         override fun deserialize(context: DeserializationContext): Option<T> {
             return if (context.json != null) {
                 Option.Value(type.deserialize(context))
@@ -102,7 +102,7 @@ sealed class Type<T> {
         }
     }
 
-    class ArrayType<T>(val elementType: Type<T>) : Type<List<T>>() {
+    public class ArrayType<T>(public val elementType: Type<T>) : Type<List<T>>() {
         override fun deserialize(context: DeserializationContext): List<T> = context.elements().map {
             elementType.deserialize(it)
         }
@@ -112,7 +112,7 @@ sealed class Type<T> {
         }
     }
 
-    class MapType<V>(val valueType: Type<V>) : Type<Map<String, V>>() {
+    public class MapType<V>(public val valueType: Type<V>) : Type<Map<String, V>>() {
         override fun deserialize(context: DeserializationContext): Map<String, V> {
             return context.requireJson().getFields(context.link).associate { (key, json) ->
                 key to valueType.deserialize(context.child("[\"$key\"]", json))
@@ -126,7 +126,7 @@ sealed class Type<T> {
         }
     }
 
-    class BatchType<T>(val elementType: Type<T>) : Type<Batch<T>>() {
+    public class BatchType<T>(public val elementType: Type<T>) : Type<Batch<T>>() {
         private val arrayType = ArrayType(elementType)
 
         override fun deserialize(context: DeserializationContext): Batch<T> {
@@ -146,7 +146,7 @@ sealed class Type<T> {
         }
     }
 
-    class ObjectType<T : Any>(val structure: TypeStructure<T>) : Type<T>() {
+    public class ObjectType<T : Any>(public val structure: TypeStructure<T>) : Type<T>() {
         override fun deserialize(context: DeserializationContext): T {
             context.requireJson()
             @Suppress("UNCHECKED_CAST")
@@ -156,7 +156,7 @@ sealed class Type<T> {
         override fun serialize(value: T): JsonValue = structure.serialize(value)
     }
 
-    class EnumType<T : Enum<T>>(private val values: List<T>) : Type<T>() {
+    public class EnumType<T : Enum<T>> @PublishedApi internal constructor(private val values: List<T>) : Type<T>() {
         override fun deserialize(context: DeserializationContext): T {
             val name = StringType.deserialize(context)
             return values.first { it.name == name }
@@ -164,12 +164,12 @@ sealed class Type<T> {
 
         override fun serialize(value: T): JsonValue = jsonString(value.name)
 
-        companion object {
-            inline operator fun <reified T : Enum<T>> invoke(): EnumType<T> = EnumType(enumValues<T>().asList())
+        public companion object {
+            public inline operator fun <reified T : Enum<T>> invoke(): EnumType<T> = EnumType(enumValues<T>().asList())
         }
     }
 
-    fun partialStructure(): TypeStructure<*>? = when (this) {
+    private fun partialStructure(): TypeStructure<*>? = when (this) {
         is NumberType, is PrimitiveType, is EnumType -> null
         is Nullable<*> -> type.partialStructure()
         is Optional<*> -> type.partialStructure()

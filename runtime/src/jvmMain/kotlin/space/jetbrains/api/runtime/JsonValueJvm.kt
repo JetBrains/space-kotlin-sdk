@@ -9,7 +9,7 @@ private val jackson = ObjectMapper()
 internal actual fun parseJson(json: String): JsonValue? = jackson.readTree(json)
 internal actual fun JsonValue.print(): String = jackson.writeValueAsString(this)
 
-actual typealias JsonValue = JsonNode
+public actual typealias JsonValue = JsonNode
 
 internal actual fun JsonValue.asNumberOrNull(): Number? = if (isNumber) numberValue() else null
 
@@ -41,7 +41,7 @@ internal actual fun JsonValue.getField(key: String): JsonValue? {
     return this[key]
 }
 
-actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
+public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
     return ObjectNode(jsonNodes, properties.toMap(hashMapOf()))
 }
 

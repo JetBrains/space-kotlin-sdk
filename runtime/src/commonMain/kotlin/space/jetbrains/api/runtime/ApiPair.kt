@@ -2,20 +2,20 @@ package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
-class ApiPair<out A, out B>(first: PropertyValue<A>, second: PropertyValue<B>) {
-    val first by first
-    val second by second
+public class ApiPair<out A, out B>(first: PropertyValue<A>, second: PropertyValue<B>) {
+    public val first: A by first
+    public val second: B by second
 
-    constructor(first: A, second: B) : this(Value(first), Value(second))
+    public constructor(first: A, second: B) : this(Value(first), Value(second))
 
-    fun toPair(): Pair<A, B> = first to second
+    public fun toPair(): Pair<A, B> = first to second
 }
 
-fun <A, B> Pair<A, B>.toApiPair(): ApiPair<A, B> = ApiPair(first, second)
+public fun <A, B> Pair<A, B>.toApiPair(): ApiPair<A, B> = ApiPair(first, second)
 
-class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStructure<ApiPair<A, B>>() {
-    val first by property(typeA)
-    val second by property(typeB)
+public class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStructure<ApiPair<A, B>>() {
+    public val first: Property<A> by property(typeA)
+    public val second: Property<B> by property(typeB)
 
     override fun deserialize(context: DeserializationContext): ApiPair<A, B> = ApiPair(
         first.deserialize(context),
@@ -30,14 +30,14 @@ class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStructure<Api
     )
 }
 
-interface ApiPairPartial<out A : Partial, out B : Partial> : Partial {
-    fun first()
-    fun first(buildPartial: A.() -> Unit)
-    fun second()
-    fun second(buildPartial: B.() -> Unit)
+public interface ApiPairPartial<out A : Partial, out B : Partial> : Partial {
+    public fun first()
+    public fun first(buildPartial: A.() -> Unit)
+    public fun second()
+    public fun second(buildPartial: B.() -> Unit)
 }
 
-class ApiPairPartialImpl<out A : Partial, out B : Partial>(
+public class ApiPairPartialImpl<out A : Partial, out B : Partial>(
     private val a: (PartialBuilder) -> A,
     private val b: (PartialBuilder) -> B,
     builder: PartialBuilder

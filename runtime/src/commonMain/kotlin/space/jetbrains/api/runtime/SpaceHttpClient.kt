@@ -27,18 +27,18 @@ import space.jetbrains.api.runtime.ErrorCodes.REQUEST_ERROR
 import space.jetbrains.api.runtime.ErrorCodes.VALIDATION_ERROR
 import kotlin.time.seconds
 
-open class RequestException(message: String?, val response: HttpResponse) : Exception(message)
+public open class RequestException(message: String?, public val response: HttpResponse) : Exception(message)
 
-class ValidationException(message: String?, response: HttpResponse) : RequestException(message, response)
-class AuthenticationRequiredException(message: String?, response: HttpResponse) : RequestException(message, response)
-class PermissionDeniedException(message: String?, response: HttpResponse) : RequestException(message, response)
-class NotFoundException(message: String?, response: HttpResponse) : RequestException(message, response)
-class DuplicatedEntityException(message: String?, response: HttpResponse) : RequestException(message, response)
-class RateLimitedException(message: String?, response: HttpResponse) : RequestException(message, response)
-class PayloadTooLargeException(message: String?, response: HttpResponse) : RequestException(message, response)
-class InternalServerErrorException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class ValidationException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class AuthenticationRequiredException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class PermissionDeniedException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class NotFoundException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class DuplicatedEntityException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class RateLimitedException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class PayloadTooLargeException(message: String?, response: HttpResponse) : RequestException(message, response)
+public class InternalServerErrorException(message: String?, response: HttpResponse) : RequestException(message, response)
 
-class SpaceHttpClient(client: HttpClient) {
+public class SpaceHttpClient(client: HttpClient) {
     private val client = client.config {
         expectSuccess = false
     }
@@ -71,7 +71,7 @@ class SpaceHttpClient(client: HttpClient) {
         )
     }
 
-    suspend fun call(
+    public suspend fun call(
         functionName: String,
         context: SpaceHttpClientCallContext,
         callMethod: HttpMethod,

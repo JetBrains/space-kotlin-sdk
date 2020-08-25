@@ -115,3 +115,9 @@ kotlin {
         }
     }
 }
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompileTool).all {
+    kotlinOptions {
+        freeCompilerArgs += "-Xexplicit-api=strict"
+    }
+}

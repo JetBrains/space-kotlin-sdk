@@ -2,9 +2,9 @@ package space.jetbrains.api.runtime
 
 import io.ktor.http.*
 
-class Batch<out T>(val next: String, val totalCount: Int?, val data: List<T>)
+public class Batch<out T>(public val next: String, public val totalCount: Int?, public val data: List<T>)
 
-abstract class RestResource(private val client: SpaceHttpClientWithCallContext) {
+public abstract class RestResource(private val client: SpaceHttpClientWithCallContext) {
     protected suspend fun callWithBody(
         functionName: String,
         path: String,

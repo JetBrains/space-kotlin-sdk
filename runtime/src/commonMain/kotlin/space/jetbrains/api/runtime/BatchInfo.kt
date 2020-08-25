@@ -2,19 +2,19 @@ package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
-class BatchInfo(
+public class BatchInfo(
     offset: PropertyValue<String?>,
     batchSize: PropertyValue<Int>
 ) {
-    val offset by offset
-    val batchSize by batchSize
+    public val offset: String? by offset
+    public val batchSize: Int by batchSize
 
-    constructor(offset: String?, batchSize: Int) : this(Value(offset), Value(batchSize))
+    public constructor(offset: String?, batchSize: Int) : this(Value(offset), Value(batchSize))
 }
 
-object BatchInfoStructure : TypeStructure<BatchInfo>() {
-    val offset by string().nullable()
-    val batchSize by int()
+public object BatchInfoStructure : TypeStructure<BatchInfo>() {
+    public val offset: Property<String?> by string().nullable()
+    public val batchSize: Property<Int> by int()
 
     override fun deserialize(context: DeserializationContext): BatchInfo = BatchInfo(
         offset = offset.deserialize(context),

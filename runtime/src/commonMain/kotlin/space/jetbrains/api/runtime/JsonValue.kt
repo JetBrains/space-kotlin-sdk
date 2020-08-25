@@ -1,6 +1,6 @@
 package space.jetbrains.api.runtime
 
-expect abstract class JsonValue
+public expect abstract class JsonValue
 
 internal expect fun parseJson(json: String): JsonValue?
 internal expect fun JsonValue.print(): String
@@ -23,7 +23,7 @@ internal fun JsonValue.asBoolean(link: ReferenceChainLink): Boolean = asBooleanO
 internal expect fun jsonNull(): JsonValue
 internal expect fun JsonValue.isNull(): Boolean
 
-expect fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue
+public expect fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue
 internal fun jsonObject(vararg properties: Pair<String, JsonValue>): JsonValue = jsonObject(properties.asIterable())
 internal expect fun JsonValue.getField(key: String): JsonValue?
 internal expect operator fun JsonValue.set(property: String, value: JsonValue)

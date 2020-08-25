@@ -8,9 +8,9 @@ import kotlin.js.*
 import kotlin.properties.*
 import kotlin.reflect.*
 
-abstract class TypeStructure<D : Any> {
-    abstract fun deserialize(context: DeserializationContext): D
-    abstract fun serialize(value: D): JsonValue
+public abstract class TypeStructure<D : Any> {
+    public abstract fun deserialize(context: DeserializationContext): D
+    public abstract fun serialize(value: D): JsonValue
 
     private val properties = mutableMapOf<String, Property<*>>()
 
@@ -63,9 +63,7 @@ abstract class TypeStructure<D : Any> {
     }
 
     @JsName("enum_property")
-    protected inline fun <reified T : Enum<T>> enum(): PropertyProvider<T> = enum(enumValues<T>().asList())
-    @JsName("enum_property_raw")
-    protected fun <T : Enum<T>> enum(values: List<T>): PropertyProvider<T> = property(EnumType(values))
+    protected inline fun <reified T : Enum<T>> enum(): PropertyProvider<T> = property(EnumType())
 
     @JsName("property_provider")
     protected fun <T> property(type: Type<T>): PropertyProvider<T> = PropertyProvider(type) {
@@ -79,18 +77,19 @@ abstract class TypeStructure<D : Any> {
         }
     }
 
-    class Property<T>(val name: String, val type: Type<T>)
+    public class Property<T>(public val name: String, public val type: Type<T>)
 
-    class PropertyProvider<T> internal constructor(
+    public class PropertyProvider<T> internal constructor(
         internal val type: Type<T>,
         private val register: (Property<T>) -> Unit
-    ) {
-        operator fun provideDelegate(thisRef: TypeStructure<*>, property: KProperty<*>): ReadOnlyProperty<TypeStructure<*>, Property<T>> {
+    ) : PropertyDelegateProvider<TypeStructure<*>, ReadOnlyProperty<TypeStructure<*>, Property<T>>> {
+        public override operator fun provideDelegate(
+            thisRef: TypeStructure<*>,
+            property: KProperty<*>,
+        ): ReadOnlyProperty<TypeStructure<*>, Property<T>> {
             val prop = Property(property.name, type)
             register(prop)
-            return object : ReadOnlyProperty<TypeStructure<*>, Property<T>> {
-                override fun getValue(thisRef: TypeStructure<*>, property: KProperty<*>): Property<T> = prop
-            }
+            return ReadOnlyProperty { _, _ -> prop }
         }
     }
 }

@@ -2,16 +2,16 @@ package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
-class Mod<out T : Any>(old: PropertyValue<T?>, new: PropertyValue<T?>) {
-    val old by old
-    val new by new
+public class Mod<out T : Any>(old: PropertyValue<T?>, new: PropertyValue<T?>) {
+    public val old: T? by old
+    public val new: T? by new
 
-    constructor(old: T?, new: T?) : this(Value(old), Value(new))
+    public constructor(old: T?, new: T?) : this(Value(old), Value(new))
 }
 
-class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>() {
-    val old by property(type).nullable()
-    val new by property(type).nullable()
+public class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>() {
+    public val old: Property<T?> by property(type).nullable()
+    public val new: Property<T?> by property(type).nullable()
 
     override fun deserialize(context: DeserializationContext): Mod<T> = Mod(
         old.deserialize(context),
@@ -24,14 +24,14 @@ class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>() {
     ))
 }
 
-interface ModPartial<out T : Partial> : Partial {
-    fun old()
-    fun old(buildPartial: T.() -> Unit)
-    fun new()
-    fun new(buildPartial: T.() -> Unit)
+public interface ModPartial<out T : Partial> : Partial {
+    public fun old()
+    public fun old(buildPartial: T.() -> Unit)
+    public fun new()
+    public fun new(buildPartial: T.() -> Unit)
 }
 
-class ModPartialImpl<out T : Partial>(
+public class ModPartialImpl<out T : Partial>(
     private val t: (PartialBuilder) -> T,
     builder: PartialBuilder
 ) : PartialImpl(builder), ModPartial<T> {
