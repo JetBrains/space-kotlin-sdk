@@ -12,7 +12,8 @@ class HA_Model(
     val dto: List<HA_Dto>,
     val enums: List<HA_Enum>,
     val urlParams: List<HA_UrlParameter>,
-    val resources: List<HA_Resource>
+    val resources: List<HA_Resource>,
+    val menuIds: List<HA_MenuId>,
 )
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
@@ -222,3 +223,5 @@ sealed class HA_UrlParameterOption {
         override val deprecation: HA_Deprecation?
     ) : HA_UrlParameterOption()
 }
+
+data class HA_MenuId(val menuId: String, val context: HA_Dto.Ref)

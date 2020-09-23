@@ -28,13 +28,15 @@ class HttpApiEntitiesById private constructor(
     val dtoAndUrlParams: Map<TID, HA_Dto>,
     val enums: Map<TID, HA_Enum>,
     val urlParams: Map<TID, HA_UrlParameter>,
-    val resources: Map<TID, HA_Resource>
+    val resources: Map<TID, HA_Resource>,
+    val menuIds: List<HA_MenuId>,
 ) {
     constructor(model: HA_Model) : this(
         dtoAndUrlParams = model.dto.associateBy { it.id } + model.urlParams.flatMap { it.toDtos() },
         enums = model.enums.associateBy { it.id },
         urlParams = model.urlParams.associateBy { it.id },
-        resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id }
+        resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id },
+        menuIds = model.menuIds
     )
 }
 
@@ -92,8 +94,10 @@ fun main(vararg args: String) {
     val generatedStructures = generateStructures(model)
     Log.info { "Generating partials for HTTP API Client" }
     val generatedPartials = generatePartials(model)
+    Log.info { "Generating menu IDs for HTTP API Client" }
+    val generatedMenuIds = generateMenuIds(model)
 
-    (generatedTypes + generatedResources + generatedStructures + generatedPartials).forEach {
+    (generatedTypes + generatedResources + generatedStructures + generatedPartials + generatedMenuIds).forEach {
         it.writeTo(out)
     }
 }

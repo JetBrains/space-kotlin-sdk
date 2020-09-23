@@ -9,6 +9,7 @@ const val TYPES_PACKAGE = "$ROOT_PACKAGE.types"
 const val RESOURCES_PACKAGE = "$ROOT_PACKAGE.resources"
 const val STRUCTURES_PACKAGE = "$TYPES_PACKAGE.structure"
 const val PARTIALS_PACKAGE = "$TYPES_PACKAGE.partials"
+const val MENU_PACKAGE = "$ROOT_PACKAGE.menu"
 
 private val localDateType = ClassName("kotlinx.datetime", "LocalDate")
 private val instantType = ClassName("kotlinx.datetime", "Instant")
