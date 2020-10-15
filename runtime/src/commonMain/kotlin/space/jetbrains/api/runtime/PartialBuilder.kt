@@ -104,7 +104,7 @@ public class PartialBuilder(
     }
 
     private companion object {
-        tailrec fun findAncestor(partial: PartialBuilder, ancestor: PartialBuilder, currentDepth: Int = 0): Int {
+        tailrec fun findAncestor(partial: PartialBuilder, ancestor: PartialBuilder, currentDepth: Int = 1): Int {
             return if (partial === ancestor) {
                 currentDepth
             } else findAncestor(
