@@ -249,7 +249,7 @@ We have to specify the properties of the data type we need. As an example, let's
 var todoBatchInfo = BatchInfo("0", 100)
 do {
     val todoBatch = spaceClient.todoItems
-            .getAllTodoItems(from = SDate("2020-01-01"), batchInfo = todoBatchInfo) {
+            .getAllTodoItems(from = LocalDate(2020, 01, 01), batchInfo = todoBatchInfo) {
                 id()
                 content()
                 status()
