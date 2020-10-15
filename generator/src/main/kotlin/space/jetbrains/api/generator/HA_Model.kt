@@ -64,6 +64,7 @@ class HA_Endpoint(
     val responseBody: HA_Type?,
     val path: HA_Path,
     val displayName: String,
+    val functionName: String,
     val doc: String?,
     val deprecation: HA_Deprecation? = null
 )

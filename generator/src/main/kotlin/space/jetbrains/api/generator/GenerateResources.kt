@@ -66,9 +66,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                             .flatMap { it.path.segments.asReversed().asSequence() }
                     ).asReversed()
 
-                    val funcName = endpoint.displayName.displayNameToMemberName()
-
-                    FunSpec.builder(funcName).also { funcBuilder ->
+                    FunSpec.builder(endpoint.functionName).also { funcBuilder ->
                         val kDoc = when {
                             deprecationKDoc != null -> endpoint.doc?.let { "$it\n" }.orEmpty() + deprecationKDoc
                             else -> endpoint.doc
@@ -97,7 +95,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                             val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
 
                             val pathParams = endpoint.parameters.filter { it.path }.associateBy { it.field.name }
-                            code.add("val response = $httpCallFuncName(%S, \"", funcName)
+                            code.add("val response = $httpCallFuncName(%S, \"", endpoint.functionName)
                             val pathIterator = fullPath.iterator()
                             pathIterator.forEach { segment ->
                                 fun pathParam(name: String) {
