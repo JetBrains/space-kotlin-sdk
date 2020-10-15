@@ -11,6 +11,7 @@ import kotlin.reflect.*
 public abstract class TypeStructure<D : Any> {
     public abstract fun deserialize(context: DeserializationContext): D
     public abstract fun serialize(value: D): JsonValue
+    public open val childClassNames: Set<String> = emptySet()
 
     private val properties = mutableMapOf<String, Property<*>>()
 

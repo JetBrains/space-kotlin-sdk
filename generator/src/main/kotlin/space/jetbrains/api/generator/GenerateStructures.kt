@@ -1,6 +1,7 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.KModifier.OVERRIDE
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
 private fun CodeBlock.Builder.appendPropertyDelegate(field: HA_Field, model: HttpApiEntitiesById) =
@@ -90,7 +91,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     })
 
                     typeBuilder.addFunction(FunSpec.builder("deserialize").also { funcBuilder ->
-                        funcBuilder.addModifiers(KModifier.OVERRIDE)
+                        funcBuilder.addModifiers(OVERRIDE)
                         funcBuilder.addParameter("context", deserializationContextType)
                         funcBuilder.returns(dtoClassName)
 
@@ -111,7 +112,11 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     val inheritor = model.resolveDto(it)
                                     val inheritorClassName = inheritor.getClassName()
                                     codeReferences += inheritorClassName.getStructureClassName()
-                                    "\"${inheritor.name}\" -> %T.deserialize(context)"
+                                    val condition = "\"${inheritor.name}\"" + if (inheritor.inheritors.isNotEmpty()) {
+                                        codeReferences += inheritorClassName.getStructureClassName()
+                                        ", in %T.childClassNames"
+                                    } else ""
+                                    "$condition -> %T.deserialize(context)"
                                 } +
                                 (if (!dto.hierarchyRole.isAbstract) {
                                     codeReferences += dtoClassName
@@ -125,7 +130,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     }.build())
 
                     typeBuilder.addFunction(FunSpec.builder("serialize").apply {
-                        addModifiers(KModifier.OVERRIDE)
+                        addModifiers(OVERRIDE)
                         addParameter("value", dtoClassName)
                         returns(jsonValueType)
 
@@ -160,6 +165,27 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                         addCode("return·$toReturn", *codeReferences.toTypedArray())
                     }.build())
+
+                    if (dto.inheritors.isNotEmpty()) {
+                        typeBuilder.addProperty(
+                            PropertySpec.builder("childClassNames", SET.parameterizedBy(STRING), OVERRIDE)
+                                .initializer(buildCodeBlock {
+                                    add("setOf(")
+                                    dto.inheritors.forEachIndexed { i, it ->
+                                        if (i != 0) add(", ")
+                                        add("%S", model.resolveDto(it).name)
+                                    }
+                                    add(")")
+                                    dto.inheritors.forEach {
+                                        val inheritor = model.resolveDto(it)
+                                        if (inheritor.inheritors.isNotEmpty()) {
+                                            add("·+ %T.childClassNames", inheritor.getClassName().getStructureClassName())
+                                        }
+                                    }
+                                })
+                                .build()
+                        )
+                    }
                 }.build())
             }
         }.build()
