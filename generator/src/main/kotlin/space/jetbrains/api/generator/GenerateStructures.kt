@@ -97,10 +97,20 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                         val codeReferences = mutableListOf<Any>()
 
-                        val createInstance = "%T(" + (fields.takeIf { it.isNotEmpty() }
-                            ?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
-                                "${it.field.name} = this.${it.field.name}.deserialize(context)"
-                            } ?: "") + ")"
+                        val createInstance = buildString {
+                            when {
+                                dto.isObject -> append("%T")
+                                fields.isNotEmpty() -> {
+                                    append("%T(\n$INDENT")
+                                    fields.forEachIndexed { i, field ->
+                                        if (i != 0) append(",\n$INDENT")
+                                        append("${field.field.name} = this.${field.field.name}.deserialize(context)")
+                                    }
+                                    append("\n)")
+                                }
+                                else -> append("%T()")
+                            }
+                        }
 
                         val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole.isAbstract) {
                             codeReferences += dtoClassName
@@ -126,13 +136,13 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 "${INDENT}else -> error(\"Unsupported class name: '\$className'\")\n}"
                         }
 
-                        funcBuilder.addCode("return·$toReturn", *codeReferences.toTypedArray())
+                        funcBuilder.addCode("return $toReturn", *codeReferences.toTypedArray())
                     }.build())
 
-                    typeBuilder.addFunction(FunSpec.builder("serialize").apply {
-                        addModifiers(OVERRIDE)
-                        addParameter("value", dtoClassName)
-                        returns(jsonValueType)
+                    typeBuilder.addFunction(FunSpec.builder("serialize").also { func ->
+                        func.addModifiers(OVERRIDE)
+                        func.addParameter("value", dtoClassName)
+                        func.returns(jsonValueType)
 
                         val codeReferences = mutableListOf<Any>()
 
@@ -163,7 +173,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 "\n}"
                         }
 
-                        addCode("return·$toReturn", *codeReferences.toTypedArray())
+                        func.addCode("return $toReturn", *codeReferences.toTypedArray())
                     }.build())
 
                     if (dto.inheritors.isNotEmpty()) {

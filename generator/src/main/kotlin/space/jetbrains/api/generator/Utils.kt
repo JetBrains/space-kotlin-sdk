@@ -77,25 +77,21 @@ val parametersType = ClassName("io.ktor.http", "Parameters")
 
 const val INDENT = "    "
 
-enum class SpecialPartial {
-    BATCH
-}
-
-data class PartialDetectionResult(val partial: HA_Type?, val special: SpecialPartial?)
+data class PartialDetectionResult(val partial: HA_Type?, val batch: Boolean)
 
 // TODO nested partials
 fun HA_Type?.partial(): PartialDetectionResult = when (this) {
-    is HA_Type.Primitive, is HA_Type.Enum, null -> PartialDetectionResult(null, null)
+    is HA_Type.Primitive, is HA_Type.Enum, null -> PartialDetectionResult(null, false)
     is HA_Type.Array -> elementType.partial()
     is HA_Type.Map -> valueType.partial()
     is HA_Type.Object -> when (kind) {
-        PAIR, TRIPLE, MOD -> PartialDetectionResult(this, null)
-        BATCH -> batchDataElementType().partial().copy(special = SpecialPartial.BATCH)
+        PAIR, TRIPLE, MOD -> PartialDetectionResult(this, false)
+        BATCH -> batchDataElementType().partial().copy(batch = true)
         REQUEST_BODY -> error("Objects of kind ${REQUEST_BODY.name} should not appear in output types")
     }
-    is HA_Type.UrlParam -> PartialDetectionResult(this, null)
-    is HA_Type.Dto -> PartialDetectionResult(this, null)
-    is HA_Type.Ref -> PartialDetectionResult(this, null)
+    is HA_Type.UrlParam -> PartialDetectionResult(this, false)
+    is HA_Type.Dto -> PartialDetectionResult(this, false)
+    is HA_Type.Ref -> PartialDetectionResult(this, false)
 }.let { it.copy(partial = it.partial?.copy(nullable = false)) }
 
 fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): TypeName = when (this) {

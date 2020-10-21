@@ -42,7 +42,7 @@ class HttpApiEntitiesById private constructor(
 
 private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
     return options.map {
-        val optionId = "$id/${it.optionName}"
+        val optionId = it.optionName.toLowerCase()
         optionId to HA_Dto(
             id = optionId,
             name = it.optionName,
@@ -64,7 +64,7 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
         hierarchyRole = SEALED,
         extends = null,
         implements = emptyList(),
-        inheritors = options.map { HA_Dto.Ref("$id/${it.optionName}") },
+        inheritors = options.map { HA_Dto.Ref(it.optionName.toLowerCase()) },
         deprecation = deprecation,
         record = false
     ))

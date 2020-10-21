@@ -19,6 +19,7 @@ inline fun <T> dfs(root: T, crossinline getChildren: (T) -> Iterable<T>): Sequen
 
 private val propertyValueType = ClassName(ROOT_PACKAGE, "PropertyValue")
 private val propertyValueValueType = propertyValueType.nestedClass("Value")
+val HA_Dto.isObject get() = hierarchyRole == FINAL && fields.isEmpty()
 
 fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
@@ -30,7 +31,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
         val rootClassName = root.getClassName()
         if (rootClassName == batchInfoType) return@mapNotNull null
 
-        Log.info { "Generating file with DTO classes for '${root.name}' and its ancestors" }
+        Log.info { "Generating file with DTO classes for '${root.name}' and its subclasses" }
         FileSpec.builder(rootClassName.packageName, rootClassName.simpleNames.joinToString("")).also { fileBuilder ->
             fileBuilder.indent(INDENT)
 
@@ -60,7 +61,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
     val typeBuilder = when (dto.hierarchyRole) {
         SEALED -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.SEALED)
         OPEN -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.OPEN)
-        FINAL -> TypeSpec.classBuilder(dtoClassName)
+        FINAL -> if (dto.isObject) TypeSpec.objectBuilder(dtoClassName) else TypeSpec.classBuilder(dtoClassName)
         ABSTRACT -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.ABSTRACT)
         INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName)
     }
@@ -124,7 +125,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
     }
     superclassConstructorArgs.values.forEach { typeBuilder.addSuperclassConstructorParameter(it) }
 
-    if (dto.hierarchyRole != INTERFACE) {
+    if (dto.hierarchyRole != INTERFACE && !dto.isObject) {
         typeBuilder.primaryConstructor(primaryConstructor.build())
 
         if (fields.isNotEmpty()) {
@@ -166,23 +167,24 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
     Log.info { "Generating field descriptors for DTOs" }
     val result: MutableMap<TID, MutableList<FieldDescriptor>> = mutableMapOf()
 
-    dtoAndUrlParams.values.asSequence().filter { it.extends == null }.flatMap {
-        it.subclasses(this)
-    }.forEach { dto ->
-        val parentFields = dto.extends?.id?.let { result.getValue(it) }
-        val fields = result.computeIfAbsent(dto.id) { mutableListOf() }
+    dtoAndUrlParams.values.asSequence()
+        .filter { it.extends == null }
+        .flatMap { it.subclasses(this) }
+        .forEach { dto ->
+            val parentFields = dto.extends?.id?.let { result.getValue(it) }
+            val fields = result.computeIfAbsent(dto.id) { mutableListOf() }
 
-        dto.fields.forEachIndexed { index, dtoField ->
-            fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField.field, index)
-                ?: FieldDescriptor(dtoField.field, index, OwnFinal, dtoField.extension)
-        }
+            dto.fields.forEachIndexed { index, dtoField ->
+                fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField.field, index)
+                    ?: FieldDescriptor(dtoField.field, index, OwnFinal, dtoField.extension)
+            }
 
-        parentFields?.forEachIndexed { parentIndex, parentField ->
-            if (fields.none { it.field.name == parentField.field.name }) {
-                fields += FieldDescriptor(parentField.field, parentIndex, Inherited(parentField), parentField.isExtension)
+            parentFields?.forEachIndexed { parentIndex, parentField ->
+                if (fields.none { it.field.name == parentField.field.name }) {
+                    fields += FieldDescriptor(parentField.field, parentIndex, Inherited(parentField), parentField.isExtension)
+                }
             }
         }
-    }
 
     return result
 }

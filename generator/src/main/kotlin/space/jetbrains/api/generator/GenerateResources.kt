@@ -23,7 +23,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                 fileBuilder.addProperty(
                     PropertySpec.builder(resourceGroup.first().displayPlural.displayNameToMemberName(), className)
                         .receiver(clientWithContextType)
-                        .getter(FunSpec.getterBuilder().addStatement("return·%T(this)", className).build())
+                        .getter(FunSpec.getterBuilder().addStatement("return %T(this)", className).build())
                         .build()
                 )
             }
@@ -53,7 +53,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     val queryParams = endpoint.parameters.filter { !it.path }.map { it.field }
                     val bodyParams = endpoint.requestBody?.fields
                     val returnType = endpoint.responseBody?.kotlinPoet(model)
-                    val (partial, specialPartial) = endpoint.responseBody.partial()
+                    val (partial, batch) = endpoint.responseBody.partial()
                     val partialInterface = partial?.partialToPartialInterface(model)
                     val hasUrlBatchInfo = queryParams.any {
                         it.name == META_PARAMETERS_PREFIX + "skip" || it.name == META_PARAMETERS_PREFIX + "top"
@@ -81,8 +81,8 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                         funcBuilder.addCode(CodeBlock.builder().also { code ->
                             if (partialInterface != null) {
                                 code.add("val partial = %T(", partialBuilderType)
-                                if (specialPartial != null) {
-                                    code.add("%M", MemberName(partialSpecialType, specialPartial.name))
+                                if (batch) {
+                                    code.add("%M", MemberName(partialSpecialType, "BATCH"))
                                 }
                                 code.add(").also·{\n")
                                 code.indent()
@@ -231,15 +231,15 @@ private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String
 
 private fun urlParam(model: HttpApiEntitiesById, expr: String, type: HA_Type.UrlParam, funcCode: CodeBlock.Builder) {
     val param = model.urlParams.getValue(type.urlParam.id)
-    funcCode.add("when ($expr) {\n")
+    funcCode.add("when (val it = $expr) {\n")
     funcCode.indent()
     param.options.forEach {
         funcCode.add("is %T -> ", it.getClassName())
         when (it) {
             is HA_UrlParameterOption.Const -> funcCode.add("%S\n", it.value)
             is HA_UrlParameterOption.Var -> {
-                funcCode.add("%S + $expr.", it.parameter.name + ":")
-                parameterConversion(model, it.parameter.name, it.parameter.type, funcCode)
+                funcCode.add("%S + ", it.parameter.name + ":")
+                parameterConversion(model, "it." + it.parameter.name, it.parameter.type, funcCode)
                 funcCode.add("\n")
             }
         }

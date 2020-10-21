@@ -77,7 +77,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                     fieldName: String,
                     buildPartialParameter: ParameterSpec,
                     partialInterface: TypeName,
-                    specialPartial: SpecialPartial?
+                    batch: Boolean
                 ) {
                     if (fieldName in requiringJvmName) {
                         impl.addJvmName(fieldName, partialInterface)
@@ -92,9 +92,9 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                         add("\n")
                         unindent()
                         add("}, build")
-                        if (specialPartial != null) {
-                            file.addImport(partialSpecialType, specialPartial.name)
-                            add(", $specialPartial")
+                        if (batch) {
+                            file.addImport(partialSpecialType, "BATCH")
+                            add(", BATCH")
                         }
                         add(")")
                     })
@@ -112,7 +112,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
 
                 dto.fields.forEach { dtoField ->
                     val field = dtoField.field
-                    val (partial, specialPartial) = field.type.partial()
+                    val (partial, batch) = field.type.partial()
 
                     val interfaceFunBuilder = FunSpec.builder(field.name).addModifiers(ABSTRACT)
                     val implFunBuilder = FunSpec.builder(field.name).addModifiers(OVERRIDE)
@@ -147,14 +147,14 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                             } else buildPartialParameter
                         )
                         interfaceFunBuilder.addJvmName(field.name, partialInterface)
-                        addImplBodyWithPartial(implFunBuilder, field.name, buildPartialParameter, partialInterface, specialPartial)
+                        addImplBodyWithPartial(implFunBuilder, field.name, buildPartialParameter, partialInterface, batch)
                     }
 
                     interfaceBuilder.addFunction(interfaceFunBuilder.build())
                     implBuilder.addFunction(implFunBuilder.build())
                 }
 
-                fun addImpl(fieldName: String, partialInterface: TypeName?, specialPartial: SpecialPartial?) {
+                fun addImpl(fieldName: String, partialInterface: TypeName?, batch: Boolean) {
                     val implFunBuilder = FunSpec.builder(fieldName).addModifiers(OVERRIDE)
 
                     if (partialInterface == null) {
@@ -164,7 +164,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                             name = "build",
                             type = LambdaTypeName.get(receiver = partialInterface, returnType = UNIT)
                         ).build()
-                        addImplBodyWithPartial(implFunBuilder, fieldName, buildPartialParameter, partialInterface, specialPartial)
+                        addImplBodyWithPartial(implFunBuilder, fieldName, buildPartialParameter, partialInterface, batch)
                     }
 
                     implBuilder.addFunction(implFunBuilder.build())
@@ -180,7 +180,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                             .map { fieldName to it.key }
                     }.forEach { (fieldName, partial) ->
                         val partialInterface = partial?.partialToPartialInterface(model)
-                        addImpl(fieldName, partialInterface, null)
+                        addImpl(fieldName, partialInterface, false)
                         partialInterface?.let { addRecursiveAsImpl(fieldName, it) }
                     }
 
@@ -276,7 +276,7 @@ private fun getChildFields(model: HttpApiEntitiesById): Map<TID, ChildFields> {
         }
         return ChildFields(childFieldNamesToPartials = childFields, ownFieldNamesToPartials = dto.fields.associate {
             val partialDetectionResult = it.field.type.partial()
-            require(partialDetectionResult.special == null) { "Batch fields are currently not supported" }
+            require(!partialDetectionResult.batch) { "Batch fields are currently not supported" }
             it.field.name to partialDetectionResult.partial
         }).also { result[dto.id] = it }
     }
@@ -290,7 +290,7 @@ private fun fieldsRequiringJvmName(model: HttpApiEntitiesById, cfById: Map<TID, 
     val result = mutableMapOf<TID, Set<String>>()
     fun impl(dto: HA_Dto, current: Set<String>) {
         val res = current + cfById.getValue(dto.id).allFieldNamesToPartials
-            .mapNotNullTo(mutableSetOf<String>()) { (name, types) ->
+            .mapNotNullTo(mutableSetOf()) { (name, types) ->
                 if (types.mapNotNullTo(mutableSetOf()) { it }.size > 1) name else null
             }
         dto.inheritors.forEach {
