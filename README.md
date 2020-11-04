@@ -1,6 +1,8 @@
-# Space API client
+# Space API client ![](https://jb.gg/badges/incubator-flat-square.svg)
 
 The Space API client is a Kotlin library to work with the [JetBrains Space](https://jetbrains.com/space/) API. 
+
+> **Disclaimer:** This is a beta version of the Space API client. It relies on the Space API, which is still in beta and subject to change. By using the current beta Space API client, you expressly acknowledge that this version of the beta Space API client may not be reliable, may not work as intended, and may contain errors. Any use of this beta Space API client is at your own risk.
 
 ## Overview
 
