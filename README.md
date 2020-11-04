@@ -244,7 +244,7 @@ class Batch<out T>(
     val data: List<T>)
 ```
 
-We have to specify the properties of the data type we need. As an example, let's retrieve the current user's To-Do items for this week, with their `id`, `content` and `status`:
+We have to specify the properties of the data type we need. As an example, let's retrieve the current user's To-Do items for this week, with their `id` and `content`:
 
 ```kotlin
 // Get all To-Do
@@ -254,7 +254,6 @@ do {
             .getAllTodoItems(from = LocalDate(2020, 01, 01), batchInfo = todoBatchInfo) {
                 id()
                 content()
-                status()
             }
 
     todoBatch.data.forEach { todo ->
