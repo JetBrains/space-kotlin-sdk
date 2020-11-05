@@ -22,6 +22,8 @@ public class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>() {
         old.serialize(value.old),
         new.serialize(value.new)
     ))
+
+    override val isRecord: Boolean get() = false
 }
 
 public interface ModPartial<out T : Partial> : Partial {
@@ -32,8 +34,8 @@ public interface ModPartial<out T : Partial> : Partial {
 }
 
 public class ModPartialImpl<out T : Partial>(
-    private val t: (PartialBuilder) -> T,
-    builder: PartialBuilder
+    private val t: (PartialBuilder.Explicit) -> T,
+    builder: PartialBuilder.Explicit
 ) : PartialImpl(builder), ModPartial<T> {
     override fun old(): Unit = builder.add("old")
 

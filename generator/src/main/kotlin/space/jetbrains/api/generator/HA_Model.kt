@@ -162,6 +162,11 @@ sealed class HA_DefaultValue {
 
 class HA_DtoField(val field: HA_Field, val extension: Boolean)
 
+val HA_DtoField.name get() = field.name
+val HA_DtoField.type get() = field.type
+val HA_DtoField.deprecation get() = field.deprecation
+val HA_DtoField.requiresOption get() = field.requiresOption
+
 class HA_Dto(
     val id: TID,
     val name: String,

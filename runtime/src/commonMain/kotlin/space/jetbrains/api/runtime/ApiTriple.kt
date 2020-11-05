@@ -34,6 +34,8 @@ public class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: 
         second.serialize(value.second),
         third.serialize(value.third)
     ))
+
+    override val isRecord: Boolean get() = false
 }
 
 
@@ -47,10 +49,10 @@ public interface ApiTriplePartial<out A : Partial, out B : Partial, out C : Part
 }
 
 public class ApiTriplePartialImpl<out A : Partial, out B : Partial, out C : Partial>(
-    private val a: (PartialBuilder) -> A,
-    private val b: (PartialBuilder) -> B,
-    private val c: (PartialBuilder) -> C,
-    builder: PartialBuilder
+    private val a: (PartialBuilder.Explicit) -> A,
+    private val b: (PartialBuilder.Explicit) -> B,
+    private val c: (PartialBuilder.Explicit) -> C,
+    builder: PartialBuilder.Explicit
 ) : PartialImpl(builder), ApiTriplePartial<A, B, C> {
     override fun first(): Unit = builder.add("first")
 

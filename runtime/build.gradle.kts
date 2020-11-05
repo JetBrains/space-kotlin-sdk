@@ -78,6 +78,7 @@ kotlin {
                 api("io.ktor:ktor-client-core:$ktor_version")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.1.0")
+                implementation("io.github.microutils:kotlin-logging:2.0.3")
             }
         }
 

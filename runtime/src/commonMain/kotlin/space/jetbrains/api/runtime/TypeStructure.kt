@@ -2,8 +2,6 @@ package space.jetbrains.api.runtime
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import space.jetbrains.api.runtime.Type.*
-import space.jetbrains.api.runtime.Type.PrimitiveType.*
 import kotlin.js.*
 import kotlin.properties.*
 import kotlin.reflect.*
@@ -12,14 +10,24 @@ public abstract class TypeStructure<D : Any> {
     public abstract fun deserialize(context: DeserializationContext): D
     public abstract fun serialize(value: D): JsonValue
     public open val childClassNames: Set<String> = emptySet()
+    public abstract val isRecord: Boolean
 
     private val properties = mutableMapOf<String, Property<*>>()
 
     protected fun <T> Property<T>.deserialize(context: DeserializationContext): PropertyValue<T> {
         val childContext = context.child(name)
-        // TODO track which fields are requested and which are not
+
+        val shouldBeIncluded = when (inclusionStrategy) {
+            InclusionStrategy.ONLY_EXPLICIT -> childContext.partial != null
+            InclusionStrategy.ONLY_EXPLICIT_OR_PARENT_EXPLICIT -> childContext.partial != null ||
+                context.partial != null && context.partial.hasAllDefault
+            InclusionStrategy.PARENT -> childContext.partial != null ||
+                context.partial != null && context.partial.hasAllDefault
+        }
+
         return childContext.json?.let { PropertyValue.Value(type.deserialize(childContext)) }
-            ?: PropertyValue.None(childContext.link)
+            ?: PropertyValue.None(childContext.link, returnNull = type is Type.Nullable<*> && shouldBeIncluded)
+
     }
 
     protected fun <T> Property<T>.serialize(value: T): Pair<String, JsonValue>? {
@@ -27,47 +35,62 @@ public abstract class TypeStructure<D : Any> {
     }
 
     @JsName("byte_property")
-    protected fun byte(): PropertyProvider<Byte> = property(NumberType.ByteType)
+    protected fun byte(isExtension: Boolean = false): PropertyProvider<Byte> = property(Type.NumberType.ByteType, isExtension)
+
     @JsName("short_property")
-    protected fun short(): PropertyProvider<Short> = property(NumberType.ShortType)
+    protected fun short(isExtension: Boolean = false): PropertyProvider<Short> = property(Type.NumberType.ShortType, isExtension)
+
     @JsName("int_property")
-    protected fun int(): PropertyProvider<Int> = property(NumberType.IntType)
+    protected fun int(isExtension: Boolean = false): PropertyProvider<Int> = property(Type.NumberType.IntType, isExtension)
+
     @JsName("long_property")
-    protected fun long(): PropertyProvider<Long> = property(NumberType.LongType)
+    protected fun long(isExtension: Boolean = false): PropertyProvider<Long> = property(Type.NumberType.LongType, isExtension)
+
     @JsName("float_property")
-    protected fun float(): PropertyProvider<Float> = property(NumberType.FloatType)
+    protected fun float(isExtension: Boolean = false): PropertyProvider<Float> = property(Type.NumberType.FloatType, isExtension)
+
     @JsName("double_property")
-    protected fun double(): PropertyProvider<Double> = property(NumberType.DoubleType)
+    protected fun double(isExtension: Boolean = false): PropertyProvider<Double> = property(Type.NumberType.DoubleType, isExtension)
+
     @JsName("boolean_property")
-    protected fun boolean(): PropertyProvider<Boolean> = property(BooleanType)
+    protected fun boolean(isExtension: Boolean = false): PropertyProvider<Boolean> = property(Type.PrimitiveType.BooleanType, isExtension)
+
     @JsName("date_property")
-    protected fun date(): PropertyProvider<LocalDate> = property(DateType)
+    protected fun date(isExtension: Boolean = false): PropertyProvider<LocalDate> = property(Type.PrimitiveType.DateType, isExtension)
+
     @JsName("datetime_property")
-    protected fun datetime(): PropertyProvider<Instant> = property(DateTimeType)
+    protected fun datetime(isExtension: Boolean = false): PropertyProvider<Instant> = property(Type.PrimitiveType.DateTimeType, isExtension)
+
     @JsName("string_property")
-    protected fun string(): PropertyProvider<String> = property(StringType)
+    protected fun string(isExtension: Boolean = false): PropertyProvider<String> = property(Type.PrimitiveType.StringType, isExtension)
 
     @JsName("nullable_property")
-    protected fun <T : Any> PropertyProvider<T>.nullable(): PropertyProvider<T?> = property(Nullable(type))
+    protected fun <T : Any> PropertyProvider<T>.nullable(): PropertyProvider<T?> =
+        property(Type.Nullable(type), isExtension)
+
     @JsName("optional_property")
-    protected fun <T> PropertyProvider<T>.optional(): PropertyProvider<Option<T>> = property(Optional(type))
+    protected fun <T> PropertyProvider<T>.optional(): PropertyProvider<Option<T>> =
+        property(Type.Optional(type), isExtension)
+
     @JsName("list_property")
-    protected fun <T> list(prop: PropertyProvider<T>): PropertyProvider<List<T>> = property(ArrayType(prop.type))
+    protected fun <T> list(prop: PropertyProvider<T>): PropertyProvider<List<T>> =
+        property(Type.ArrayType(prop.type), prop.isExtension)
+
     @JsName("map_property")
     protected fun <V> map(valueProp: PropertyProvider<V>): PropertyProvider<Map<String, V>> {
-        return property(MapType(valueProp.type))
+        return property(Type.MapType(valueProp.type), valueProp.isExtension)
     }
 
     @JsName("obj_property")
-    protected fun <T : Any> obj(structure: TypeStructure<T>): PropertyProvider<T> {
-        return property(ObjectType(structure))
+    protected fun <T : Any> obj(structure: TypeStructure<T>, isExtension: Boolean = false): PropertyProvider<T> {
+        return property(Type.ObjectType(structure), isExtension)
     }
 
     @JsName("enum_property")
-    protected inline fun <reified T : Enum<T>> enum(): PropertyProvider<T> = property(EnumType())
+    protected inline fun <reified T : Enum<T>> enum(isExtension: Boolean = false): PropertyProvider<T> = property(Type.EnumType(), isExtension)
 
     @JsName("property_provider")
-    protected fun <T> property(type: Type<T>): PropertyProvider<T> = PropertyProvider(type) {
+    protected fun <T> property(type: Type<T>, isExtension: Boolean = false): PropertyProvider<T> = PropertyProvider(type, isExtension, isRecord) {
         properties[it.name] = it
     }
 
@@ -78,17 +101,37 @@ public abstract class TypeStructure<D : Any> {
         }
     }
 
-    public class Property<T>(public val name: String, public val type: Type<T>)
+    protected fun minorDeserializationError(message: String, link: ReferenceChainLink): Nothing =
+        throw DeserializationException.Minor(message, link)
+
+    public class Property<T> internal constructor(
+        public val name: String,
+        public val type: Type<T>,
+        public val inclusionStrategy: InclusionStrategy,
+    )
+
+    public enum class InclusionStrategy {
+        ONLY_EXPLICIT,
+        ONLY_EXPLICIT_OR_PARENT_EXPLICIT,
+        PARENT
+    }
 
     public class PropertyProvider<T> internal constructor(
         internal val type: Type<T>,
-        private val register: (Property<T>) -> Unit
+        internal val isExtension: Boolean,
+        private val isOuterRecord: Boolean,
+        private val register: (Property<T>) -> Unit,
     ) : PropertyDelegateProvider<TypeStructure<*>, ReadOnlyProperty<TypeStructure<*>, Property<T>>> {
         public override operator fun provideDelegate(
             thisRef: TypeStructure<*>,
             property: KProperty<*>,
         ): ReadOnlyProperty<TypeStructure<*>, Property<T>> {
-            val prop = Property(property.name, type)
+            val inclusionStrategy = when {
+                isExtension -> InclusionStrategy.ONLY_EXPLICIT
+                isOuterRecord && property.name == "id" -> InclusionStrategy.ONLY_EXPLICIT_OR_PARENT_EXPLICIT
+                else -> InclusionStrategy.PARENT
+            }
+            val prop = Property(property.name, type, inclusionStrategy)
             register(prop)
             return ReadOnlyProperty { _, _ -> prop }
         }

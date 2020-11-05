@@ -2,6 +2,7 @@ package space.jetbrains.api.runtime
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import mu.KotlinLogging
 import space.jetbrains.api.runtime.Type.NumberType.IntType
 import space.jetbrains.api.runtime.Type.NumberType.LongType
 import space.jetbrains.api.runtime.Type.PrimitiveType.StringType
@@ -79,9 +80,10 @@ public sealed class Type<T> {
     public class Nullable<T : Any>(public val type: Type<T>) : Type<T?>() {
         override fun deserialize(context: DeserializationContext): T? {
             return if (context.json != null && !context.json.isNull()) {
-                type.deserialize(context)
-            }
-            else null
+                tryDeserialize(context.link) {
+                    type.deserialize(context)
+                }.valueOrNull
+            } else null
         }
 
         override fun serialize(value: T?): JsonValue {
@@ -93,8 +95,7 @@ public sealed class Type<T> {
         override fun deserialize(context: DeserializationContext): Option<T> {
             return if (context.json != null) {
                 Option.Value(type.deserialize(context))
-            }
-            else Option.None
+            } else Option.None
         }
 
         override fun serialize(value: Option<T>): JsonValue? {
@@ -103,8 +104,12 @@ public sealed class Type<T> {
     }
 
     public class ArrayType<T>(public val elementType: Type<T>) : Type<List<T>>() {
-        override fun deserialize(context: DeserializationContext): List<T> = context.elements().map {
-            elementType.deserialize(it)
+        override fun deserialize(context: DeserializationContext): List<T> = buildList {
+            context.elements().forEach {
+                tryDeserialize(context.link) {
+                    elementType.deserialize(it)
+                }.ifValue { add(it) }
+            }
         }
 
         override fun serialize(value: List<T>): JsonValue {
@@ -114,8 +119,13 @@ public sealed class Type<T> {
 
     public class MapType<V>(public val valueType: Type<V>) : Type<Map<String, V>>() {
         override fun deserialize(context: DeserializationContext): Map<String, V> {
-            return context.requireJson().getFields(context.link).associate { (key, json) ->
-                key to valueType.deserialize(context.child("[\"$key\"]", json))
+            return buildMap {
+                context.requireJson().getFields(context.link).forEach { (key, json) ->
+                    val elemContext = context.child("[\"$key\"]", json, partial = context.partial)
+                    tryDeserialize(elemContext.link) {
+                        valueType.deserialize(elemContext)
+                    }.ifValue { put(key, it) }
+                }
             }
         }
 
@@ -131,9 +141,9 @@ public sealed class Type<T> {
 
         override fun deserialize(context: DeserializationContext): Batch<T> {
             return Batch(
-                StringType.deserialize(context.child("next")),
-                Nullable(IntType).deserialize(context.child("totalCount")),
-                arrayType.deserialize(context.child("data"))
+                StringType.deserialize(context.child("next", partial = context.partial)),
+                Nullable(IntType).deserialize(context.child("totalCount", partial = context.partial)),
+                arrayType.deserialize(context.child("data", partial = context.partial))
             )
         }
 
@@ -177,5 +187,29 @@ public sealed class Type<T> {
         is MapType<*> -> valueType.partialStructure()
         is BatchType<*> -> elementType.partialStructure()
         is ObjectType -> structure
+    }
+
+    private companion object {
+        val log = KotlinLogging.logger {}
+
+        inline fun <T> tryDeserialize(link: ReferenceChainLink, deserialize: () -> T): Option<T> {
+            return try {
+                Option.Value(deserialize())
+            } catch (e: DeserializationException) {
+                val msg = "Deserialization failed. Setting " + link.referenceChain() + " to null\n" +
+                    "Error: " + e.message
+                when (e) {
+                    is DeserializationException.Major -> log.error { msg }
+                    is DeserializationException.Minor -> {
+                        if (e.link === link || e.link.parent === link && e.link.name.startsWith("[")) {
+                            log.warn { msg }
+                        } else {
+                            log.error { msg }
+                        }
+                    }
+                }
+                Option.None
+            }
+        }
     }
 }

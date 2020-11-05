@@ -82,7 +82,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                             if (partialInterface != null) {
                                 code.add("val partial = %T(", partialBuilderType)
                                 if (batch) {
-                                    code.add("%M", MemberName(partialSpecialType, "BATCH"))
+                                    code.add("isBatch = true")
                                 }
                                 code.add(").also·{\n")
                                 code.indent()

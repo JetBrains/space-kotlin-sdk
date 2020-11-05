@@ -1,43 +1,49 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.KModifier.OVERRIDE
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
-private fun CodeBlock.Builder.appendPropertyDelegate(field: HA_Field, model: HttpApiEntitiesById) =
-    appendPropertyDelegate(field.type, model, field.requiresOption)
+private fun CodeBlock.Builder.appendPropertyDelegate(field: HA_DtoField, model: HttpApiEntitiesById) =
+    appendPropertyDelegate(field.type, model, field.requiresOption, field.extension)
 
-private fun CodeBlock.Builder.appendPropertyDelegate(type: HA_Type, model: HttpApiEntitiesById, option: Boolean): CodeBlock.Builder {
+private fun CodeBlock.Builder.appendPropertyDelegate(
+    type: HA_Type,
+    model: HttpApiEntitiesById,
+    option: Boolean,
+    isExtension: Boolean
+): CodeBlock.Builder {
+    val isExtensionArg = if (isExtension) "isExtension = true" else ""
     when (type) {
         is HA_Type.Primitive -> when (type.primitive) {
-            HA_Primitive.Byte -> add("byte()")
-            HA_Primitive.Short -> add("short()")
-            HA_Primitive.Int -> add("int()")
-            HA_Primitive.Long -> add("long()")
-            HA_Primitive.Float -> add("float()")
-            HA_Primitive.Double -> add("double()")
-            HA_Primitive.Boolean -> add("boolean()")
-            HA_Primitive.String -> add("string()")
-            HA_Primitive.Date -> add("date()")
-            HA_Primitive.DateTime -> add("datetime()")
+            HA_Primitive.Byte -> add("byte($isExtensionArg)")
+            HA_Primitive.Short -> add("short($isExtensionArg)")
+            HA_Primitive.Int -> add("int($isExtensionArg)")
+            HA_Primitive.Long -> add("long($isExtensionArg)")
+            HA_Primitive.Float -> add("float($isExtensionArg)")
+            HA_Primitive.Double -> add("double($isExtensionArg)")
+            HA_Primitive.Boolean -> add("boolean($isExtensionArg)")
+            HA_Primitive.String -> add("string($isExtensionArg)")
+            HA_Primitive.Date -> add("date($isExtensionArg)")
+            HA_Primitive.DateTime -> add("datetime($isExtensionArg)")
         }
         is HA_Type.Array -> {
             add("list(")
-            appendPropertyDelegate(type.elementType, model, false)
+            appendPropertyDelegate(type.elementType, model, false, isExtension)
             add(")")
         }
         is HA_Type.Map -> {
             add("map(")
-            appendPropertyDelegate(type.valueType, model, false)
+            appendPropertyDelegate(type.valueType, model, false, isExtension)
             add(")")
         }
         is HA_Type.Object, is HA_Type.Dto, is HA_Type.Ref, is HA_Type.UrlParam -> {
             add("obj(")
             appendStructure(type, model)
+            if (isExtension) add(", $isExtensionArg")
             add(")")
         }
         is HA_Type.Enum -> {
-            add("enum<%T>()", type.copy(nullable = false).kotlinPoet(model))
+            add("enum<%T>($isExtensionArg)", type.copy(nullable = false).kotlinPoet(model))
         }
     }.let {}
 
@@ -91,7 +97,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     })
 
                     typeBuilder.addFunction(FunSpec.builder("deserialize").also { funcBuilder ->
-                        funcBuilder.addModifiers(OVERRIDE)
+                        funcBuilder.addModifiers(KModifier.OVERRIDE)
                         funcBuilder.addParameter("context", deserializationContextType)
                         funcBuilder.returns(dtoClassName)
 
@@ -133,14 +139,14 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     "$INDENT\"${dto.name}\" -> " +
                                         createInstance.indentNonFirst() + "\n"
                                 } else "") +
-                                "${INDENT}else -> error(\"Unsupported class name: '\$className'\")\n}"
+                                "${INDENT}else -> minorDeserializationError(\"Unsupported class name: '\$className'\", context.link)\n}"
                         }
 
                         funcBuilder.addCode("return $toReturn", *codeReferences.toTypedArray())
                     }.build())
 
                     typeBuilder.addFunction(FunSpec.builder("serialize").also { func ->
-                        func.addModifiers(OVERRIDE)
+                        func.addModifiers(KModifier.OVERRIDE)
                         func.addParameter("value", dtoClassName)
                         func.returns(jsonValueType)
 
@@ -178,7 +184,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                     if (dto.inheritors.isNotEmpty()) {
                         typeBuilder.addProperty(
-                            PropertySpec.builder("childClassNames", SET.parameterizedBy(STRING), OVERRIDE)
+                            PropertySpec.builder("childClassNames", SET.parameterizedBy(STRING), KModifier.OVERRIDE)
                                 .initializer(buildCodeBlock {
                                     add("setOf(")
                                     dto.inheritors.forEachIndexed { i, it ->
@@ -196,6 +202,12 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 .build()
                         )
                     }
+
+                    typeBuilder.addProperty(
+                        PropertySpec.builder("isRecord", BOOLEAN, KModifier.OVERRIDE)
+                            .getter(FunSpec.getterBuilder().addCode("return ${dto.record}").build())
+                            .build()
+                    )
                 }.build())
             }
         }.build()

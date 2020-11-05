@@ -25,4 +25,6 @@ public object BatchInfoStructure : TypeStructure<BatchInfo>() {
         offset.serialize(value.offset),
         batchSize.serialize(value.batchSize)
     ))
+
+    override val isRecord: Boolean get() = false
 }

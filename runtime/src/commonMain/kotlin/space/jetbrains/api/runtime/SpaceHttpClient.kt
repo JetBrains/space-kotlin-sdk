@@ -16,6 +16,7 @@ import io.ktor.http.content.TextContent
 import io.ktor.utils.io.charsets.Charsets
 import io.ktor.utils.io.errors.IOException
 import kotlinx.datetime.Clock.System
+import mu.KotlinLogging
 import space.jetbrains.api.runtime.ErrorCodes.AUTHENTICATION_REQUIRED
 import space.jetbrains.api.runtime.ErrorCodes.DUPLICATED_ENTITY
 import space.jetbrains.api.runtime.ErrorCodes.INTERNAL_SERVER_ERROR
@@ -60,7 +61,7 @@ public class SpaceHttpClient(client: HttpClient) {
         val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
         handleErrors(response, tokenJson, httpMethod, url)
 
-        val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"))
+        val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
         return ExpiringToken(
             accessToken = deserialization.child("access_token").let {
                 it.requireJson().asString(it.link)
@@ -76,13 +77,13 @@ public class SpaceHttpClient(client: HttpClient) {
         context: SpaceHttpClientCallContext,
         callMethod: HttpMethod,
         path: String,
-        partial: PartialBuilder?,
+        partial: PartialBuilder.Explicit?,
         parameters: Parameters = Parameters.Empty,
         requestBody: JsonValue? = null
     ): DeserializationContext {
         val token = context.tokenSource.token()
 
-        val response = client.request<HttpResponse> {
+        val request = HttpRequestBuilder().apply {
             url {
                 takeFrom(context.server.apiBaseUrl.removeSuffix("/") + "/" + path.removePrefix("/"))
 
@@ -103,10 +104,13 @@ public class SpaceHttpClient(client: HttpClient) {
                 body = TextContent(it.print(), ContentType.Application.Json)
             }
         }
+        val response = client.request<HttpResponse>(request)
 
-        val content = response.readText(Charsets.UTF_8).let(::parseJson)
+        val responseText = response.readText(Charsets.UTF_8)
+        log.trace { "Response for ${request.method.value} request to ${request.url.buildString()}:\n$responseText" }
+        val content = responseText.let(::parseJson)
         handleErrors(response, content, callMethod, path)
-        return DeserializationContext(content, ReferenceChainLink(functionName))
+        return DeserializationContext(content, ReferenceChainLink(functionName), partial)
     }
 
     private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {
@@ -134,5 +138,9 @@ public class SpaceHttpClient(client: HttpClient) {
                 }
             }
         }
+    }
+
+    private companion object {
+        private val log = KotlinLogging.logger {}
     }
 }

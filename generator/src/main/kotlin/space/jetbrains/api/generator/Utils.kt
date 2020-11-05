@@ -33,8 +33,7 @@ val optionType = ClassName(ROOT_PACKAGE, "Option")
 val optionNoneType = optionType.nestedClass("None")
 
 val deserializationContextType = ClassName(ROOT_PACKAGE, "DeserializationContext")
-val partialBuilderType = ClassName(ROOT_PACKAGE, "PartialBuilder")
-val partialSpecialType = partialBuilderType.nestedClass("Special")
+val partialBuilderType = ClassName(ROOT_PACKAGE, "PartialBuilder", "Explicit")
 
 val partialType = ClassName(ROOT_PACKAGE, "Partial")
 val partialImplType = ClassName(ROOT_PACKAGE, "PartialImpl")

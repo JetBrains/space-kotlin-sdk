@@ -93,8 +93,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                         unindent()
                         add("}, build")
                         if (batch) {
-                            file.addImport(partialSpecialType, "BATCH")
-                            add(", BATCH")
+                            add(", isBatch = true")
                         }
                         add(")")
                     })

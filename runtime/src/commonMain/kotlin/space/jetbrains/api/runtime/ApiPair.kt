@@ -28,6 +28,8 @@ public class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStruct
             second.serialize(value.second)
         )
     )
+
+    override val isRecord: Boolean get() = false
 }
 
 public interface ApiPairPartial<out A : Partial, out B : Partial> : Partial {
@@ -38,9 +40,9 @@ public interface ApiPairPartial<out A : Partial, out B : Partial> : Partial {
 }
 
 public class ApiPairPartialImpl<out A : Partial, out B : Partial>(
-    private val a: (PartialBuilder) -> A,
-    private val b: (PartialBuilder) -> B,
-    builder: PartialBuilder
+    private val a: (PartialBuilder.Explicit) -> A,
+    private val b: (PartialBuilder.Explicit) -> B,
+    builder: PartialBuilder.Explicit
 ) : PartialImpl(builder), ApiPairPartial<A, B> {
     override fun first(): Unit = builder.add("first")
 

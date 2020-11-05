@@ -175,8 +175,8 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
             val fields = result.computeIfAbsent(dto.id) { mutableListOf() }
 
             dto.fields.forEachIndexed { index, dtoField ->
-                fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField.field, index)
-                    ?: FieldDescriptor(dtoField.field, index, OwnFinal, dtoField.extension)
+                fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField, index)
+                    ?: FieldDescriptor(dtoField, index, OwnFinal, dtoField.extension)
             }
 
             parentFields?.forEachIndexed { parentIndex, parentField ->
@@ -189,8 +189,8 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
     return result
 }
 
-class FieldDescriptor(val field: HA_Field, val index: Int, var state: FieldState, val isExtension: Boolean) {
-    fun override(field: HA_Field, index: Int): FieldDescriptor = when (val state = state) {
+class FieldDescriptor(val field: HA_DtoField, val index: Int, var state: FieldState, val isExtension: Boolean) {
+    fun override(field: HA_DtoField, index: Int): FieldDescriptor = when (val state = state) {
         OwnFinal -> {
             this.state = OwnOpen
             FieldDescriptor(field, index, Overrides(this), false)
