@@ -264,7 +264,7 @@ do {
 } while (todoBatch.hasNext())
 ```
 
-> **Note:** This code example makes use of an extension method `hasNext()` to determine whethr more results need to be retrieved:
+> **Note:** This code example makes use of an extension method `hasNext()` to determine whether more results need to be retrieved:
 >
 > `fun Batch<*>.hasNext() = totalCount != null && next != totalCount.toString()`
 
