@@ -40,13 +40,13 @@ publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'org.jetbrains'
-            artifactId = 'space-api-client-generator'
+            artifactId = 'space-sdk-generator'
             version = this_version
             from components.java
 
             pom {
-                name = 'Space API client generator'
-                description = 'API client generator for JetBrains Space API'
+                name = 'Space SDK generator'
+                description = 'SDK generator for JetBrains Space API'
             }
         }
     }

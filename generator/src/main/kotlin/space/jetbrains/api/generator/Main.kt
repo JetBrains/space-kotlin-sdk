@@ -86,15 +86,15 @@ fun main(vararg args: String) {
     if (out.exists() && args.size != 3) out.deleteRecursively()
     out.mkdirs()
 
-    Log.info { "Generating types for HTTP API Client" }
+    Log.info { "Generating types for SDK" }
     val generatedTypes = generateTypes(model)
-    Log.info { "Generating resources for HTTP API Client" }
+    Log.info { "Generating resources for SDK" }
     val generatedResources = generateResources(model)
-    Log.info { "Generating structures for HTTP API Client" }
+    Log.info { "Generating structures for SDK" }
     val generatedStructures = generateStructures(model)
-    Log.info { "Generating partials for HTTP API Client" }
+    Log.info { "Generating partials for SDK" }
     val generatedPartials = generatePartials(model)
-    Log.info { "Generating menu IDs for HTTP API Client" }
+    Log.info { "Generating menu IDs for SDK" }
     val generatedMenuIds = generateMenuIds(model)
 
     (generatedTypes + generatedResources + generatedStructures + generatedPartials + generatedMenuIds).forEach {

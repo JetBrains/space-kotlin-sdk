@@ -24,7 +24,7 @@ val HA_Dto.isObject get() = hierarchyRole == FINAL && fields.isEmpty()
 fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
 
-    Log.info { "Generating DTO classes for HTTP API Client" }
+    Log.info { "Generating DTO classes for SDK" }
     return model.dtoAndUrlParams.values.mapNotNull { root ->
         if (root.extends != null) return@mapNotNull null
 

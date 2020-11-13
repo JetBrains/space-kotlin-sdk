@@ -37,10 +37,10 @@ kotlin {
         }
         mavenPublication {
             setGroupAndVersion(this)
-            artifactId = "space-api-client-runtime-jvm"
+            artifactId = "space-sdk-runtime-jvm"
             pom {
-                name.set("Space API client runtime")
-                description.set("Runtime for JetBrains Space API client")
+                name.set("Space SDK runtime")
+                description.set("Runtime for JetBrains Space SDK")
             }
         }
     }
@@ -52,10 +52,10 @@ kotlin {
         }
         mavenPublication {
             setGroupAndVersion(this)
-            artifactId = "space-api-client-runtime-js"
+            artifactId = "space-sdk-runtime-js"
             pom {
-                name.set("Space API client runtime")
-                description.set("Runtime for JetBrains Space API client")
+                name.set("Space SDK runtime")
+                description.set("Runtime for JetBrains Space SDK")
             }
         }
 
@@ -110,18 +110,18 @@ publishing {
     publications {
         val kotlinMultiplatform by getting(MavenPublication::class) {
             setGroupAndVersion(this)
-            artifactId = "space-api-client-runtime"
+            artifactId = "space-sdk-runtime"
             pom {
-                name.set("Space API client runtime")
-                description.set("Runtime for JetBrains Space API client")
+                name.set("Space SDK runtime")
+                description.set("Runtime for JetBrains Space SDK")
             }
         }
         val metadata by getting(MavenPublication::class) {
             setGroupAndVersion(this)
-            artifactId = "space-api-client-runtime-metadata"
+            artifactId = "space-sdk-runtime-metadata"
             pom {
-                name.set("Space API client runtime")
-                description.set("Runtime for JetBrains Space API client")
+                name.set("Space SDK runtime")
+                description.set("Runtime for JetBrains Space SDK")
             }
         }
     }

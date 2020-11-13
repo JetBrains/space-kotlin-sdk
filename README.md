@@ -1,17 +1,17 @@
-# Space API client ![](https://jb.gg/badges/incubator-flat-square.svg)
+# Space SDK ![](https://jb.gg/badges/incubator-flat-square.svg)
 
-The Space API client is a Kotlin library to work with the [JetBrains Space](https://jetbrains.com/space/) API. 
+The Space SDK is a Kotlin library to work with the [JetBrains Space](https://jetbrains.com/space/) API. 
 
-> **Disclaimer:** This is a beta version of the Space API client. It relies on the Space API, which is still in beta and subject to change. By using the current beta Space API client, you expressly acknowledge that this version of the beta Space API client may not be reliable, may not work as intended, and may contain errors. Any use of this beta Space API client is at your own risk.
+> **Disclaimer:** This is a beta version of the Space SDK. It relies on the Space API, which is still in beta and subject to change. By using the current beta Space SDK, you expressly acknowledge that this version of the beta Space SDK may not be reliable, may not work as intended, and may contain errors. Any use of this beta Space SDK is at your own risk.
 
 ## Overview
 
-The Space API client comes in two flavours:
+The Space SDK comes in two flavours:
 
-* `org.jetbrains:space-api-client-jvm` — Space API client that can be used on the Java Virtual Machine (JVM).
-* `org.jetbrains:space-api-client-js` — Space API client that can be used with Kotlin/JS.
+* `org.jetbrains:space-sdk-jvm` — Space SDK that can be used on the Java Virtual Machine (JVM).
+* `org.jetbrains:space-sdk-js` — Space SDK that can be used with Kotlin/JS.
 
-Let's have a look at how we can start working with the Space API client.
+Let's have a look at how we can start working with the Space SDK.
 
 ## Getting Started
 
@@ -19,7 +19,7 @@ We will need to [register an application](https://www.jetbrains.com/help/space/a
 
 ### Create a Connection
 
-After installing `org.jetbrains:space-api-client-jvm` in our project, we can use the *Client ID* and *Client Secret* of our Service Account to create a `SpaceHttpClient` that can connect to our Space organization:
+After installing `org.jetbrains:space-sdk-jvm` in our project, we can use the *Client ID* and *Client Secret* of our Service Account to create a `SpaceHttpClient` that can connect to our Space organization:
 
 ```kotlin
 val spaceClient = SpaceHttpClient(HttpClient())
@@ -43,7 +43,7 @@ Clients for endpoints are exposed on the Space HTTP client, and map to the top l
 
 As an example, the top level *Team Directory* is exposed as `spaceClient.teamDirectory`.
 
-> **Tip:** While not required to work with Space API client, having the [HTTP API Playground](https://www.jetbrains.com/help/space/api.html#api-playground) open will be useful to explore the available APIs and data types while developing.
+> **Tip:** While not required to work with Space SDK, having the [HTTP API Playground](https://www.jetbrains.com/help/space/api.html#api-playground) open will be useful to explore the available APIs and data types while developing.
 
 ### Get Profile by Username 
 
@@ -104,7 +104,7 @@ In Space API client, we will need to specify the properties we want to retrieve 
 
 #### Top-level Properties by Default
 
-By default, Space API client will retrieve all top level properties from the Space API. For example, retrieving a profile from the team directory will retrieve all top level properties, such as `id`, `username`, `about`, and more:
+By default, Space API client will retrieve all top-level properties from the Space API. For example, retrieving a profile from the team directory will retrieve all top level properties, such as `id`, `username`, `about`, and more:
 
 ```kotlin
 val memberProfile = spaceClient.teamDirectory.profiles

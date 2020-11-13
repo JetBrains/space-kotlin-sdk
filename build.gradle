@@ -19,6 +19,14 @@ buildscript {
                 password = props.has(spacePassword) ? props[spacePassword] : System.getenv("JB_SPACE_CLIENT_SECRET")
             }
         }
+        publishing.repositories.maven {
+            url = "https://maven.pkg.jetbrains.space/public/p/space-sdk/maven"
+            credentials {
+                def props = rootProject.extensions.extraProperties
+                username = props["publicJbSpaceUsername"]
+                password = props["publicJbSpacePassword"]
+            }
+        }
     }
 }
 
