@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory.instance as jsonNodes
 
 private val jackson = ObjectMapper()
 
-internal actual fun parseJson(json: String): JsonValue? = jackson.readTree(json)
-internal actual fun JsonValue.print(): String = jackson.writeValueAsString(this)
+public actual fun parseJson(json: String): JsonValue? = jackson.readTree(json)
+public actual fun JsonValue.print(): String = jackson.writeValueAsString(this)
 
 public actual typealias JsonValue = JsonNode
 

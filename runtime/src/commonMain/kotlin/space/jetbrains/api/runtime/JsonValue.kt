@@ -2,8 +2,8 @@ package space.jetbrains.api.runtime
 
 public expect abstract class JsonValue
 
-internal expect fun parseJson(json: String): JsonValue?
-internal expect fun JsonValue.print(): String
+public expect fun parseJson(json: String): JsonValue?
+public expect fun JsonValue.print(): String
 
 internal expect fun jsonNumber(number: Number): JsonValue
 internal expect fun JsonValue.asNumberOrNull(): Number?
