@@ -13,6 +13,8 @@ The Space SDK comes in two flavours:
 
 Let's have a look at how we can start working with the Space SDK.
 
+> **Note:** The beta version of the Space SDK is available from the following repository: `https://maven.pkg.jetbrains.space/public/p/space/maven`
+
 ## Getting Started
 
 We will need to [register an application](https://www.jetbrains.com/help/space/applications.html) to work with the Space API. There are various application types, all supporting different authentication flows. For this example, we will use a *Service Account*.
