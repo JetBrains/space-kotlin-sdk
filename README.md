@@ -17,7 +17,9 @@ Let's have a look at how we can start working with the Space SDK.
 
 ## Getting Started
 
-We will need to [register an application](https://www.jetbrains.com/help/space/applications.html) to work with the Space API. There are various application types, all supporting different authentication flows. For this example, we will use a *Service Account*.
+We will need to [register an application](https://www.jetbrains.com/help/space/applications.html) to work with the Space API.  There are various application types, all supporting different authentication flows.
+
+For this example, we will use a *Client application*. Make sure to enable the *Client Credentials Flow* in your application's *Authentication* settings.
 
 ### Create a Connection
 
