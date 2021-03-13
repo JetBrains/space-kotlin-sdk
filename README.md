@@ -23,7 +23,7 @@ For this example, we will use a *Client application*. Make sure to enable the *C
 
 ### Create a Connection
 
-After installing `org.jetbrains:space-sdk-jvm` in our project, we can use the *Client ID* and *Client Secret* of our Service Account to create a `SpaceHttpClient` that can connect to our Space organization:
+After installing `org.jetbrains:space-sdk-jvm` in our project, we can use the *Client ID* and *Client Secret* of our Space application to create a `SpaceHttpClient` that can connect to our Space organization:
 
 ```kotlin
 val spaceClient = SpaceHttpClient(HttpClient())
@@ -37,7 +37,7 @@ We can then use the Space HTTP client in `spaceClient` to access the various Spa
 
 The `HttpClient` is a [Ktor client](https://ktor.io/clients/http-client/quick-start/client.html).
 
-> **Note:** Service Accounts have access to a limited set of APIs when using the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). Many actions (such as posting an article draft) require user consent, and cannot be performed with client credentials. For actions that should be performed on behalf of the user, use other authorization flows, such as [Resource Owner Password Credentials Flow](https://www.jetbrains.com/help/space/resource-owner-password-credentials.html).
+> **Note:** Applications have access to a limited set of APIs when using the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). Many actions (such as posting an article draft) require user consent, and cannot be performed with client credentials. For actions that should be performed on behalf of the user, use other authorization flows, such as [Resource Owner Password Credentials Flow](https://www.jetbrains.com/help/space/resource-owner-password-credentials.html).
 
 ### Work with a Service Client
 
@@ -72,7 +72,7 @@ Communication with Space is handled by the `SpaceHttpClient` base class. It will
 
 The Space API client provides several extension methods that can be used to authenticate and work with Space:
 
-* `SpaceHttpClient.withServiceAccountTokenSource` — Supports the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). This is typically used by a Service Account that acts on behalf of itself.
+* `SpaceHttpClient.withServiceAccountTokenSource` — Supports the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). This is typically used by a Space application that acts on behalf of itself.
 * `SpaceHttpClient.withPermanentToken` — Uses a bearer token obtained using [other flows](https://www.jetbrains.com/help/space/oauth-2-0-authorization.html), or a [personal token](https://www.jetbrains.com/help/space/personal-tokens.html). This is typically used by applications that act on behalf of a user.
 * `SpaceHttpClient.withCallContext` — Allows integrating other token sources. The `ExpiringTokenSource` can be used to implement the [Refresh Token Flow](https://www.jetbrains.com/help/space/refresh-token.html).
 
