@@ -158,6 +158,10 @@ sealed class HA_DefaultValue {
     data class Collection(val elements: List<HA_DefaultValue>) : HA_DefaultValue()
     data class Map(val elements: kotlin.collections.Map<String, HA_DefaultValue>) : HA_DefaultValue()
     data class Reference(val paramName: String): HA_DefaultValue()
+
+    companion object {
+        val NULL = Const.Primitive("null")
+    }
 }
 
 class HA_DtoField(val field: HA_Field, val extension: Boolean)

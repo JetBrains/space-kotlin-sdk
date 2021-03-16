@@ -1,5 +1,6 @@
 package space.jetbrains.api.generator
 
+import app.cash.exhaustive.Exhaustive
 import com.squareup.kotlinpoet.*
 import space.jetbrains.api.generator.HA_Method.*
 import space.jetbrains.api.generator.HA_PathSegment.*
@@ -135,10 +136,15 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                             parameterConversion(model, param.name, param.type, code)
                                             code.add("?.let·{ appendAll(%S, it) }\n", param.name)
                                         }
-                                        param.funcParameterHaType().nullable -> {
+                                        param.requiresAddedNullability || param.defaultValue == HA_DefaultValue.NULL -> {
                                             code.add(param.name + "?.let·{ append(%S, ", param.name)
-                                            parameterConversion(model, "it", param.type, code)
-                                            code.add(") }\n", param.name)
+                                            parameterConversion(model, "it", param.type.copy(nullable = false), code)
+                                            code.add(") }\n")
+                                        }
+                                        param.type.nullable -> {
+                                            code.add("append(%S, ${param.name}?.let·{ ", param.name)
+                                            parameterConversion(model, "it", param.type.copy(nullable = false), code)
+                                            code.add(" }.orEmpty())\n")
                                         }
                                         else -> {
                                             code.add("append(%S, ", param.name)
@@ -166,7 +172,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                             serialize()
                                             code.add("?.let·{ %S·to it }", field.name)
                                         }
-                                        field.requiresAddedNullability -> {
+                                        field.requiresAddedNullability || field.defaultValue == HA_DefaultValue.NULL -> {
                                             code.add("${field.name}?.let·{ %S·to ", field.name)
                                             serialize("it")
                                             code.add(" }")
@@ -248,15 +254,22 @@ private fun urlParam(model: HttpApiEntitiesById, expr: String, type: HA_Type.Url
     funcCode.add("}")
 }
 
+// String -> String
+// String? -> String?
+// <primitive>? -> String
+// <URL param>!! -> String
+// Enum!! -> String
+// <Ref> -> String
+// <Ref>? -> String?
+// List<T>? -> List<String>?
 private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: HA_Type, funcCode: CodeBlock.Builder) {
-    @Suppress("UNUSED_VARIABLE")
-    val unused: Any? = when (type) {
+    @Exhaustive
+    when (type) {
         is HA_Type.Primitive -> {
             funcCode.add(expr)
             if (type.primitive != HA_Primitive.String) {
                 funcCode.add(".toString()")
             }
-            Unit
         }
         is HA_Type.UrlParam -> urlParam(model, expr, type, funcCode)
         is HA_Type.Enum -> funcCode.add("$expr.name")
@@ -278,7 +291,6 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
                 }
                 funcCode.add(" }")
             }
-            Unit
         }
 
         is HA_Type.Map -> error("Maps cannot occur in URL parameters")

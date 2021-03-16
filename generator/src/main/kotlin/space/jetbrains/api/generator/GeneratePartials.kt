@@ -172,13 +172,12 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                 cf.childFieldNamesToPartials.asSequence()
                     .filter { it.key !in cf.ownFieldNamesToPartials }
                     .flatMap { (fieldName, partials) ->
-                        partials.groupingBy { it }
+                        partials.groupingBy { it?.partialToPartialInterface(model) }
                             .eachCount()
                             .asSequence()
                             .filter { it.value > 1 }
                             .map { fieldName to it.key }
-                    }.forEach { (fieldName, partial) ->
-                        val partialInterface = partial?.partialToPartialInterface(model)
+                    }.forEach { (fieldName, partialInterface) ->
                         addImpl(fieldName, partialInterface, false)
                         partialInterface?.let { addRecursiveAsImpl(fieldName, it) }
                     }
