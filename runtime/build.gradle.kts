@@ -27,7 +27,7 @@ kotlin {
         compilations.configureEach {
             tasks.named(compileKotlinTaskName).configure {
                 kotlinOptions {
-                    jvmTarget = "1.6"
+                    jvmTarget = "1.8"
                 }
             }
         }
