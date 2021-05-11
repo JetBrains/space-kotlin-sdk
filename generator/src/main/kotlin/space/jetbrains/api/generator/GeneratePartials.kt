@@ -57,7 +57,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                 val cf = childFieldsById.getValue(dto.id)
                 val requiringJvmName = fieldsRequiringJvmName.getValue(dto.id)
 
-                fun FunSpec.Builder.addJvmName(fieldName: String, partialInterface: TypeName) {
+                fun FunSpec.Builder.addJvmName(fieldName: String, partialInterface: TypeName, recursive: Boolean = false) {
                     fun getShortId(typeName: TypeName): String = when (typeName) {
                         is ClassName -> typeName.simpleNames.joinToString("")
                         is ParameterizedTypeName -> getShortId(typeName.rawType) + "_" +
@@ -67,7 +67,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
 
                     addAnnotation(
                         AnnotationSpec.builder(JvmName::class)
-                            .addMember("%S", fieldName + "_" + getShortId(partialInterface))
+                            .addMember("%S", fieldName + "_" + getShortId(partialInterface) + if (recursive) "-r" else "")
                             .build()
                     )
                 }
@@ -105,6 +105,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                             .addModifiers(OVERRIDE)
                             .addParameter("recursiveAs", partialInterface)
                             .addStatement("builder.addRecursively(%S, getPartialBuilder(recursiveAs))", fieldName)
+                            .also { if (fieldName in requiringJvmName) it.addJvmName(fieldName, partialInterface, true) }
                             .build()
                     )
                 }
@@ -131,6 +132,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                                 .addModifiers(ABSTRACT)
                                 .addParameter("recursiveAs", partialInterface)
                                 .also { if (isOverride) it.addModifiers(OVERRIDE) }
+                                .also { if (field.name in requiringJvmName) it.addJvmName(field.name, partialInterface, true) }
                                 .build()
                         )
                         addRecursiveAsImpl(field.name, partialInterface)
