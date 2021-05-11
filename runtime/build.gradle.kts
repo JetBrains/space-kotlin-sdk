@@ -69,16 +69,16 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
+        getByName("commonMain") {
             dependencies {
                 api("io.ktor:ktor-client-core:$ktor_version")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
-                api("org.jetbrains.kotlinx:kotlinx-datetime:0.1.1")
+                api("org.jetbrains.kotlinx:kotlinx-datetime:0.2.0")
                 implementation("io.github.microutils:kotlin-logging:2.0.3")
             }
         }
 
-        val jvmMain by getting {
+        getByName("jvmMain") {
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
 
@@ -87,7 +87,7 @@ kotlin {
             }
         }
 
-        val jsMain by getting {
+        getByName("jsMain") {
             dependencies {
                 api("io.ktor:ktor-client-js:$ktor_version")
             }
@@ -98,17 +98,9 @@ kotlin {
 publishing {
     mavenForPublishing(this)
     publications {
-        val kotlinMultiplatform by getting(MavenPublication::class) {
+        getByName("kotlinMultiplatform", MavenPublication::class) {
             setGroupAndVersion(this)
             artifactId = "space-sdk-runtime"
-            pom {
-                name.set("Space SDK runtime")
-                description.set("Runtime for JetBrains Space SDK")
-            }
-        }
-        val metadata by getting(MavenPublication::class) {
-            setGroupAndVersion(this)
-            artifactId = "space-sdk-runtime-metadata"
             pom {
                 name.set("Space SDK runtime")
                 description.set("Runtime for JetBrains Space SDK")

@@ -5,7 +5,7 @@ buildscript {
     ext.jackson_version = '2.9.10'
     ext.kotlin_jackson_version = '2.9.10'
     ext.kotlinx_coroutines_version = '1.5.0-RC'
-    ext.ktor_version = '1.4.0'
+    ext.ktor_version = '1.5.4'
 
     ext.mavenForPublishing = { PublishingExtension publishing ->
         publishing.repositories.maven {
@@ -30,6 +30,6 @@ buildscript {
 }
 
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.4.10' apply false
-    id 'org.jetbrains.kotlin.multiplatform' version '1.4.10' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.0' apply false
+    id 'org.jetbrains.kotlin.multiplatform' version '1.5.0' apply false
 }
