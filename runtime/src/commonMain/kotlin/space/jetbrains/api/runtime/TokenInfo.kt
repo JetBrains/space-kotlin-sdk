@@ -1,9 +1,8 @@
 package space.jetbrains.api.runtime
 
 import io.ktor.http.Parameters
+import kotlinx.datetime.*
 import kotlinx.datetime.Clock.System
-import kotlinx.datetime.Instant
-import kotlin.time.seconds
 
 public interface TokenInfo {
     public val accessToken: String
@@ -22,7 +21,7 @@ public data class PermanentToken(override val accessToken: String) : TokenInfo, 
 }
 
 private fun TokenInfo.expired(gapSeconds: Long = 5): Boolean {
-    return expires?.let { System.now() + gapSeconds.seconds > it } ?: false
+    return expires?.let { System.now().plus(gapSeconds, DateTimeUnit.SECOND) > it } ?: false
 }
 
 public class ExpiringTokenSource(private val getToken: suspend () -> TokenInfo) : TokenSource {

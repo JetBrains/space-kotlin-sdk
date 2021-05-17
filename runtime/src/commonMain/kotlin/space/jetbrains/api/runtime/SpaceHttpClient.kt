@@ -15,6 +15,7 @@ import io.ktor.http.HttpStatusCode.Companion.Unauthorized
 import io.ktor.http.content.TextContent
 import io.ktor.utils.io.charsets.Charsets
 import io.ktor.utils.io.errors.IOException
+import kotlinx.datetime.*
 import kotlinx.datetime.Clock.System
 import mu.KotlinLogging
 import space.jetbrains.api.runtime.ErrorCodes.AUTHENTICATION_REQUIRED
@@ -26,7 +27,6 @@ import space.jetbrains.api.runtime.ErrorCodes.PERMISSION_DENIED
 import space.jetbrains.api.runtime.ErrorCodes.RATE_LIMITED
 import space.jetbrains.api.runtime.ErrorCodes.REQUEST_ERROR
 import space.jetbrains.api.runtime.ErrorCodes.VALIDATION_ERROR
-import kotlin.time.seconds
 
 public open class RequestException(message: String?, public val response: HttpResponse) : Exception(message)
 
@@ -66,9 +66,12 @@ public class SpaceHttpClient(client: HttpClient) {
             accessToken = deserialization.child("access_token").let {
                 it.requireJson().asString(it.link)
             },
-            expires = responseTime.plus(deserialization.child("expires_in").let {
-                it.requireJson().asNumber(it.link)
-            }.toLong().seconds)
+            expires = responseTime.plus(
+                value = deserialization.child("expires_in").let {
+                    it.requireJson().asNumber(it.link)
+                }.toLong(),
+                unit = DateTimeUnit.SECOND
+            )
         )
     }
 

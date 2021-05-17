@@ -1,7 +1,5 @@
 @file:Suppress("PropertyName")
 
-import org.jetbrains.kotlin.gradle.plugin.LanguageSettingsBuilder
-
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     id("maven-publish")
@@ -9,8 +7,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://kotlin.bintray.com/kotlinx") }
-    maven { url = uri("https://cache-redirector.jetbrains.com/plugins.gradle.org/m2") }
 }
 
 val this_version: String by rootProject.extra
@@ -95,12 +91,6 @@ kotlin {
             dependencies {
                 api("io.ktor:ktor-client-js:$ktor_version")
             }
-        }
-        all {
-            languageSettings(closureOf<LanguageSettingsBuilder> {
-                useExperimentalAnnotation("kotlin.time.ExperimentalTime")
-                useExperimentalAnnotation("kotlin.ExperimentalStdlibApi")
-            })
         }
     }
 }

@@ -104,7 +104,7 @@ public sealed class Type<T> {
     }
 
     public class ArrayType<T>(public val elementType: Type<T>) : Type<List<T>>() {
-        override fun deserialize(context: DeserializationContext): List<T> = buildList {
+        override fun deserialize(context: DeserializationContext): List<T> = mutableListOf<T>().apply {
             context.elements().forEach {
                 tryDeserialize(context.link) {
                     elementType.deserialize(it)
@@ -119,7 +119,7 @@ public sealed class Type<T> {
 
     public class MapType<V>(public val valueType: Type<V>) : Type<Map<String, V>>() {
         override fun deserialize(context: DeserializationContext): Map<String, V> {
-            return buildMap {
+            return mutableMapOf<String, V>().apply {
                 context.requireJson().getFields(context.link).forEach { (key, json) ->
                     val elemContext = context.child("[\"$key\"]", json, partial = context.partial)
                     tryDeserialize(elemContext.link) {
