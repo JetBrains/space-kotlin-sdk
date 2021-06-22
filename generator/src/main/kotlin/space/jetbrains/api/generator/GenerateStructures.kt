@@ -118,7 +118,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                             }
                         }
 
-                        val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole.isAbstract) {
+                        val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole2.isAbstract) {
                             codeReferences += dtoClassName
                             createInstance
                         } else {
@@ -134,7 +134,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     } else ""
                                     "$condition -> %T.deserialize(context)"
                                 } +
-                                (if (!dto.hierarchyRole.isAbstract) {
+                                (if (!dto.hierarchyRole2.isAbstract) {
                                     codeReferences += dtoClassName
                                     "$INDENT\"${dto.name}\" -> " +
                                         createInstance.indentNonFirst() + "\n"
@@ -157,7 +157,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 "this.${it.field.name}.serialize(value.${it.field.name})"
                             } ?: "") + "))"
 
-                        val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole.isAbstract) {
+                        val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole2.isAbstract) {
                             codeReferences += jsonObjectFunction
                             createJson
                         } else {
@@ -170,7 +170,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     "is %T -> %T.serialize(value).withClassName(\"${inheritor.name}\")"
                                 } +
                                 "${INDENT}else -> " +
-                                if (!dto.hierarchyRole.isAbstract) {
+                                if (!dto.hierarchyRole2.isAbstract) {
                                     codeReferences += jsonObjectFunction
                                     createJson.indentNonFirst() + ".withClassName(\"${dto.name}\")"
                                 } else {

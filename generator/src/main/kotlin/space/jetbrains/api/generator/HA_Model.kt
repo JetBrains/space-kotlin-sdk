@@ -175,7 +175,7 @@ class HA_Dto(
     val id: TID,
     val name: String,
     val fields: List<HA_DtoField>,
-    val hierarchyRole: HierarchyRole,
+    val hierarchyRole2: HierarchyRole2,
     val extends: Ref?,
     val implements: List<Ref>,
     val inheritors: List<Ref>,
@@ -185,12 +185,13 @@ class HA_Dto(
     data class Ref(val id: TID)
 }
 
-enum class HierarchyRole(val isAbstract: Boolean) {
-    SEALED(true),
-    OPEN(false),
-    FINAL(false),
-    ABSTRACT(true),
-    INTERFACE(true)
+enum class HierarchyRole2(val isAbstract: Boolean, val isInterface: Boolean) {
+    SEALED_CLASS(isAbstract = true, isInterface = false),
+    OPEN_CLASS(isAbstract = false, isInterface = false),
+    FINAL_CLASS(isAbstract = false, isInterface = false),
+    ABSTRACT_CLASS(isAbstract = true, isInterface = false),
+    INTERFACE(isAbstract = true, isInterface = true),
+    SEALED_INTERFACE(isAbstract = true, isInterface = true),
 }
 
 class HA_Enum(

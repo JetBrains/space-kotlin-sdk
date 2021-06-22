@@ -6,8 +6,6 @@ import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.kotlin.*
 import space.jetbrains.api.generator.HA_UrlParameterOption.Const
 import space.jetbrains.api.generator.HA_UrlParameterOption.Var
-import space.jetbrains.api.generator.HierarchyRole.FINAL
-import space.jetbrains.api.generator.HierarchyRole.SEALED
 import java.io.*
 
 object Log {
@@ -42,7 +40,7 @@ class HttpApiEntitiesById private constructor(
 
 private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
     return options.map {
-        val optionId = it.optionName.toLowerCase()
+        val optionId = it.optionName.lowercase()
         optionId to HA_Dto(
             id = optionId,
             name = it.optionName,
@@ -50,9 +48,9 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
                 is Const -> emptyList()
                 is Var -> listOf(HA_DtoField(it.parameter, extension = false))
             },
-            hierarchyRole = FINAL,
-            extends = HA_Dto.Ref(id),
-            implements = emptyList(),
+            hierarchyRole2 = HierarchyRole2.FINAL_CLASS,
+            extends = null,
+            implements = listOf(HA_Dto.Ref(id)),
             inheritors = emptyList(),
             deprecation = it.deprecation,
             record = false
@@ -61,10 +59,10 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
         id = id,
         name = name,
         fields = emptyList(),
-        hierarchyRole = SEALED,
+        hierarchyRole2 = HierarchyRole2.SEALED_INTERFACE,
         extends = null,
         implements = emptyList(),
-        inheritors = options.map { HA_Dto.Ref(it.optionName.toLowerCase()) },
+        inheritors = options.map { HA_Dto.Ref(it.optionName.lowercase()) },
         deprecation = deprecation,
         record = false
     ))

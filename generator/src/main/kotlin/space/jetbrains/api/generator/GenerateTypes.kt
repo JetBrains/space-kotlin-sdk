@@ -1,7 +1,7 @@
 package space.jetbrains.api.generator
 
 import space.jetbrains.api.generator.FieldState.*
-import space.jetbrains.api.generator.HierarchyRole.*
+import space.jetbrains.api.generator.HierarchyRole2.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.KModifier.OVERRIDE
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -19,7 +19,7 @@ inline fun <T> dfs(root: T, crossinline getChildren: (T) -> Iterable<T>): Sequen
 
 private val propertyValueType = ClassName(ROOT_PACKAGE, "PropertyValue")
 private val propertyValueValueType = propertyValueType.nestedClass("Value")
-val HA_Dto.isObject get() = hierarchyRole == FINAL && fields.isEmpty()
+val HA_Dto.isObject get() = hierarchyRole2 == FINAL_CLASS && fields.isEmpty()
 
 fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     val fieldDescriptorsByDtoId = model.buildFieldsByDtoId()
@@ -58,12 +58,13 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
 private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescriptorsByDtoId: Map<TID, List<FieldDescriptor>>): TypeSpec {
     Log.info { "Generating DTO class for '${dto.name}'" }
     val dtoClassName = dto.getClassName()
-    val typeBuilder = when (dto.hierarchyRole) {
-        SEALED -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.SEALED)
-        OPEN -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.OPEN)
-        FINAL -> if (dto.isObject) TypeSpec.objectBuilder(dtoClassName) else TypeSpec.classBuilder(dtoClassName)
-        ABSTRACT -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.ABSTRACT)
+    val typeBuilder = when (dto.hierarchyRole2) {
+        SEALED_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.SEALED)
+        OPEN_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.OPEN)
+        FINAL_CLASS -> if (dto.isObject) TypeSpec.objectBuilder(dtoClassName) else TypeSpec.classBuilder(dtoClassName)
+        ABSTRACT_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.ABSTRACT)
         INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName)
+        SEALED_INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName).addModifiers(KModifier.SEALED)
     }
 
     dto.superclass(model)?.let {
@@ -125,7 +126,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
     }
     superclassConstructorArgs.values.forEach { typeBuilder.addSuperclassConstructorParameter(it) }
 
-    if (dto.hierarchyRole != INTERFACE && !dto.isObject) {
+    if (!dto.hierarchyRole2.isInterface && !dto.isObject) {
         typeBuilder.primaryConstructor(primaryConstructor.build())
 
         if (fields.isNotEmpty()) {
@@ -147,10 +148,9 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
 }
 
 fun HA_Dto.subclasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {
-    return if (hierarchyRole != INTERFACE) {
+    return if (!hierarchyRole2.isInterface) {
         dfs(this) { it.inheritors.asSequence().map(model::resolveDto).asIterable() }
-    }
-    else sequenceOf(this)
+    } else sequenceOf(this)
 }
 
 fun HA_Dto.directlyNestedClasses(model: HttpApiEntitiesById): Sequence<HA_Dto> {

@@ -133,7 +133,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                                     when {
                                         param.type is HA_Type.Array -> {
-                                            parameterConversion(model, param.name, param.type, code)
+                                            parameterConversion(model, param.name, param.funcParameterHaType(), code)
                                             code.add("?.let·{ appendAll(%S, it) }\n", param.name)
                                         }
                                         param.requiresAddedNullability || param.defaultValue == HA_DefaultValue.NULL -> {
