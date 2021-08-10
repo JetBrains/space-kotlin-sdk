@@ -80,9 +80,11 @@ The Space API client provides several extension methods that can be used to auth
 
 Scope is a mechanism in OAuth 2.0 to limit an application's access to a user's account.
 
-When setting up the `SpaceHttpClient` using the `withServiceAccountTokenSource` extension method, use the `scope` parameter to specify the scope required by an application. By default, Space API client uses the `**` scope, which requests all available scopes.
+When setting up the `SpaceHttpClient` using the `withServiceAccountTokenSource` extension method, use the `scope` parameter to specify the scope required by an application.
 
-More [examples of available scopes](https://www.jetbrains.com/help/space/oauth-2-0-authorization.html) are available in the Space documentation.
+> **Warning:** By default, the Space API client uses the `**` scope, which requests all available scopes. It is recommended to limit the scope to just those permissions that are needed by your application.
+
+Examples of [available scopes](https://www.jetbrains.com/help/space/oauth-2-0-authorization.html) are available in the Space documentation.
 
 ### Endpoints
 
