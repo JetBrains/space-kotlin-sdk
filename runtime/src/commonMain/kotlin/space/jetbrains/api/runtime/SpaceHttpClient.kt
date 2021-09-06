@@ -14,6 +14,7 @@ import io.ktor.http.HttpStatusCode.Companion.TooManyRequests
 import io.ktor.http.HttpStatusCode.Companion.Unauthorized
 import io.ktor.http.content.TextContent
 import io.ktor.utils.io.charsets.Charsets
+import io.ktor.utils.io.core.*
 import io.ktor.utils.io.errors.IOException
 import kotlinx.datetime.*
 import kotlinx.datetime.Clock.System
@@ -39,7 +40,7 @@ public class RateLimitedException(message: String?, response: HttpResponse) : Re
 public class PayloadTooLargeException(message: String?, response: HttpResponse) : RequestException(message, response)
 public class InternalServerErrorException(message: String?, response: HttpResponse) : RequestException(message, response)
 
-public class SpaceHttpClient(client: HttpClient) {
+public class SpaceHttpClient(client: HttpClient): Closeable {
     private val client = client.config {
         expectSuccess = false
     }
@@ -114,6 +115,10 @@ public class SpaceHttpClient(client: HttpClient) {
         val content = responseText.let(::parseJson)
         handleErrors(response, content, callMethod, path)
         return DeserializationContext(content, ReferenceChainLink(functionName), partial)
+    }
+
+    override fun close() {
+        client.close()
     }
 
     private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {
