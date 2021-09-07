@@ -28,6 +28,7 @@ import space.jetbrains.api.runtime.ErrorCodes.PERMISSION_DENIED
 import space.jetbrains.api.runtime.ErrorCodes.RATE_LIMITED
 import space.jetbrains.api.runtime.ErrorCodes.REQUEST_ERROR
 import space.jetbrains.api.runtime.ErrorCodes.VALIDATION_ERROR
+import space.jetbrains.api.runtime.epoch.EpochTrackingFeature
 
 public open class RequestException(message: String?, public val response: HttpResponse) : Exception(message)
 
@@ -43,6 +44,7 @@ public class InternalServerErrorException(message: String?, response: HttpRespon
 public class SpaceHttpClient(client: HttpClient): Closeable {
     private val client = client.config {
         expectSuccess = false
+        install(EpochTrackingFeature)
     }
 
     internal suspend fun auth(url: String, methodBody: Parameters, authHeaderValue: String): ExpiringToken {
