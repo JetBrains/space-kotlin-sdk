@@ -239,13 +239,18 @@ private fun urlParam(model: HttpApiEntitiesById, expr: String, type: HA_Type.Url
     val param = model.urlParams.getValue(type.urlParam.id)
     funcCode.add("when (val it = $expr) {\n")
     funcCode.indent()
-    param.options.forEach {
-        funcCode.add("is %T -> ", it.getClassName())
-        when (it) {
-            is HA_UrlParameterOption.Const -> funcCode.add("%S\n", it.value)
+    param.options.forEach { option ->
+        funcCode.add("is %T -> ", option.getClassName())
+        when (option) {
+            is HA_UrlParameterOption.Const -> funcCode.add("%S\n", option.value)
             is HA_UrlParameterOption.Var -> {
-                funcCode.add("%S + ", it.parameter.name + ":")
-                parameterConversion(model, "it." + it.parameter.name, it.parameter.type, funcCode)
+                if (option.parameters.size != 1) funcCode.add("\"{\"·+ ")
+                option.parameters.forEachIndexed { i, field ->
+                    if (i != 0) funcCode.add("·+ \",\"·+ ")
+                    funcCode.add("%S·+ ", field.name + ":")
+                    parameterConversion(model, "it." + field.name, field.type, funcCode)
+                }
+                if (option.parameters.size != 1) funcCode.add("·+ \"}\"")
                 funcCode.add("\n")
             }
         }

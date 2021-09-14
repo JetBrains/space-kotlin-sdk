@@ -228,7 +228,7 @@ sealed class HA_UrlParameterOption {
     ) : HA_UrlParameterOption()
 
     class Var(
-        val parameter: HA_Field,
+        val parameters: List<HA_Field>,
         val prefixRequired: Boolean,
         override val optionName: String,
         override val deprecation: HA_Deprecation?
