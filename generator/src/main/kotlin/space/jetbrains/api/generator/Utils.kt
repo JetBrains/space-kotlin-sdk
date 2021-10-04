@@ -144,12 +144,28 @@ fun MutableList<AnnotationSpec>.deprecation(deprecation: HA_Deprecation?) {
     }
 }
 
-fun String.displayNameToClassName(): String = split(' ')
-    .joinToString("") { it.toLowerCase().capitalize().filter(Char::isJavaIdentifierPart) }
-    .dropWhile { !it.isJavaIdentifierStart() }
-    .capitalize()
+private inline fun String.splitByPredicate(predicate: (Char) -> Boolean): List<String> {
+    val result = mutableListOf<String>()
+    var lastIndex = 0
+    forEachIndexed { index, c ->
+        if (predicate(c)) {
+            if (lastIndex < index) {
+                result.add(substring(lastIndex, index))
+            }
+            lastIndex = index + 1
+        }
+    }
+    if (lastIndex != length) result.add(substring(lastIndex))
+    return result
+}
 
-fun String.displayNameToMemberName(): String = displayNameToClassName().decapitalize()
+fun String.displayNameToClassName(): String = lowercase()
+    .splitByPredicate { !it.isJavaIdentifierPart() }
+    .joinToString("") { it.replaceFirstChar(Char::titlecase) }
+    .dropWhile { !it.isJavaIdentifierStart() }
+    .replaceFirstChar(Char::titlecase)
+
+fun String.displayNameToMemberName(): String = displayNameToClassName().replaceFirstChar(Char::lowercase)
 fun String.kotlinClassNameJoined(): String = replace(".", "")
 fun String.kotlinClassName(): List<String> = split(".")
 
