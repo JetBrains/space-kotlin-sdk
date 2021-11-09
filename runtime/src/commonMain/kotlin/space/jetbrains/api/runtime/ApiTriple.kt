@@ -18,10 +18,11 @@ public class ApiTriple<out A, out B, out C>(first: PropertyValue<A>, second: Pro
 
 public fun <A, B, C> Triple<A, B, C>.toApiTriple(): ApiTriple<A, B, C> = ApiTriple(first, second, third)
 
-public class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: Type<C>) : TypeStructure<ApiTriple<A, B, C>>() {
-    public val first: Property<A> by property(typeA)
-    public val second: Property<B> by property(typeB)
-    public val third: Property<C> by property(typeC)
+public class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: Type<C>) :
+    TypeStructure<ApiTriple<A, B, C>>(isRecord = false) {
+    private val first: Property<A> by property(typeA)
+    private val second: Property<B> by property(typeB)
+    private val third: Property<C> by property(typeC)
 
     override fun deserialize(context: DeserializationContext): ApiTriple<A, B, C> = ApiTriple(
         first.deserialize(context),
@@ -34,8 +35,6 @@ public class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: 
         second.serialize(value.second),
         third.serialize(value.third)
     ))
-
-    override val isRecord: Boolean get() = false
 }
 
 

@@ -6,13 +6,10 @@ import kotlin.js.*
 import kotlin.properties.*
 import kotlin.reflect.*
 
-public abstract class TypeStructure<D : Any> {
+public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
     public abstract fun deserialize(context: DeserializationContext): D
     public abstract fun serialize(value: D): JsonValue
     public open val childClassNames: Set<String> = emptySet()
-    public abstract val isRecord: Boolean
-
-    private val properties = mutableMapOf<String, Property<*>>()
 
     protected fun <T> Property<T>.deserialize(context: DeserializationContext): PropertyValue<T> {
         val childContext = context.child(name)
@@ -26,6 +23,9 @@ public abstract class TypeStructure<D : Any> {
         }
 
         return childContext.json?.let { PropertyValue.Value(type.deserialize(childContext)) }
+            ?: context.inaccessibleFieldErrorMessagesByFieldName[name]?.let {
+                PropertyValue.ValueInaccessible(context.link, it)
+            }
             ?: PropertyValue.None(childContext.link, returnNull = type is Type.Nullable<*> && shouldBeIncluded)
 
     }
@@ -35,34 +35,44 @@ public abstract class TypeStructure<D : Any> {
     }
 
     @JsName("byte_property")
-    protected fun byte(isExtension: Boolean = false): PropertyProvider<Byte> = property(Type.NumberType.ByteType, isExtension)
+    protected fun byte(isExtension: Boolean = false): PropertyProvider<Byte> =
+        property(Type.NumberType.ByteType, isExtension)
 
     @JsName("short_property")
-    protected fun short(isExtension: Boolean = false): PropertyProvider<Short> = property(Type.NumberType.ShortType, isExtension)
+    protected fun short(isExtension: Boolean = false): PropertyProvider<Short> =
+        property(Type.NumberType.ShortType, isExtension)
 
     @JsName("int_property")
-    protected fun int(isExtension: Boolean = false): PropertyProvider<Int> = property(Type.NumberType.IntType, isExtension)
+    protected fun int(isExtension: Boolean = false): PropertyProvider<Int> =
+        property(Type.NumberType.IntType, isExtension)
 
     @JsName("long_property")
-    protected fun long(isExtension: Boolean = false): PropertyProvider<Long> = property(Type.NumberType.LongType, isExtension)
+    protected fun long(isExtension: Boolean = false): PropertyProvider<Long> =
+        property(Type.NumberType.LongType, isExtension)
 
     @JsName("float_property")
-    protected fun float(isExtension: Boolean = false): PropertyProvider<Float> = property(Type.NumberType.FloatType, isExtension)
+    protected fun float(isExtension: Boolean = false): PropertyProvider<Float> =
+        property(Type.NumberType.FloatType, isExtension)
 
     @JsName("double_property")
-    protected fun double(isExtension: Boolean = false): PropertyProvider<Double> = property(Type.NumberType.DoubleType, isExtension)
+    protected fun double(isExtension: Boolean = false): PropertyProvider<Double> =
+        property(Type.NumberType.DoubleType, isExtension)
 
     @JsName("boolean_property")
-    protected fun boolean(isExtension: Boolean = false): PropertyProvider<Boolean> = property(Type.PrimitiveType.BooleanType, isExtension)
+    protected fun boolean(isExtension: Boolean = false): PropertyProvider<Boolean> =
+        property(Type.PrimitiveType.BooleanType, isExtension)
 
     @JsName("date_property")
-    protected fun date(isExtension: Boolean = false): PropertyProvider<LocalDate> = property(Type.PrimitiveType.DateType, isExtension)
+    protected fun date(isExtension: Boolean = false): PropertyProvider<LocalDate> =
+        property(Type.PrimitiveType.DateType, isExtension)
 
     @JsName("datetime_property")
-    protected fun datetime(isExtension: Boolean = false): PropertyProvider<Instant> = property(Type.PrimitiveType.DateTimeType, isExtension)
+    protected fun datetime(isExtension: Boolean = false): PropertyProvider<Instant> =
+        property(Type.PrimitiveType.DateTimeType, isExtension)
 
     @JsName("string_property")
-    protected fun string(isExtension: Boolean = false): PropertyProvider<String> = property(Type.PrimitiveType.StringType, isExtension)
+    protected fun string(isExtension: Boolean = false): PropertyProvider<String> =
+        property(Type.PrimitiveType.StringType, isExtension)
 
     @JsName("nullable_property")
     protected fun <T : Any> PropertyProvider<T>.nullable(): PropertyProvider<T?> =
@@ -87,12 +97,12 @@ public abstract class TypeStructure<D : Any> {
     }
 
     @JsName("enum_property")
-    protected inline fun <reified T : Enum<T>> enum(isExtension: Boolean = false): PropertyProvider<T> = property(Type.EnumType(), isExtension)
+    protected inline fun <reified T : Enum<T>> enum(isExtension: Boolean = false): PropertyProvider<T> =
+        property(Type.EnumType(), isExtension)
 
     @JsName("property_provider")
-    protected fun <T> property(type: Type<T>, isExtension: Boolean = false): PropertyProvider<T> = PropertyProvider(type, isExtension, isRecord) {
-        properties[it.name] = it
-    }
+    protected fun <T> property(type: Type<T>, isExtension: Boolean = false): PropertyProvider<T> =
+        PropertyProvider(type, isExtension, isRecord)
 
     @JsName("with_className")
     protected fun JsonValue.withClassName(className: String): JsonValue = also {
@@ -120,7 +130,6 @@ public abstract class TypeStructure<D : Any> {
         internal val type: Type<T>,
         internal val isExtension: Boolean,
         private val isOuterRecord: Boolean,
-        private val register: (Property<T>) -> Unit,
     ) : PropertyDelegateProvider<TypeStructure<*>, ReadOnlyProperty<TypeStructure<*>, Property<T>>> {
         public override operator fun provideDelegate(
             thisRef: TypeStructure<*>,
@@ -132,7 +141,6 @@ public abstract class TypeStructure<D : Any> {
                 else -> InclusionStrategy.PARENT
             }
             val prop = Property(property.name, type, inclusionStrategy)
-            register(prop)
             return ReadOnlyProperty { _, _ -> prop }
         }
     }

@@ -1,10 +1,9 @@
 buildscript {
-    ext.this_version = '0.1.16'
+    ext.this_version = '0.1.17'
 
-    ext.kotlin_version = "1.5.0"
+    ext.kotlin_version = "1.5.10"
     ext.jackson_version = '2.9.10'
-    ext.kotlin_jackson_version = '2.9.10'
-    ext.kotlinx_coroutines_version = '1.5.0-RC'
+    ext.kotlinx_coroutines_version = '1.5.0'
     ext.ktor_version = '1.5.4'
 
     ext.mavenForPublishing = { PublishingExtension publishing ->

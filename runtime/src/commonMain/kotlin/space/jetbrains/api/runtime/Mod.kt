@@ -9,9 +9,9 @@ public class Mod<out T : Any>(old: PropertyValue<T?>, new: PropertyValue<T?>) {
     public constructor(old: T?, new: T?) : this(Value(old), Value(new))
 }
 
-public class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>() {
-    public val old: Property<T?> by property(type).nullable()
-    public val new: Property<T?> by property(type).nullable()
+public class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>(isRecord = false) {
+    private val old: Property<T?> by property(type).nullable()
+    private val new: Property<T?> by property(type).nullable()
 
     override fun deserialize(context: DeserializationContext): Mod<T> = Mod(
         old.deserialize(context),
@@ -22,8 +22,6 @@ public class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>() {
         old.serialize(value.old),
         new.serialize(value.new)
     ))
-
-    override val isRecord: Boolean get() = false
 }
 
 public interface ModPartial<out T : Partial> : Partial {

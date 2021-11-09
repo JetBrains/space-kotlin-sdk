@@ -85,13 +85,15 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                 addType(TypeSpec.objectBuilder(dtoStructureClassName).also { typeBuilder ->
 
                     typeBuilder.superclass(typeStructureType.parameterizedBy(dtoClassName))
+                    typeBuilder.addSuperclassConstructorParameter(dto.record.toString())
 
                     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
 
                     typeBuilder.addProperties(fields.map {
                         PropertySpec.builder(
                             name = it.field.name,
-                            type = propertyType.importNested().parameterizedBy(it.field.type.kotlinPoet(model))
+                            type = propertyType.importNested().parameterizedBy(it.field.type.kotlinPoet(model)),
+                            modifiers = listOf(KModifier.PRIVATE),
                         ).delegate(buildCodeBlock { appendPropertyDelegate(it.field, model) })
                             .build()
                     })
@@ -174,7 +176,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     codeReferences += jsonObjectFunction
                                     createJson.indentNonFirst() + ".withClassName(\"${dto.name}\")"
                                 } else {
-                                    "error(\"Unsupported class\")"
+                                    "error(\"Unsupported class: '\${value::class.simpleName}'\")"
                                 } +
                                 "\n}"
                         }
@@ -202,12 +204,6 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 .build()
                         )
                     }
-
-                    typeBuilder.addProperty(
-                        PropertySpec.builder("isRecord", BOOLEAN, KModifier.OVERRIDE)
-                            .getter(FunSpec.getterBuilder().addCode("return ${dto.record}").build())
-                            .build()
-                    )
                 }.build())
             }
         }.build()

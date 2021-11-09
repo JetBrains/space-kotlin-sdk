@@ -44,4 +44,14 @@ public data class DeserializationContext(
             yield(DeserializationContext(element, link.child("[$index]"), partial))
         }
     }.asIterable()
+
+    internal val inaccessibleFieldErrorMessagesByFieldName by lazy {
+        Type.Nullable(Type.ArrayType(Type.ObjectType(HA_InlineErrorStructure)))
+            .deserialize(child("\$errors")).orEmpty().asSequence()
+            .filterIsInstance<HA_InlineError.InaccessibleFields>()
+            .flatMap { error ->
+                error.fields.asSequence().map { it to error.message }
+            }
+            .toMap()
+    }
 }

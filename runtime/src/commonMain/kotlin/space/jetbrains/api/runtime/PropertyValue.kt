@@ -3,10 +3,16 @@ package space.jetbrains.api.runtime
 import mu.KotlinLogging
 import space.jetbrains.api.runtime.PropertyValue.None
 import space.jetbrains.api.runtime.PropertyValue.Value
+import space.jetbrains.api.runtime.PropertyValue.ValueInaccessible
 import kotlin.reflect.*
 
 public sealed class PropertyValue<out T> {
     public data class Value<out T>(val value: T) : PropertyValue<T>()
+
+    public class ValueInaccessible(
+        public val link: ReferenceChainLink,
+        internal val message: String
+    ) : PropertyValue<Nothing>()
 
     public class None(public val link: ReferenceChainLink, internal val returnNull: Boolean) : PropertyValue<Nothing>()
 
@@ -14,6 +20,8 @@ public sealed class PropertyValue<out T> {
         val log = KotlinLogging.logger {}
     }
 }
+
+public class PropertyValueInaccessibleException(message: String) : Exception(message)
 
 public operator fun <T> PropertyValue<T>.getValue(instance: Any?, prop: KProperty<*>): T {
     return when (this) {
@@ -27,6 +35,7 @@ public operator fun <T> PropertyValue<T>.getValue(instance: Any?, prop: KPropert
             }
             error("Property '${prop.name}' was not requested. Reference chain:\n${link.referenceChain()}")
         }
+        is ValueInaccessible -> throw PropertyValueInaccessibleException(message)
         is Value -> value
     }
 }

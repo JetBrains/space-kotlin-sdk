@@ -13,9 +13,11 @@ public class ApiPair<out A, out B>(first: PropertyValue<A>, second: PropertyValu
 
 public fun <A, B> Pair<A, B>.toApiPair(): ApiPair<A, B> = ApiPair(first, second)
 
-public class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStructure<ApiPair<A, B>>() {
-    public val first: Property<A> by property(typeA)
-    public val second: Property<B> by property(typeB)
+public class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStructure<ApiPair<A, B>>(
+    isRecord = false
+) {
+    private val first: Property<A> by property(typeA)
+    private val second: Property<B> by property(typeB)
 
     override fun deserialize(context: DeserializationContext): ApiPair<A, B> = ApiPair(
         first.deserialize(context),
@@ -28,8 +30,6 @@ public class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStruct
             second.serialize(value.second)
         )
     )
-
-    override val isRecord: Boolean get() = false
 }
 
 public interface ApiPairPartial<out A : Partial, out B : Partial> : Partial {
