@@ -237,6 +237,35 @@ val issues = spaceClient.projects.planning.issues
 
 We can cast these types, use `when` expressions on their type, and more.
 
+#### Inaccessible Fields
+
+When a given field can not be accessed, for example when our application does not have the required permissions, a `PropertyValueInaccessibleException` may be thrown.
+
+Let's say we try to retrieve the `username` and `logins` fields for a profile:
+
+```kotlin
+val memberProfile = spaceClient.teamDirectory.profiles
+    .getProfile(ProfileIdentifier.Username("Heather.Stewart")) {
+        username()
+        logins()
+    }
+```
+
+Accessing elements in the `logins` field will throw a `PropertyValueInaccessibleException` with additional information, in this case because `logins` are typically not available to applications.
+
+```kotlin
+try {
+    // This will fail...
+    memberProfile.logins.forEach { login ->
+    	println(login.identifier)
+    }    
+} catch (e: PropertyValueInaccessibleException) {
+    // ...and we'll get a pointer about why it fails:
+    // Could not access following fields: 'logins'.
+    println(e.message)
+}
+```
+
 ### Batch
 
 Many operations in the Space API return a collection of results. To guarantee performance, these responses will be paginated, and can be retrieved in batches.
