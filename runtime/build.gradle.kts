@@ -10,7 +10,7 @@ repositories {
 }
 
 val this_version: String by rootProject.extra
-val mavenForPublishing: groovy.lang.Closure<PublishingExtension> by rootProject.extra
+val mavenForPublishing: (PublishingExtension) -> Unit by rootProject.extra
 val ktor_version: String by rootProject.extra
 val kotlinx_coroutines_version: String by rootProject.extra
 val kotlin_version: String by rootProject.extra
