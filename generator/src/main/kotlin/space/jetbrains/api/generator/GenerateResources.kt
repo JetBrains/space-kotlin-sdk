@@ -95,28 +95,17 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                             val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
 
-                            val pathParams = endpoint.parameters.filter { it.path }.associateBy { it.field.name }
                             code.add("val response = $httpCallFuncName(%S, \"", endpoint.functionName)
                             val pathIterator = fullPath.iterator()
                             pathIterator.forEach { segment ->
-                                fun pathParam(name: String) {
-                                    code.add("\${pathParam(")
-                                    val paramType = pathParams.getValue(name).field.type
-                                    if (paramType is HA_Type.UrlParam) {
-                                        urlParam(model, name, paramType, code)
-                                    } else {
-                                        code.add(name)
-                                    }
-                                    code.add(")}")
-                                }
                                 when (segment) {
                                     is Const -> code.add(segment.value)
-                                    is Var -> pathParam(segment.name)
+                                    is Var -> code.add("\${pathParam(${segment.name})}")
                                     is PrefixedVar -> {
                                         code.add(segment.prefix + ":")
-                                        pathParam(segment.name)
+                                        code.add("\${pathParam(${segment.name})}")
                                     }
-                                }
+                                }.let {}
                                 if (pathIterator.hasNext()) code.add("/")
                             }
                             code.add("\", %T.$httpMethod", httpMethodType)
@@ -235,7 +224,7 @@ private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String
     }
 }
 
-private fun urlParam(model: HttpApiEntitiesById, expr: String, type: HA_Type.UrlParam, funcCode: CodeBlock.Builder) {
+fun urlParamToString(model: HttpApiEntitiesById, expr: String, type: HA_Type.UrlParam, funcCode: CodeBlock.Builder) {
     val param = model.urlParams.getValue(type.urlParam.id)
     funcCode.add("when (val it = $expr) {\n")
     funcCode.indent()
@@ -276,7 +265,7 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
                 funcCode.add(".toString()")
             }
         }
-        is HA_Type.UrlParam -> urlParam(model, expr, type, funcCode)
+        is HA_Type.UrlParam -> funcCode.add("$expr.toString()")
         is HA_Type.Enum -> funcCode.add("$expr.name")
 
         is HA_Type.Ref -> funcCode.add(expr + if (type.nullable) "?.id" else ".id")

@@ -49,8 +49,8 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
                 is Var -> option.parameters.map { HA_DtoField(it, extension = false) }
             },
             hierarchyRole2 = HierarchyRole2.FINAL_CLASS,
-            extends = null,
-            implements = listOf(HA_Dto.Ref(id)),
+            extends = HA_Dto.Ref(id),
+            implements = emptyList(),
             inheritors = emptyList(),
             deprecation = option.deprecation,
             record = false
@@ -59,7 +59,7 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
         id = id,
         name = name,
         fields = emptyList(),
-        hierarchyRole2 = HierarchyRole2.SEALED_INTERFACE,
+        hierarchyRole2 = HierarchyRole2.SEALED_CLASS,
         extends = null,
         implements = emptyList(),
         inheritors = options.map { HA_Dto.Ref(it.optionName.lowercase()) },

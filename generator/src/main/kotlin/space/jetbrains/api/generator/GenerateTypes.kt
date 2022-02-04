@@ -1,10 +1,10 @@
 package space.jetbrains.api.generator
 
-import space.jetbrains.api.generator.FieldState.*
-import space.jetbrains.api.generator.HierarchyRole2.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.KModifier.OVERRIDE
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import space.jetbrains.api.generator.FieldState.*
+import space.jetbrains.api.generator.HierarchyRole2.*
 import java.util.TreeMap
 
 
@@ -142,6 +142,19 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
 
     dto.directlyNestedClasses(model).forEach {
         typeBuilder.addType(dtoDeclaration(it, model, fieldDescriptorsByDtoId))
+    }
+
+    if (dto.id in model.urlParams) {
+        typeBuilder.addFunction(
+            FunSpec.builder("toString")
+                .addModifiers(OVERRIDE)
+                .returns(STRING)
+                .addCode(CodeBlock.builder().also {
+                    it.add("return ")
+                    urlParamToString(model, "this", HA_Type.UrlParam(HA_UrlParameter.Ref(dto.id), nullable = false), it)
+                }.build())
+                .build()
+        )
     }
 
     return typeBuilder.build()
