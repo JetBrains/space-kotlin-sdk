@@ -23,14 +23,14 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
             if (displayPath.size == 1) { // top-level resource
                 fileBuilder.addProperty(
                     PropertySpec.builder(resourceGroup.first().displayPlural.displayNameToMemberName(), className)
-                        .receiver(clientWithContextType)
+                        .receiver(clientType)
                         .getter(FunSpec.getterBuilder().addStatement("return %T(this)", className).build())
                         .build()
                 )
             }
 
             fileBuilder.addType(TypeSpec.classBuilder(className).also { typeBuilder ->
-                typeBuilder.primaryConstructor(FunSpec.constructorBuilder().addParameter("client", clientWithContextType).build())
+                typeBuilder.primaryConstructor(FunSpec.constructorBuilder().addParameter("client", clientType).build())
                 typeBuilder.superclass(restResourceType)
                 typeBuilder.addSuperclassConstructorParameter("client")
 

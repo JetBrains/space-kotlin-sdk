@@ -1,156 +1,196 @@
 package space.jetbrains.api.runtime
 
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.readText
 import io.ktor.http.*
-import io.ktor.http.HttpStatusCode.Companion.BadRequest
-import io.ktor.http.HttpStatusCode.Companion.Forbidden
-import io.ktor.http.HttpStatusCode.Companion.InternalServerError
-import io.ktor.http.HttpStatusCode.Companion.NotFound
-import io.ktor.http.HttpStatusCode.Companion.PayloadTooLarge
-import io.ktor.http.HttpStatusCode.Companion.TooManyRequests
-import io.ktor.http.HttpStatusCode.Companion.Unauthorized
 import io.ktor.http.content.TextContent
 import io.ktor.utils.io.charsets.Charsets
-import io.ktor.utils.io.core.*
 import io.ktor.utils.io.errors.IOException
-import kotlinx.datetime.*
 import kotlinx.datetime.Clock.System
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
 import mu.KotlinLogging
-import space.jetbrains.api.runtime.ErrorCodes.AUTHENTICATION_REQUIRED
-import space.jetbrains.api.runtime.ErrorCodes.DUPLICATED_ENTITY
-import space.jetbrains.api.runtime.ErrorCodes.INTERNAL_SERVER_ERROR
-import space.jetbrains.api.runtime.ErrorCodes.NOT_FOUND
-import space.jetbrains.api.runtime.ErrorCodes.PAYLOAD_TOO_LARGE
-import space.jetbrains.api.runtime.ErrorCodes.PERMISSION_DENIED
-import space.jetbrains.api.runtime.ErrorCodes.RATE_LIMITED
-import space.jetbrains.api.runtime.ErrorCodes.REQUEST_ERROR
-import space.jetbrains.api.runtime.ErrorCodes.VALIDATION_ERROR
 import space.jetbrains.api.runtime.epoch.EpochTrackingFeature
 
-public open class RequestException(message: String?, public val response: HttpResponse) : Exception(message)
+public fun HttpClientConfig<*>.configureKtorClientForSpace() {
+    expectSuccess = false
+    install(EpochTrackingFeature)
+}
 
-public class ValidationException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class AuthenticationRequiredException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class PermissionDeniedException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class NotFoundException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class DuplicatedEntityException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class RateLimitedException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class PayloadTooLargeException(message: String?, response: HttpResponse) : RequestException(message, response)
-public class InternalServerErrorException(message: String?, response: HttpResponse) : RequestException(message, response)
+public fun ktorClientForSpace(block: HttpClientConfig<*>.() -> Unit = {}): HttpClient = HttpClient {
+    block()
+    configureKtorClientForSpace()
+}
 
-public class SpaceHttpClient(client: HttpClient): Closeable {
-    private val client = client.config {
-        expectSuccess = false
-        install(EpochTrackingFeature)
-    }
+public fun ktorClientForSpace(
+    engine: HttpClientEngine,
+    block: HttpClientConfig<*>.() -> Unit,
+): HttpClient = HttpClient(engine) {
+    block()
+    configureKtorClientForSpace()
+}
 
-    internal suspend fun auth(url: String, methodBody: Parameters, authHeaderValue: String): ExpiringToken {
-        val httpMethod = HttpMethod.Post
-        val response = client.request<HttpResponse>(url) {
-            method = httpMethod
-            accept(ContentType.Application.Json)
+public fun <T : HttpClientEngineConfig> ktorClientForSpace(
+    engineFactory: HttpClientEngineFactory<T>,
+    block: HttpClientConfig<T>.() -> Unit = {},
+): HttpClient = HttpClient(engineFactory) {
+    block()
+    configureKtorClientForSpace()
+}
 
-            header(HttpHeaders.Authorization, authHeaderValue)
+@Deprecated(
+    "Use HttpClient from ktorClientForSpace() or configured with configureKtorClientForSpace()",
+    ReplaceWith("HttpClient", "io.ktor.client.HttpClient")
+)
+public typealias SpaceHttpClient = HttpClient
 
-            methodBody.takeIf { !it.isEmpty() }?.let {
-                body = TextContent(it.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+@Deprecated(
+    "Use HttpClient from ktorClientForSpace() or configured with configureKtorClientForSpace()",
+    ReplaceWith("ktorClient.config { configureKtorClientForSpace() }")
+)
+@Suppress("FunctionName")
+public fun SpaceHttpClient(ktorClient: HttpClient): HttpClient = ktorClient.config { configureKtorClientForSpace() }
+
+private val log = KotlinLogging.logger {}
+
+@Suppress("DeprecatedCallableAddReplaceWith")
+@Deprecated("Use SpaceClient to call Space API")
+public suspend fun HttpClient.call(
+    functionName: String,
+    appInstance: SpaceAppInstance,
+    auth: SpaceAuth,
+    callMethod: HttpMethod,
+    path: String,
+    partial: PartialBuilder.Explicit?,
+    parameters: Parameters = Parameters.Empty,
+    requestBody: JsonValue? = null
+): DeserializationContext = callSpaceApi(
+    ktorClient = this,
+    functionName = functionName,
+    appInstance = appInstance,
+    auth = auth,
+    callMethod = callMethod,
+    path = path,
+    partial = partial,
+    parameters = parameters,
+    requestBody = requestBody
+)
+
+internal suspend fun callSpaceApi(
+    ktorClient: HttpClient,
+    functionName: String,
+    appInstance: SpaceAppInstance,
+    auth: SpaceAuth,
+    callMethod: HttpMethod,
+    path: String,
+    partial: PartialBuilder.Explicit?,
+    parameters: Parameters = Parameters.Empty,
+    requestBody: JsonValue? = null
+): DeserializationContext {
+    val templateRequest = HttpRequestBuilder().apply {
+        url {
+            takeFrom(appInstance.spaceServer.apiBaseUrl.removeSuffix("/") + "/" + path.removePrefix("/"))
+
+            this.parameters.appendAll(parameters)
+            if (partial != null) {
+                this.parameters.append("\$fields", partial.buildQuery())
             }
         }
-        val responseTime = System.now()
 
-        val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
-        handleErrors(response, tokenJson, httpMethod, url)
+        method = callMethod
+        accept(ContentType.Application.Json)
 
-        val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
-        return ExpiringToken(
-            accessToken = deserialization.child("access_token").let {
-                it.requireJson().asString(it.link)
-            },
-            expires = responseTime.plus(
-                value = deserialization.child("expires_in").let {
-                    it.requireJson().asNumber(it.link)
-                }.toLong(),
-                unit = DateTimeUnit.SECOND
-            )
-        )
+
+        requestBody?.let {
+            body = TextContent(it.print(), ContentType.Application.Json)
+        }
     }
 
-    public suspend fun call(
-        functionName: String,
-        context: SpaceHttpClientCallContext,
-        callMethod: HttpMethod,
-        path: String,
-        partial: PartialBuilder.Explicit?,
-        parameters: Parameters = Parameters.Empty,
-        requestBody: JsonValue? = null
-    ): DeserializationContext {
-        val token = context.tokenSource.token()
-
-        val request = HttpRequestBuilder().apply {
-            url {
-                takeFrom(context.server.apiBaseUrl.removeSuffix("/") + "/" + path.removePrefix("/"))
-
-                this.parameters.appendAll(parameters)
-                if (partial != null) {
-                    this.parameters.append("\$fields", partial.buildQuery())
-                }
-            }
-
-            method = callMethod
-            accept(ContentType.Application.Json)
-
-            token.accessToken.takeIf { it.isNotEmpty() }?.let {
-                header(HttpHeaders.Authorization, "Bearer $it")
-            }
-
-            requestBody?.let {
-                body = TextContent(it.print(), ContentType.Application.Json)
-            }
+    while (true) {
+        val request = HttpRequestBuilder().takeFrom(templateRequest)
+        auth.token(ktorClient, appInstance).accessToken.takeIf { it.isNotEmpty() }?.let {
+            request.header(HttpHeaders.Authorization, "Bearer $it")
         }
-        val response = client.request<HttpResponse>(request)
-
+        val response = ktorClient.request<HttpResponse>(request)
         val responseText = response.readText(Charsets.UTF_8)
         log.trace { "Response for ${request.method.value} request to ${request.url.buildString()}:\n$responseText" }
         val content = responseText.let(::parseJson)
-        handleErrors(response, content, callMethod, path)
-        return DeserializationContext(content, ReferenceChainLink(functionName), partial)
+        if (!throwErrorOrReturnWhetherToRetry(response, content, callMethod, path)) {
+            return DeserializationContext(content, ReferenceChainLink(functionName), partial)
+        }
     }
+}
 
-    override fun close() {
-        client.close()
+internal suspend fun auth(ktorClient: HttpClient, url: String, methodBody: Parameters, authHeaderValue: String): SpaceTokenInfo {
+    val httpMethod = HttpMethod.Post
+    val response = ktorClient.request<HttpResponse>(url) {
+        this.method = httpMethod
+        this.accept(ContentType.Application.Json)
+
+        this.header(HttpHeaders.Authorization, authHeaderValue)
+
+        methodBody.takeIf { !it.isEmpty() }?.let {
+            this.body = TextContent(it.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+        }
     }
+    val responseTime = System.now()
 
-    private fun handleErrors(response: HttpResponse, responseContent: JsonValue?, callMethod: HttpMethod, path: String) {
-        if (!response.status.isSuccess()) {
-            val errorDescription = responseContent?.getField("error_description")?.asStringOrNull()
-            throw when (responseContent?.getField("error")?.asStringOrNull()) {
-                VALIDATION_ERROR -> ValidationException(errorDescription, response)
-                AUTHENTICATION_REQUIRED -> AuthenticationRequiredException(errorDescription, response)
-                PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response)
-                DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, response)
-                REQUEST_ERROR -> RequestException(errorDescription, response)
-                NOT_FOUND -> NotFoundException(errorDescription, response)
-                RATE_LIMITED -> RateLimitedException(errorDescription, response)
-                PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, response)
-                INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response)
-                else -> when (response.status) {
-                    BadRequest -> RequestException(BadRequest.description, response)
-                    Unauthorized -> AuthenticationRequiredException(BadRequest.description, response)
-                    Forbidden -> PermissionDeniedException(Forbidden.description, response)
-                    NotFound -> NotFoundException(NotFound.description, response)
-                    TooManyRequests -> RateLimitedException(TooManyRequests.description, response)
-                    PayloadTooLarge -> PayloadTooLargeException(PayloadTooLarge.description, response)
-                    InternalServerError -> InternalServerErrorException(InternalServerError.description, response)
-                    else -> IOException("${callMethod.value} request to $path failed")
-                }
+    val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
+    throwErrorOrReturnWhetherToRetry(response, tokenJson, httpMethod, url)
+
+    val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
+    return SpaceTokenInfo(
+        accessToken = deserialization.child("access_token").let {
+            it.requireJson().asString(it.link)
+        },
+        expires = responseTime.plus(
+            value = deserialization.child("expires_in").let {
+                it.requireJson().asNumber(it.link)
+            }.toLong(),
+            unit = DateTimeUnit.SECOND,
+        ),
+        refreshToken = deserialization.child("refresh_token").let { it.json?.asString(it.link) },
+    )
+}
+
+private fun throwErrorOrReturnWhetherToRetry(
+    response: HttpResponse,
+    responseContent: JsonValue?,
+    callMethod: HttpMethod,
+    path: String
+): Boolean {
+    if (!response.status.isSuccess()) {
+        val errorDescription = responseContent?.getField("error_description")?.asStringOrNull()
+        throw when (responseContent?.getField("error")?.asStringOrNull()) {
+            ErrorCodes.VALIDATION_ERROR -> ValidationException(errorDescription, response)
+            ErrorCodes.AUTHENTICATION_REQUIRED -> when (errorDescription) {
+                "Access token has expired" -> return true
+                "Refresh token associated with the access token is revoked" ->
+                    RefreshTokenRevokedException(errorDescription, response)
+                else -> AuthenticationRequiredException(errorDescription, response)
+            }
+            ErrorCodes.PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response)
+            ErrorCodes.DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, response)
+            ErrorCodes.REQUEST_ERROR -> RequestException(errorDescription, response)
+            ErrorCodes.NOT_FOUND -> NotFoundException(errorDescription, response)
+            ErrorCodes.RATE_LIMITED -> RateLimitedException(errorDescription, response)
+            ErrorCodes.PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, response)
+            ErrorCodes.INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response)
+            else -> when (response.status) {
+                HttpStatusCode.BadRequest -> RequestException(HttpStatusCode.BadRequest.description, response)
+                HttpStatusCode.Unauthorized -> AuthenticationRequiredException(HttpStatusCode.BadRequest.description, response)
+                HttpStatusCode.Forbidden -> PermissionDeniedException(HttpStatusCode.Forbidden.description, response)
+                HttpStatusCode.NotFound -> NotFoundException(HttpStatusCode.NotFound.description, response)
+                HttpStatusCode.TooManyRequests -> RateLimitedException(HttpStatusCode.TooManyRequests.description, response)
+                HttpStatusCode.PayloadTooLarge -> PayloadTooLargeException(HttpStatusCode.PayloadTooLarge.description, response)
+                HttpStatusCode.InternalServerError -> InternalServerErrorException(HttpStatusCode.InternalServerError.description, response)
+                else -> IOException("${callMethod.value} request to $path failed")
             }
         }
     }
-
-    private companion object {
-        private val log = KotlinLogging.logger {}
-    }
+    return false
 }

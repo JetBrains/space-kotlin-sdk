@@ -41,7 +41,7 @@ kotlin {
         }
     }
 
-    js {
+    js(BOTH) {
         browser {
         }
         nodejs {
@@ -80,8 +80,6 @@ kotlin {
 
         getByName("jvmMain") {
             dependencies {
-                api("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")
-
                 api("com.fasterxml.jackson.core:jackson-core:$jackson_version")
                 api("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
             }

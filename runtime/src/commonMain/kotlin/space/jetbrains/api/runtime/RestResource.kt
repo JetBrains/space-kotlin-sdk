@@ -4,16 +4,23 @@ import io.ktor.http.*
 
 public class Batch<out T>(public val next: String, public val totalCount: Int?, public val data: List<T>)
 
-public abstract class RestResource(private val client: SpaceHttpClientWithCallContext) {
+public abstract class RestResource(private val client: SpaceClient) {
     protected suspend fun callWithBody(
         functionName: String,
         path: String,
         method: HttpMethod,
         requestBody: JsonValue? = null,
         partial: PartialBuilder.Explicit? = null
-    ): DeserializationContext {
-        return client.client.call(functionName, client.callContext, method, path, partial, requestBody = requestBody)
-    }
+    ): DeserializationContext = callSpaceApi(
+        ktorClient = client.ktorClient,
+        functionName = functionName,
+        appInstance = client.appInstance,
+        auth = client.auth,
+        callMethod = method,
+        path = path,
+        partial = partial,
+        requestBody = requestBody,
+    )
 
     protected suspend fun callWithParameters(
         functionName: String,
@@ -21,9 +28,16 @@ public abstract class RestResource(private val client: SpaceHttpClientWithCallCo
         method: HttpMethod,
         parameters: Parameters = Parameters.Empty,
         partial: PartialBuilder.Explicit? = null
-    ): DeserializationContext {
-        return client.client.call(functionName, client.callContext, method, path, partial, parameters)
-    }
+    ): DeserializationContext = callSpaceApi(
+        ktorClient = client.ktorClient,
+        functionName = functionName,
+        appInstance = client.appInstance,
+        auth = client.auth,
+        callMethod = method,
+        path = path,
+        partial = partial,
+        parameters = parameters,
+    )
 
     protected fun ParametersBuilder.appendBatchInfo(batchInfo: BatchInfo?) {
         batchInfo?.let {

@@ -26,16 +26,17 @@ For this example, we will use a *Client application*. Make sure to enable the *C
 After installing `org.jetbrains:space-sdk-jvm` in our project, we can use the *Client ID* and *Client Secret* of our Space application to create a `SpaceHttpClient` that can connect to our Space organization:
 
 ```kotlin
-val spaceClient = SpaceHttpClient(HttpClient())
-    .withServiceAccountTokenSource(
+val spaceClient = SpaceClient(
+    SpaceAppInstance(
         clientId,         // from settings/secrets
         clientSecret,     // from settings/secrets
-        organizationUrl)  // i.e. "https://<organization>.jetbrains.space/"
+        organizationUrl  // i.e. "https://<organization>.jetbrains.space/"
+    ),
+    SpaceAuth.ClientCredentials
+)
 ```
 
-We can then use the Space HTTP client in `spaceClient` to access the various Space API endpoint.
-
-The `HttpClient` is a [Ktor client](https://ktor.io/clients/http-client/quick-start/client.html).
+We can then use the Space HTTP client in `spaceClient` to access the various Space API endpoints.
 
 > **Note:** Applications have access to a limited set of APIs when using the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). Many actions (such as posting an article draft) require user consent, and cannot be performed with client credentials. For actions that should be performed on behalf of the user, use other authorization flows, such as [Resource Owner Password Credentials Flow](https://www.jetbrains.com/help/space/resource-owner-password-credentials.html).
 
@@ -68,21 +69,20 @@ The Space API client provides necessary types to connect to and interact with th
 
 ### Authentication and Connection
 
-Communication with Space is handled by the `SpaceHttpClient` base class. It will require the Space organization URL and an access token to work.
+Communication with Space is requires the Space organization URL and an access token to work. Some features also require app client ID and client secret.
 
-The Space API client provides several extension methods that can be used to authenticate and work with Space:
-
-* `SpaceHttpClient.withServiceAccountTokenSource` — Supports the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). This is typically used by a Space application that acts on behalf of itself.
-* `SpaceHttpClient.withPermanentToken` — Uses a bearer token obtained using [other flows](https://www.jetbrains.com/help/space/oauth-2-0-authorization.html), or a [personal token](https://www.jetbrains.com/help/space/personal-tokens.html). This is typically used by applications that act on behalf of a user.
-* `SpaceHttpClient.withCallContext` — Allows integrating other token sources. The `ExpiringTokenSource` can be used to implement the [Refresh Token Flow](https://www.jetbrains.com/help/space/refresh-token.html).
+`SpaceAuth` defines several methods of authentication.
+* `SpaceAuth.ClientCredentials` supports the [Client Credentials Flow](https://www.jetbrains.com/help/space/client-credentials.html). This is typically used by a Space application that acts on behalf of itself. It requires the client to be created with client id and secret specified.
+* `SpaceAuth.RefreshToken` supports [Refresh Token Flow](https://www.jetbrains.com/help/space/refresh-token.html) (and, by the association, [Authorization Code Flow](https://www.jetbrains.com/help/space/authorization-code.html)). This is typically used by applications that act on behalf of a user. It also requires the client to be created with client id and secret specified. The refresh token can be retrieved using `Space.exchangeAuthCodeForToken()`, which requires authorization code. Authorization code can be obtained by redirecting the user to a URL constructed with `Space.authCodeSpaceUrl()`
+* `SpaceAuth.Token` can be used with any flow. It doesn't require the client id and secret to be specified.
 
 #### Scope
 
 Scope is a mechanism in OAuth 2.0 to limit an application's access to a user's account.
 
-When setting up the `SpaceHttpClient` using the `withServiceAccountTokenSource` extension method, use the `scope` parameter to specify the scope required by an application.
+When setting up the `SpaceClient` with the `SpaceAuth.ClientCredentials` or `SpaceAuth.RefreshToken` auth method, use the `scope` parameter to specify the scope required by an application.
 
-> **Warning:** By default, the Space API client uses the `**` scope, which requests all available scopes. It is recommended to limit the scope to just those permissions that are needed by your application.
+> **Warning:** By default, the Space API client uses the `**` scope for `SpaceAuth.ClientCredentials`, which requests all available scopes. It is recommended to limit the scope to just those permissions that are needed by your application.
 
 Examples of [available scopes](https://www.jetbrains.com/help/space/oauth-2-0-authorization.html) are available in the Space documentation.
 
@@ -157,7 +157,7 @@ try {
 } catch (e: IllegalStateException) {
     // ...and we'll get a pointer about why it fails:
     // Property 'name' was not requested. Reference chain: getAllProfiles->data->[0]->name
-    println("The Space API client tells us which partial query should be added to access the property:");
+    println("The Space API client tells us which partial query should be added to access the property:")
     println(e.message)
 }
 ```
@@ -286,7 +286,7 @@ We have to specify the properties of the data type we need. As an example, let's
 var todoBatchInfo = BatchInfo("0", 100)
 do {
     val todoBatch = spaceClient.todoItems
-            .getAllTodoItems(from = LocalDate(2020, 01, 01), batchInfo = todoBatchInfo) {
+            .getAllTodoItems(from = LocalDate(2020, 1, 1), batchInfo = todoBatchInfo) {
                 id()
                 content()
             }

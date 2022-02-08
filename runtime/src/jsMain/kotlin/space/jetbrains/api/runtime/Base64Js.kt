@@ -8,6 +8,6 @@ internal actual fun base64(src: String): String {
         window.btoa(src)
     } else {
         // node
-        js("Buffer").from(src).toString("base64") as String
+        js("Buffer").from(src, "latin1").toString("base64") as String
     }
 }

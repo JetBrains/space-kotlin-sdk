@@ -8,7 +8,7 @@ import io.ktor.util.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-private val EPOCH_HEADER_NAME = "epoch"
+private const val EPOCH_HEADER_NAME = "epoch"
 
 public class EpochTrackingFeature {
     public class Configuration
