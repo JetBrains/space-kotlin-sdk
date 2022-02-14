@@ -95,15 +95,26 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                             val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
 
+                            val pathParams = endpoint.parameters.filter { it.path }.associateBy { it.field.name }
                             code.add("val response = $httpCallFuncName(%S, \"", endpoint.functionName)
                             val pathIterator = fullPath.iterator()
                             pathIterator.forEach { segment ->
+                                fun pathParam(name: String): CodeBlock.Builder {
+                                    code.add("\${pathParam(")
+                                    val paramType = pathParams.getValue(name).field.type
+                                    if (paramType is HA_Type.UrlParam) {
+                                        code.add("$name.compactId")
+                                    } else {
+                                        code.add(name)
+                                    }
+                                    return code.add(")}")
+                                }
                                 when (segment) {
                                     is Const -> code.add(segment.value)
-                                    is Var -> code.add("\${pathParam(${segment.name})}")
+                                    is Var -> pathParam(segment.name)
                                     is PrefixedVar -> {
                                         code.add(segment.prefix + ":")
-                                        code.add("\${pathParam(${segment.name})}")
+                                        pathParam(segment.name)
                                     }
                                 }.let {}
                                 if (pathIterator.hasNext()) code.add("/")
@@ -265,7 +276,7 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
                 funcCode.add(".toString()")
             }
         }
-        is HA_Type.UrlParam -> funcCode.add("$expr.toString()")
+        is HA_Type.UrlParam -> funcCode.add("$expr.compactId")
         is HA_Type.Enum -> funcCode.add("$expr.name")
 
         is HA_Type.Ref -> funcCode.add(expr + if (type.nullable) "?.id" else ".id")

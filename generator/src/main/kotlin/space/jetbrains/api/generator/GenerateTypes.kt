@@ -145,14 +145,21 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
     }
 
     if (dto.id in model.urlParams) {
-        typeBuilder.addFunction(
-            FunSpec.builder("toString")
-                .addModifiers(OVERRIDE)
-                .returns(STRING)
-                .addCode(CodeBlock.builder().also {
-                    it.add("return ")
-                    urlParamToString(model, "this", HA_Type.UrlParam(HA_UrlParameter.Ref(dto.id), nullable = false), it)
-                }.build())
+        typeBuilder.addProperty(
+            PropertySpec.builder("compactId", STRING)
+                .getter(
+                    FunSpec.getterBuilder()
+                        .addCode(CodeBlock.builder().also {
+                            it.add("return ")
+                            urlParamToString(
+                                model = model,
+                                expr = "this",
+                                type = HA_Type.UrlParam(HA_UrlParameter.Ref(dto.id), nullable = false),
+                                funcCode = it
+                            )
+                        }.build())
+                        .build()
+                )
                 .build()
         )
     }
