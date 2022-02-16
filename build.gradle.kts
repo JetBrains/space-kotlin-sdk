@@ -5,6 +5,7 @@ buildscript {
     val jackson_version: String by extra("2.9.10")
     val kotlinx_coroutines_version: String by extra("1.5.0")
     val ktor_version: String by extra("1.5.4")
+    val assertk_version: String by extra("0.25")
 
     val mavenForPublishing: (PublishingExtension) -> Unit by extra { publishing: PublishingExtension ->
         val props = rootProject.extensions.extraProperties

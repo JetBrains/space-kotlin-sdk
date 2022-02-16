@@ -15,6 +15,7 @@ val ktor_version: String by rootProject.extra
 val kotlinx_coroutines_version: String by rootProject.extra
 val kotlin_version: String by rootProject.extra
 val jackson_version: String by rootProject.extra
+val assertk_version: String by rootProject.extra
 
 fun setGroupAndVersion(publication: MavenPublication) {
     publication.groupId = "org.jetbrains"
@@ -30,6 +31,9 @@ kotlin {
                     jvmTarget = "1.8"
                 }
             }
+        }
+        testRuns["test"].executionTask.configure {
+            useJUnitPlatform()
         }
         mavenPublication {
             setGroupAndVersion(this)
@@ -82,6 +86,13 @@ kotlin {
             dependencies {
                 api("com.fasterxml.jackson.core:jackson-core:$jackson_version")
                 api("com.fasterxml.jackson.core:jackson-databind:$jackson_version")
+            }
+        }
+
+        getByName("jvmTest") {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("com.willowtreeapps.assertk:assertk-jvm:$assertk_version")
             }
         }
 

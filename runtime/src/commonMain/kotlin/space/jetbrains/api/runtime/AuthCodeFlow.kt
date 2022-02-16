@@ -62,7 +62,7 @@ public object Space {
         redirectUri: String? = null,
         requestCredentials: OAuthRequestCredentials? = null,
         accessType: OAuthAccessType = OAuthAccessType.ONLINE,
-    ): Url = URLBuilder(appInstance.spaceServer.oauthAuthUrl).also {
+    ): String = URLBuilder(appInstance.spaceServer.oauthAuthUrl).also {
         it.parameters.append("response_type", "code")
         if (state != null) {
             it.parameters.append("state", state)
@@ -76,7 +76,7 @@ public object Space {
         it.parameters.append("client_id", appInstance.clientId)
         it.parameters.append("scope", scope)
         it.parameters.append("access_type", accessType.parameterValue)
-    }.build()
+    }.build().toString()
 
     // TODO PKCE
     /**
