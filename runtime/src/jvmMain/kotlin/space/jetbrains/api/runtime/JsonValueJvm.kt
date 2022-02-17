@@ -46,7 +46,7 @@ public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): Jso
 }
 
 internal actual operator fun JsonValue.set(property: String, value: JsonValue) {
-    (this as ObjectNode)[property] = value
+    (this as ObjectNode).set<JsonNode>(property, value)
 }
 
 internal actual fun JsonValue.getFieldsOrNull(): Iterable<Map.Entry<String, JsonValue>>? = if (this is ObjectNode) {

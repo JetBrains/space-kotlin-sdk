@@ -19,7 +19,7 @@ private val jackson: ObjectMapper = ObjectMapper()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
     .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-    .registerModule(KotlinModule())
+    .registerKotlinModule()
     .registerModule(JodaModule())
 
 class HttpApiEntitiesById private constructor(
