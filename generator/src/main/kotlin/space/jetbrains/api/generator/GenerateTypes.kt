@@ -94,7 +94,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
                 typeBuilder.addProperty(
                     PropertySpec.builder(it.field.name, kotlinPoetType)
                         .delegate(it.field.name)
-                        .apply { annotations.deprecation(it.field.deprecation) }
+                        .addKDocAndDeprecation(it.field)
                         .build()
                 )
 
@@ -104,7 +104,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
                     PropertySpec.builder(it.field.name, kotlinPoetType)
                         .delegate(it.field.name)
                         .addModifiers(KModifier.OPEN)
-                        .apply { annotations.deprecation(it.field.deprecation) }
+                        .addKDocAndDeprecation(it.field)
                         .build()
                 )
             }
@@ -118,7 +118,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
                     PropertySpec.builder(it.field.name, kotlinPoetType)
                         .delegate(it.field.name)
                         .addModifiers(OVERRIDE)
-                        .apply { annotations.deprecation(it.field.deprecation) }
+                        .addKDocAndDeprecation(it.field)
                         .build()
                 )
             }
@@ -136,6 +136,10 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
                     .build()
             )
         }
+    }
+
+    dto.description?.let {
+        typeBuilder.addKdoc(it.buildKDoc())
     }
 
     typeBuilder.annotationSpecs.deprecation(dto.deprecation)
@@ -219,6 +223,13 @@ class FieldDescriptor(val field: HA_DtoField, val index: Int, var state: FieldSt
         is Inherited -> state.field.override(field, index)
         is Overrides -> state.field.override(field, index)
     }
+}
+
+fun PropertySpec.Builder.addKDocAndDeprecation(field: HA_DtoField) = apply {
+    field.description?.let {
+        addKdoc(it.buildKDoc())
+    }
+    annotations.deprecation(field.deprecation)
 }
 
 sealed class FieldState {

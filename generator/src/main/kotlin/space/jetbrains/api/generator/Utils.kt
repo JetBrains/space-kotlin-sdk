@@ -203,3 +203,18 @@ fun HttpApiEntitiesById.resolveDto(dto: HA_Dto.Ref): HA_Dto = this.dtoAndUrlPara
 fun HttpApiEntitiesById.resolveDto(type: HA_Type.Dto): HA_Dto = resolveDto(type.dto)
 fun HttpApiEntitiesById.resolveDto(type: HA_Type.Ref): HA_Dto = resolveDto(type.dto)
 fun HttpApiEntitiesById.resolveUrlParam(type: HA_Type.UrlParam): HA_Dto = this.dtoAndUrlParams.getValue(type.urlParam.id)
+
+fun HA_Description.buildKDoc() = buildString {
+    appendKDoc(this@buildKDoc)
+}
+
+val HA_Description.helpTopicLink
+    get() = helpTopic?.let { "https://www.jetbrains.com/help/space/$it" }
+
+fun StringBuilder.appendKDoc(description: HA_Description) {
+    appendLine(description.text)
+    description.helpTopicLink?.let {
+        appendLine()
+        appendLine("[Read more]($it)")
+    }
+}

@@ -52,6 +52,7 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
             extends = HA_Dto.Ref(id),
             implements = emptyList(),
             inheritors = emptyList(),
+            description = option.description,
             deprecation = option.deprecation,
             record = false
         )
@@ -63,6 +64,7 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
         extends = null,
         implements = emptyList(),
         inheritors = options.map { HA_Dto.Ref(it.optionName.lowercase()) },
+        description = null,
         deprecation = deprecation,
         record = false
     ))

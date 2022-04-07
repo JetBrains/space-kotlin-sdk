@@ -60,7 +60,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                         it.name == META_PARAMETERS_PREFIX + "skip" || it.name == META_PARAMETERS_PREFIX + "top"
                     }
 
-                    val (funcParams, deprecationKDoc) = getFuncParamsAndDeprecationKDoc(model, urlParams, bodyParams, hasUrlBatchInfo, partialInterface)
+                    val funcParams = getFuncParams(model, urlParams, bodyParams, hasUrlBatchInfo, partialInterface)
 
                     val fullPath = endpoint.path.segments.asReversed().plus(
                         ancestors(model.resources.getValue(endpoint.resource.id), model)
@@ -68,15 +68,20 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                     ).asReversed()
 
                     FunSpec.builder(endpoint.functionName).also { funcBuilder ->
-                        val kDoc = when {
-                            deprecationKDoc != null -> endpoint.doc?.let { "$it\n" }.orEmpty() + deprecationKDoc
-                            else -> endpoint.doc
+                        val kDoc = buildString {
+                            endpoint.description?.let {
+                                appendKDoc(it)
+                            }
+                            funcParams.mapNotNull { it.second }.joinToString("\n").takeUnless { it.isBlank() }?.let {
+                                appendLine()
+                                append(it)
+                            }
                         }
 
-                        kDoc?.let { funcBuilder.addKdoc(it) }
+                        kDoc.takeUnless { it.isBlank() }?.let { funcBuilder.addKdoc(it) }
                         funcBuilder.annotations.deprecation(endpoint.deprecation)
                         funcBuilder.addModifiers(KModifier.SUSPEND)
-                        funcBuilder.addParameters(funcParams)
+                        funcBuilder.addParameters(funcParams.map { it.first })
                         if (returnType != null) funcBuilder.returns(returnType)
 
                         funcBuilder.addCode(CodeBlock.builder().also { code ->
@@ -336,37 +341,66 @@ fun CodeBlock.Builder.default(type: HA_Type, model: HttpApiEntitiesById, default
     }.let {}
 }
 
-private fun getFuncParamsAndDeprecationKDoc(
+private fun getFuncParams(
     model: HttpApiEntitiesById,
     urlParams: List<HA_Field>,
     bodyParams: List<HA_Field>?,
     hasUrlBatchInfo: Boolean,
     partialInterface: TypeName?
-): Pair<List<ParameterSpec>, String?> {
-    val deprecation = StringBuilder()
-    val params = mutableListOf<ParameterSpec>().also { funcParams ->
-        fun paramWithDefault(paramField: HA_Field): ParameterSpec {
-            val parameter = ParameterSpec.builder(
-                paramField.name,
-                paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
-            )
-            when {
-                paramField.requiresOption -> parameter.defaultValue("%T", optionNoneType)
-                paramField.requiresAddedNullability -> parameter.defaultValue("null")
-                paramField.defaultValue != null -> parameter.defaultValue(buildCodeBlock {
-                    default(paramField.type, model, paramField.defaultValue)
-                })
-            }
-            paramField.deprecation?.run {
-                deprecation.append(
-                    "@param ${paramField.name} deprecated since $since" +
-                        ", scheduled for removal".takeIf { forRemoval }.orEmpty() +
-                        ". $message\n"
-                )
-            }
-            return parameter.build()
-        }
+): List<Pair<ParameterSpec, String?>> {
 
+    fun paramDescription(paramField: HA_Field): String? {
+        if (paramField.description == null && paramField.deprecation == null)
+            return null
+
+        val prefix = "@param ${paramField.name} "
+        val indent = " ".repeat(prefix.length)
+        return buildString {
+            if (paramField.description != null) {
+                paramField.description.text.splitToSequence('\n').forEachIndexed { ix, s ->
+                    append(if (ix == 0) prefix else indent)
+                    appendLine(s)
+                }
+                paramField.description.helpTopicLink?.let {
+                    if (length > prefix.length) {
+                        append(indent)
+                        appendLine("([read more]($it))")
+                    } else {
+                        append(prefix)
+                        appendLine("[Read more]($it)")
+                    }
+                }
+            }
+            paramField.deprecation
+                ?.run {
+                    "deprecated since $since" +
+                            ", scheduled for removal".takeIf { forRemoval }.orEmpty() +
+                            ". $message"
+                }
+                ?.let {
+                    val descPresent = length > prefix.length
+                    append(if (descPresent) indent else prefix)
+                    appendLine(if (descPresent) it.replaceFirstChar { it.uppercaseChar() } else it)
+                }
+        }
+    }
+
+    fun paramWithDefault(paramField: HA_Field): Pair<ParameterSpec, String?> {
+        val parameter = ParameterSpec.builder(
+            paramField.name,
+            paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
+        )
+        when {
+            paramField.requiresOption -> parameter.defaultValue("%T", optionNoneType)
+            paramField.requiresAddedNullability -> parameter.defaultValue("null")
+            paramField.defaultValue != null -> parameter.defaultValue(buildCodeBlock {
+                default(paramField.type, model, paramField.defaultValue)
+            })
+        }
+        return parameter.build() to paramDescription(paramField)
+    }
+
+    val params = mutableListOf<Pair<ParameterSpec, String?>>().also { funcParams ->
         urlParams.forEach {
             if (!it.name.startsWith(META_PARAMETERS_PREFIX)) {
                 funcParams.add(paramWithDefault(it))
@@ -381,7 +415,7 @@ private fun getFuncParamsAndDeprecationKDoc(
             funcParams.add(
                 ParameterSpec.builder("batchInfo", batchInfoType.copy(nullable = true))
                     .defaultValue("null")
-                    .build()
+                    .build() to null
             )
         }
 
@@ -393,11 +427,11 @@ private fun getFuncParamsAndDeprecationKDoc(
                         receiver = partialInterface,
                         returnType = UNIT
                     )
-                ).defaultValue("%T::defaultPartial", partialType).build()
+                ).defaultValue("%T::defaultPartial", partialType).build() to null
             )
         }
     }
-    return params to deprecation.toString().takeIf { it.isNotEmpty() }
+    return params
 }
 
 private fun displayPath(it: HA_Resource, model: HttpApiEntitiesById) =

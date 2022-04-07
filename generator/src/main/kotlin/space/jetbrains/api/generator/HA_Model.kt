@@ -65,13 +65,18 @@ class HA_Endpoint(
     val path: HA_Path,
     val displayName: String,
     val functionName: String,
-    val doc: String?,
+    val description: HA_Description? = null,
     val deprecation: HA_Deprecation? = null
 )
 
 class HA_Parameter(
     val field: HA_Field,
     val path: Boolean
+)
+
+data class HA_Description(
+    val text: String,
+    val helpTopic: String?
 )
 
 data class HA_Deprecation(
@@ -138,6 +143,7 @@ sealed class HA_Type {
 data class HA_Field(
     val name: String,
     val type: HA_Type,
+    val description: HA_Description?,
     val deprecation: HA_Deprecation?,
     val optional: Boolean,
     val defaultValue: HA_DefaultValue?
@@ -168,6 +174,7 @@ class HA_DtoField(val field: HA_Field, val extension: Boolean)
 
 val HA_DtoField.name get() = field.name
 val HA_DtoField.type get() = field.type
+val HA_DtoField.description get() = field.description
 val HA_DtoField.deprecation get() = field.deprecation
 val HA_DtoField.requiresOption get() = field.requiresOption
 
@@ -179,6 +186,7 @@ class HA_Dto(
     val extends: Ref?,
     val implements: List<Ref>,
     val inheritors: List<Ref>,
+    val description: HA_Description?,
     val deprecation: HA_Deprecation?,
     val record: Boolean
 ) {
@@ -219,11 +227,13 @@ class HA_UrlParameter(
 )
 sealed class HA_UrlParameterOption {
     abstract val optionName: String
+    abstract val description: HA_Description?
     abstract val deprecation: HA_Deprecation?
 
     class Const(
         val value: String,
         override val optionName: String,
+        override val description: HA_Description?,
         override val deprecation: HA_Deprecation?
     ) : HA_UrlParameterOption()
 
@@ -231,6 +241,7 @@ sealed class HA_UrlParameterOption {
         val parameters: List<HA_Field>,
         val prefixRequired: Boolean,
         override val optionName: String,
+        override val description: HA_Description?,
         override val deprecation: HA_Deprecation?
     ) : HA_UrlParameterOption()
 }
