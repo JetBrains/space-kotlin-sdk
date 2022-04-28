@@ -4,11 +4,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.readText
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.content.TextContent
-import io.ktor.utils.io.charsets.Charsets
 import io.ktor.utils.io.errors.IOException
 import kotlinx.datetime.Clock.System
 import kotlinx.datetime.DateTimeUnit
@@ -106,7 +104,7 @@ internal suspend fun callSpaceApi(
 
 
         requestBody?.let {
-            body = TextContent(it.print(), ContentType.Application.Json)
+            setBody(TextContent(it.print(), ContentType.Application.Json))
         }
     }
 
@@ -115,8 +113,8 @@ internal suspend fun callSpaceApi(
         auth.token(ktorClient, appInstance).accessToken.takeIf { it.isNotEmpty() }?.let {
             request.header(HttpHeaders.Authorization, "Bearer $it")
         }
-        val response = ktorClient.request<HttpResponse>(request)
-        val responseText = response.readText(Charsets.UTF_8)
+        val response = ktorClient.request(request)
+        val responseText = response.bodyAsText()
         log.trace { "Response for ${request.method.value} request to ${request.url.buildString()}:\n$responseText" }
         val content = responseText.let(::parseJson)
         if (!throwErrorOrReturnWhetherToRetry(response, content, callMethod, path)) {
@@ -127,19 +125,19 @@ internal suspend fun callSpaceApi(
 
 internal suspend fun auth(ktorClient: HttpClient, url: String, methodBody: Parameters, authHeaderValue: String): SpaceTokenInfo {
     val httpMethod = HttpMethod.Post
-    val response = ktorClient.request<HttpResponse>(url) {
+    val response = ktorClient.request(url) {
         this.method = httpMethod
         this.accept(ContentType.Application.Json)
 
         this.header(HttpHeaders.Authorization, authHeaderValue)
 
         methodBody.takeIf { !it.isEmpty() }?.let {
-            this.body = TextContent(it.formUrlEncode(), ContentType.Application.FormUrlEncoded)
+            setBody(TextContent(it.formUrlEncode(), ContentType.Application.FormUrlEncoded))
         }
     }
     val responseTime = System.now()
 
-    val tokenJson = response.readText(Charsets.UTF_8).let(::parseJson)
+    val tokenJson = response.bodyAsText().let(::parseJson)
     throwErrorOrReturnWhetherToRetry(response, tokenJson, httpMethod, url)
 
     val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
