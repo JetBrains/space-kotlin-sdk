@@ -1,10 +1,10 @@
 buildscript {
-    val this_version: String by extra("0.2.4-ktor-2.0.1-eap-380.1")
+    val this_version: String by extra("0.2.5")
 
     val kotlin_version: String by extra("1.6.10")
     val jackson_version: String by extra("2.13.1")
     val kotlinx_coroutines_version: String by extra("1.6.1")
-    val ktor_version: String by extra("2.0.1-eap-380")
+    val ktor_version: String by extra("2.0.1")
     val assertk_version: String by extra("0.25")
 
     val mavenForPublishing: (PublishingExtension) -> Unit by extra { publishing: PublishingExtension ->

@@ -7,7 +7,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven("https://maven.pkg.jetbrains.space/public/p/ktor/eap")
 }
 
 val mavenForPublishing: (PublishingExtension) -> Unit by rootProject.extra
