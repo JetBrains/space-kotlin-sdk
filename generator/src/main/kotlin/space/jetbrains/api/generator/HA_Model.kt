@@ -14,6 +14,7 @@ class HA_Model(
     val urlParams: List<HA_UrlParameter>,
     val resources: List<HA_Resource>,
     val menuIds: List<HA_MenuId>,
+    val classes: List<HA_Class>
 )
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
@@ -123,6 +124,7 @@ sealed class HA_Type {
             PAIR, TRIPLE, BATCH, MOD, REQUEST_BODY
         }
     }
+
     data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
     data class Ref(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
     data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean) : HA_Type()
@@ -161,9 +163,10 @@ sealed class HA_DefaultValue {
         data class Primitive(val expression: String) : Const()
         data class EnumEntry(val entryName: String) : Const()
     }
+
     data class Collection(val elements: List<HA_DefaultValue>) : HA_DefaultValue()
     data class Map(val elements: kotlin.collections.Map<String, HA_DefaultValue>) : HA_DefaultValue()
-    data class Reference(val paramName: String): HA_DefaultValue()
+    data class Reference(val paramName: String) : HA_DefaultValue()
 
     companion object {
         val NULL = Const.Primitive("null")

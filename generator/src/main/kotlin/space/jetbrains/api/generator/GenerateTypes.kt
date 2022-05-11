@@ -1,7 +1,7 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.KModifier.OVERRIDE
+import com.squareup.kotlinpoet.KModifier.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import space.jetbrains.api.generator.FieldState.*
 import space.jetbrains.api.generator.HierarchyRole2.*
@@ -55,7 +55,11 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     }
 }
 
-private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescriptorsByDtoId: Map<TID, List<FieldDescriptor>>): TypeSpec {
+private fun dtoDeclaration(
+    dto: HA_Dto,
+    model: HttpApiEntitiesById,
+    fieldDescriptorsByDtoId: Map<TID, List<FieldDescriptor>>
+): TypeSpec {
     Log.info { "Generating DTO class for '${dto.name}'" }
     val dtoClassName = dto.getClassName()
     val typeBuilder = when (dto.hierarchyRole2) {
@@ -205,7 +209,12 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
 
             parentFields?.forEachIndexed { parentIndex, parentField ->
                 if (fields.none { it.field.name == parentField.field.name }) {
-                    fields += FieldDescriptor(parentField.field, parentIndex, Inherited(parentField), parentField.isExtension)
+                    fields += FieldDescriptor(
+                        parentField.field,
+                        parentIndex,
+                        Inherited(parentField),
+                        parentField.isExtension
+                    )
                 }
             }
         }

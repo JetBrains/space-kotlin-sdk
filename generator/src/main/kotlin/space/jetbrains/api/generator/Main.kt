@@ -28,13 +28,16 @@ class HttpApiEntitiesById private constructor(
     val urlParams: Map<TID, HA_UrlParameter>,
     val resources: Map<TID, HA_Resource>,
     val menuIds: List<HA_MenuId>,
+    val classes: List<HA_Class>
 ) {
     constructor(model: HA_Model) : this(
         dtoAndUrlParams = model.dto.associateBy { it.id } + model.urlParams.flatMap { it.toDtos() },
         enums = model.enums.associateBy { it.id },
         urlParams = model.urlParams.associateBy { it.id },
-        resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id },
-        menuIds = model.menuIds
+        resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }
+            .associateBy { it.id },
+        menuIds = model.menuIds,
+        classes = model.classes
     )
 }
 
@@ -76,7 +79,7 @@ fun main(vararg args: String) {
         // name,record),enums(id,deprecation,name,values),resources(id,displayPlural,displaySingular,endpoints,
         // nestedResources!,parentResource,path)
         "HTTP Client Generator accepts two or three arguments: path to HTTP model, path to output directory and, " +
-            "optionally, '--no-cleanup'"
+                "optionally, '--no-cleanup'"
     }
 
     Log.info { "Parsing HTTP model" }
@@ -96,8 +99,11 @@ fun main(vararg args: String) {
     val generatedPartials = generatePartials(model)
     Log.info { "Generating menu IDs for SDK" }
     val generatedMenuIds = generateMenuIds(model)
+    Log.info { "Generating classes for SDK" }
+    val generatedClasses = generateClasses(model)
 
-    (generatedTypes + generatedResources + generatedStructures + generatedPartials + generatedMenuIds).forEach {
+
+    (generatedTypes + generatedResources + generatedStructures + generatedPartials + generatedMenuIds + generatedClasses).forEach {
         it.writeTo(out)
     }
 }
