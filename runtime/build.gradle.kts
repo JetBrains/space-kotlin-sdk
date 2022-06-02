@@ -7,6 +7,13 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev") {
+        credentials {
+            val props = rootProject.extensions.extraProperties
+            username = props["spaceUsername"] as String
+            password = props["spacePassword"] as String
+        }
+    }
 }
 
 val this_version: String by rootProject.extra
