@@ -5,6 +5,7 @@ import kotlinx.datetime.LocalDate
 import mu.KotlinLogging
 import space.jetbrains.api.runtime.Type.NumberType.IntType
 import space.jetbrains.api.runtime.Type.NumberType.LongType
+import space.jetbrains.api.runtime.Type.PrimitiveType.BooleanType
 import space.jetbrains.api.runtime.Type.PrimitiveType.StringType
 
 public sealed class Type<T> {
@@ -47,12 +48,16 @@ public sealed class Type<T> {
 
     public sealed class PrimitiveType<T : Any> : Type<T>() {
         public object BooleanType : PrimitiveType<Boolean>() {
-            override fun deserialize(context: DeserializationContext): Boolean = context.requireJson().asBoolean(context.link)
+            override fun deserialize(context: DeserializationContext): Boolean =
+                context.requireJson().asBoolean(context.link)
+
             override fun serialize(value: Boolean): JsonValue = jsonBoolean(value)
         }
 
         public object StringType : PrimitiveType<String>() {
-            override fun deserialize(context: DeserializationContext): String = context.requireJson().asString(context.link)
+            override fun deserialize(context: DeserializationContext): String =
+                context.requireJson().asString(context.link)
+
             override fun serialize(value: String): JsonValue = jsonString(value)
         }
 
@@ -156,6 +161,26 @@ public sealed class Type<T> {
         }
     }
 
+    public class SyncBatchType<T>(public val elementType: Type<T>) : Type<SyncBatch<T>>() {
+        private val arrayType = ArrayType(elementType)
+
+        override fun deserialize(context: DeserializationContext): SyncBatch<T> {
+            return SyncBatch(
+                etag = StringType.deserialize(context.child("etag", partial = context.partial)),
+                data = arrayType.deserialize(context.child("data", partial = context.partial)),
+                hasMore = BooleanType.deserialize(context.child("hasMore", partial = context.partial))
+            )
+        }
+
+        override fun serialize(value: SyncBatch<T>): JsonValue {
+            return jsonObject(
+                "etag" to jsonString(value.etag),
+                "data" to arrayType.serialize(value.data),
+                "hasMore" to jsonBoolean(value.hasMore)
+            )
+        }
+    }
+
     public class ObjectType<T : Any>(public val structure: TypeStructure<T>) : Type<T>() {
         override fun deserialize(context: DeserializationContext): T {
             context.requireJson()
@@ -186,6 +211,7 @@ public sealed class Type<T> {
         is ArrayType<*> -> elementType.partialStructure()
         is MapType<*> -> valueType.partialStructure()
         is BatchType<*> -> elementType.partialStructure()
+        is SyncBatchType<*> -> elementType.partialStructure()
         is ObjectType -> structure
     }
 
@@ -197,7 +223,7 @@ public sealed class Type<T> {
                 Option.Value(deserialize())
             } catch (e: DeserializationException) {
                 val msg = "Deserialization failed. Setting " + link.referenceChain() + " to null\n" +
-                    "Error: " + e.message
+                        "Error: " + e.message
                 when (e) {
                     is DeserializationException.Major -> log.error { msg }
                     is DeserializationException.Minor -> {

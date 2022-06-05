@@ -194,6 +194,10 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                 code.add("))")
                             }
 
+                            if (endpoint.returnsSyncBatch()) {
+                                code.add(", requestHeaders = listOfNotNull(getSyncEpochHeader())")
+                            }
+
                             if (partial != null) {
                                 code.add(", partial = partial")
                             }
@@ -442,3 +446,5 @@ private fun ancestors(resource: HA_Resource, model: HttpApiEntitiesById): Sequen
         it.parentResource?.run { model.resources.getValue(id) }
     }
 }
+
+private fun HA_Endpoint.returnsSyncBatch() = this.responseBody is HA_Type.Object && this.responseBody.kind == HA_Type.Object.Kind.SYNC_BATCH

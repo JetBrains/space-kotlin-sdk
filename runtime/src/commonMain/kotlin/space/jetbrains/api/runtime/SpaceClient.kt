@@ -6,7 +6,7 @@ import io.ktor.client.engine.*
 import io.ktor.client.plugins.*
 import io.ktor.utils.io.core.Closeable
 import kotlinx.datetime.*
-import space.jetbrains.api.runtime.epoch.EpochTrackingFeature
+import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
 import kotlin.reflect.KFunction1
 
 public class SpaceClient private constructor(
@@ -122,7 +122,7 @@ public class SpaceClient private constructor(
             error("Unreachable")
         } catch (e: Hack) { e.value }
 
-        require(!expectSuccess && ktorClient.pluginOrNull(EpochTrackingFeature) != null) {
+        require(!expectSuccess && ktorClient.pluginOrNull(EpochTrackingPlugin) != null) {
             val ktorClientForSpace: KFunction1<Nothing, HttpClient> = ::ktorClientForSpace
             "${::ktorClient.name} should be either created with ${ktorClientForSpace.name}() or configured with " +
                 "${HttpClientConfig<*>::configureKtorClientForSpace.name}()"

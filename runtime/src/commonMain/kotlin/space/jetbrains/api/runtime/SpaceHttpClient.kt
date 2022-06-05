@@ -1,22 +1,21 @@
 package space.jetbrains.api.runtime
 
-import io.ktor.client.HttpClient
-import io.ktor.client.HttpClientConfig
+import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.content.TextContent
-import io.ktor.utils.io.errors.IOException
+import io.ktor.http.content.*
+import io.ktor.utils.io.errors.*
 import kotlinx.datetime.Clock.System
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
 import mu.KotlinLogging
-import space.jetbrains.api.runtime.epoch.EpochTrackingFeature
+import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
 
 public fun HttpClientConfig<*>.configureKtorClientForSpace() {
     expectSuccess = false
-    install(EpochTrackingFeature)
+    install(EpochTrackingPlugin)
 }
 
 public fun ktorClientForSpace(block: HttpClientConfig<*>.() -> Unit = {}): HttpClient = HttpClient {
@@ -87,7 +86,8 @@ internal suspend fun callSpaceApi(
     path: String,
     partial: PartialBuilder.Explicit?,
     parameters: Parameters = Parameters.Empty,
-    requestBody: JsonValue? = null
+    requestBody: JsonValue? = null,
+    requestHeaders: List<Pair<String, String>>? = null,
 ): DeserializationContext {
     val templateRequest = HttpRequestBuilder().apply {
         url {
@@ -106,6 +106,10 @@ internal suspend fun callSpaceApi(
         requestBody?.let {
             setBody(TextContent(it.print(), ContentType.Application.Json))
         }
+
+        requestHeaders?.forEach {
+            headers.append(it.first, it.second)
+        }
     }
 
     while (true) {
@@ -123,7 +127,12 @@ internal suspend fun callSpaceApi(
     }
 }
 
-internal suspend fun auth(ktorClient: HttpClient, url: String, methodBody: Parameters, authHeaderValue: String): SpaceTokenInfo {
+internal suspend fun auth(
+    ktorClient: HttpClient,
+    url: String,
+    methodBody: Parameters,
+    authHeaderValue: String
+): SpaceTokenInfo {
     val httpMethod = HttpMethod.Post
     val response = ktorClient.request(url) {
         this.method = httpMethod
@@ -180,12 +189,24 @@ private fun throwErrorOrReturnWhetherToRetry(
             ErrorCodes.INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response)
             else -> when (response.status) {
                 HttpStatusCode.BadRequest -> RequestException(HttpStatusCode.BadRequest.description, response)
-                HttpStatusCode.Unauthorized -> AuthenticationRequiredException(HttpStatusCode.BadRequest.description, response)
+                HttpStatusCode.Unauthorized -> AuthenticationRequiredException(
+                    HttpStatusCode.BadRequest.description,
+                    response
+                )
                 HttpStatusCode.Forbidden -> PermissionDeniedException(HttpStatusCode.Forbidden.description, response)
                 HttpStatusCode.NotFound -> NotFoundException(HttpStatusCode.NotFound.description, response)
-                HttpStatusCode.TooManyRequests -> RateLimitedException(HttpStatusCode.TooManyRequests.description, response)
-                HttpStatusCode.PayloadTooLarge -> PayloadTooLargeException(HttpStatusCode.PayloadTooLarge.description, response)
-                HttpStatusCode.InternalServerError -> InternalServerErrorException(HttpStatusCode.InternalServerError.description, response)
+                HttpStatusCode.TooManyRequests -> RateLimitedException(
+                    HttpStatusCode.TooManyRequests.description,
+                    response
+                )
+                HttpStatusCode.PayloadTooLarge -> PayloadTooLargeException(
+                    HttpStatusCode.PayloadTooLarge.description,
+                    response
+                )
+                HttpStatusCode.InternalServerError -> InternalServerErrorException(
+                    HttpStatusCode.InternalServerError.description,
+                    response
+                )
                 else -> IOException("${callMethod.value} request to $path failed")
             }
         }

@@ -249,7 +249,7 @@ fun HA_Type.partialToPartialInterface(model: HttpApiEntitiesById): TypeName {
                 thirdType().recurse()
             )
             MOD -> modPartialType.parameterizedBy(modSubjectType().recurse())
-            BATCH, REQUEST_BODY -> error("Such partials should not be returned")
+            BATCH, REQUEST_BODY, SYNC_BATCH -> error("Such partials should not be returned")
         }
         is HA_Type.Dto -> model.resolveDto(this).getClassName().dtoToPartialInterface()
         is HA_Type.Ref -> model.resolveDto(this).getClassName().dtoToPartialInterface()

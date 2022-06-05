@@ -14,6 +14,7 @@ const val MENU_PACKAGE = "$ROOT_PACKAGE.menu"
 private val localDateType = ClassName("kotlinx.datetime", "LocalDate")
 private val instantType = ClassName("kotlinx.datetime", "Instant")
 val batchType = ClassName(ROOT_PACKAGE, "Batch")
+val syncBatchType = ClassName(ROOT_PACKAGE, "SyncBatch")
 val batchInfoType = ClassName(ROOT_PACKAGE, "BatchInfo")
 val batchInfoStructureType = ClassName(ROOT_PACKAGE, "BatchInfoStructure")
 
@@ -67,6 +68,7 @@ val arrayTypeType = typeType.nestedClass("ArrayType")
 val mapTypeType = typeType.nestedClass("MapType")
 val objectTypeType = typeType.nestedClass("ObjectType")
 val batchTypeType = typeType.nestedClass("BatchType")
+val syncBatchTypeType = typeType.nestedClass("SyncBatchType")
 val enumTypeType = typeType.nestedClass("EnumType")
 
 val clientType = ClassName(ROOT_PACKAGE, "SpaceClient")
@@ -85,7 +87,7 @@ fun HA_Type?.partial(): PartialDetectionResult = when (this) {
     is HA_Type.Map -> valueType.partial()
     is HA_Type.Object -> when (kind) {
         PAIR, TRIPLE, MOD -> PartialDetectionResult(this, false)
-        BATCH -> batchDataElementType().partial().copy(batch = true)
+        BATCH, SYNC_BATCH -> batchDataElementType().partial().copy(batch = true)
         REQUEST_BODY -> error("Objects of kind ${REQUEST_BODY.name} should not appear in output types")
     }
     is HA_Type.UrlParam -> PartialDetectionResult(this, false)
@@ -118,6 +120,7 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): Typ
             thirdType().kotlinPoet(model)
         )
         BATCH -> batchType.parameterizedBy(batchDataElementType().kotlinPoet(model))
+        SYNC_BATCH -> syncBatchType.parameterizedBy(batchDataElementType().kotlinPoet(model))
         MOD -> modType.parameterizedBy(modSubjectType().kotlinPoet(model))
         REQUEST_BODY -> error("Request bodies are not representable with kotlin types")
     }

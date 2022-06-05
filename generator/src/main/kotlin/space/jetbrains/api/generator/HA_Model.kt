@@ -119,8 +119,8 @@ sealed class HA_Type {
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
     data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean) : HA_Type() {
-        enum class Kind {
-            PAIR, TRIPLE, BATCH, MOD, REQUEST_BODY
+        enum class Kind(val isBatch: Boolean = false) {
+            PAIR, TRIPLE, BATCH(true), SYNC_BATCH(true), MOD, REQUEST_BODY
         }
     }
     data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()

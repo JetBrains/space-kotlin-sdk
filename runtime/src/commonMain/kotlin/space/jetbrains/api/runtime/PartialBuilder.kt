@@ -93,7 +93,9 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
                 query.isEmpty() -> "*"
                 else -> "$query,*"
             }
-            return if (isBatch) "next,totalCount,data($queryWithDefault)" else queryWithDefault
+
+            /** Both [Batch] and [ContinuousExportBatch] have `data` field, other fields are different **/
+            return if (isBatch) "*,data($queryWithDefault)" else queryWithDefault
         }
     }
 

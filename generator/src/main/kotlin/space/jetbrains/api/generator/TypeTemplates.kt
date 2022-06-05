@@ -25,7 +25,7 @@ fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById)
                 appendFieldType(type.thirdField(), model)
                 add(")")
             }
-            BATCH -> error("Batches have no structure")
+            BATCH, SYNC_BATCH -> error("Batches have no structure")
             MOD -> {
                 add("%T(", modStructureType)
                 appendType(type.modSubjectType(), model, false)
@@ -106,6 +106,11 @@ fun CodeBlock.Builder.appendType(
             }
             BATCH -> {
                 add("%T(", batchTypeType.importNested())
+                appendType(notNullType.batchDataElementType(), model, false)
+                add(")")
+            }
+            SYNC_BATCH -> {
+                add("%T(", syncBatchTypeType.importNested())
                 appendType(notNullType.batchDataElementType(), model, false)
                 add(")")
             }
