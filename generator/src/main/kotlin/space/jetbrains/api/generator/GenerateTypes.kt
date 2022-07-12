@@ -50,6 +50,7 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                     addEnumConstant(it)
                 }
                 annotationSpecs.deprecation(enumType.deprecation)
+                annotationSpecs.experimental(enumType.experimental)
             }.build())
         }.build()
     }
@@ -75,6 +76,10 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
         model.resolveDto(it).getClassName()
     })
 
+    buildKDoc(dto.description)?.let {
+        typeBuilder.addKdoc(it)
+    }
+
     val primaryConstructor = FunSpec.constructorBuilder()
     val secondaryConstructor = FunSpec.constructorBuilder()
     val constructorArgs = mutableListOf<CodeBlock>()
@@ -88,6 +93,11 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
         secondaryConstructor
             .addParameter(it.field.name, kotlinPoetType)
         constructorArgs += CodeBlock.of("%T(${it.field.name})", propertyValueValueType)
+
+        paramDescription(it.field.field)?.let {
+            typeBuilder.addKdoc(it)
+            secondaryConstructor.addKdoc(it)
+        }
 
         when (val fieldsState = it.state) {
             OwnFinal -> {
@@ -138,11 +148,8 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
         }
     }
 
-    dto.description?.let {
-        typeBuilder.addKdoc(it.buildKDoc())
-    }
-
     typeBuilder.annotationSpecs.deprecation(dto.deprecation)
+    typeBuilder.annotationSpecs.experimental(dto.experimental)
 
     dto.directlyNestedClasses(model).forEach {
         typeBuilder.addType(dtoDeclaration(it, model, fieldDescriptorsByDtoId))
@@ -226,9 +233,7 @@ class FieldDescriptor(val field: HA_DtoField, val index: Int, var state: FieldSt
 }
 
 fun PropertySpec.Builder.addKDocAndDeprecation(field: HA_DtoField) = apply {
-    field.description?.let {
-        addKdoc(it.buildKDoc())
-    }
+    buildKDoc(field.description, field.experimental)?.let { addKdoc(it) }
     annotations.deprecation(field.deprecation)
 }
 

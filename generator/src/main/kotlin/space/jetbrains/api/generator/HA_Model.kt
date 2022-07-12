@@ -66,7 +66,8 @@ class HA_Endpoint(
     val displayName: String,
     val functionName: String,
     val description: HA_Description? = null,
-    val deprecation: HA_Deprecation? = null
+    val deprecation: HA_Deprecation? = null,
+    val experimental: HA_Experimental? = null
 )
 
 class HA_Parameter(
@@ -84,6 +85,8 @@ data class HA_Deprecation(
     val since: String,
     val forRemoval: Boolean
 )
+
+data class HA_Experimental(val message: String?)
 
 
 enum class HA_Primitive(val presentation: kotlin.String) {
@@ -145,6 +148,7 @@ data class HA_Field(
     val type: HA_Type,
     val description: HA_Description?,
     val deprecation: HA_Deprecation?,
+    val experimental: HA_Experimental?,
     val optional: Boolean,
     val defaultValue: HA_DefaultValue?
 )
@@ -176,6 +180,7 @@ val HA_DtoField.name get() = field.name
 val HA_DtoField.type get() = field.type
 val HA_DtoField.description get() = field.description
 val HA_DtoField.deprecation get() = field.deprecation
+val HA_DtoField.experimental get() = field.experimental
 val HA_DtoField.requiresOption get() = field.requiresOption
 
 class HA_Dto(
@@ -188,6 +193,7 @@ class HA_Dto(
     val inheritors: List<Ref>,
     val description: HA_Description?,
     val deprecation: HA_Deprecation?,
+    val experimental: HA_Experimental?,
     val record: Boolean
 ) {
     data class Ref(val id: TID)
@@ -206,7 +212,8 @@ class HA_Enum(
     val id: TID,
     val name: String,
     val values: List<String>,
-    val deprecation: HA_Deprecation?
+    val deprecation: HA_Deprecation?,
+    val experimental: HA_Experimental?
 ) {
     class Ref(val id: TID)
 }
@@ -215,7 +222,8 @@ class HA_UrlParameter(
     val id: TID,
     val name: String,
     val options: List<HA_UrlParameterOption>,
-    val deprecation: HA_Deprecation?
+    val deprecation: HA_Deprecation?,
+    val experimental: HA_Experimental?
 ) {
     class Ref(val id: TID)
 }
@@ -229,12 +237,14 @@ sealed class HA_UrlParameterOption {
     abstract val optionName: String
     abstract val description: HA_Description?
     abstract val deprecation: HA_Deprecation?
+    abstract val experimental: HA_Experimental?
 
     class Const(
         val value: String,
         override val optionName: String,
         override val description: HA_Description?,
-        override val deprecation: HA_Deprecation?
+        override val deprecation: HA_Deprecation?,
+        override val experimental: HA_Experimental?
     ) : HA_UrlParameterOption()
 
     class Var(
@@ -242,7 +252,8 @@ sealed class HA_UrlParameterOption {
         val prefixRequired: Boolean,
         override val optionName: String,
         override val description: HA_Description?,
-        override val deprecation: HA_Deprecation?
+        override val deprecation: HA_Deprecation?,
+        override val experimental: HA_Experimental?
     ) : HA_UrlParameterOption()
 }
 

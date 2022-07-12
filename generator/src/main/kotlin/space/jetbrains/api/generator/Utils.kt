@@ -147,6 +147,14 @@ fun MutableList<AnnotationSpec>.deprecation(deprecation: HA_Deprecation?) {
     }
 }
 
+fun MutableList<AnnotationSpec>.experimental(experimental: HA_Experimental?) {
+    if (experimental != null) {
+        this += AnnotationSpec.builder(ClassName(packageName = "space.jetbrains.api", "ExperimentalSpaceSdkApi"))
+            .apply { experimental.message?.let { addMember("%S", it) } }
+            .build()
+    }
+}
+
 private inline fun String.splitByPredicate(predicate: (Char) -> Boolean): List<String> {
     val result = mutableListOf<String>()
     var lastIndex = 0
@@ -207,17 +215,64 @@ fun HttpApiEntitiesById.resolveDto(type: HA_Type.Dto): HA_Dto = resolveDto(type.
 fun HttpApiEntitiesById.resolveDto(type: HA_Type.Ref): HA_Dto = resolveDto(type.dto)
 fun HttpApiEntitiesById.resolveUrlParam(type: HA_Type.UrlParam): HA_Dto = this.dtoAndUrlParams.getValue(type.urlParam.id)
 
-fun HA_Description.buildKDoc() = buildString {
-    appendKDoc(this@buildKDoc)
-}
-
 val HA_Description.helpTopicLink
     get() = helpTopic?.let { "https://www.jetbrains.com/help/space/$it" }
 
-fun StringBuilder.appendKDoc(description: HA_Description) {
-    appendLine(description.text)
-    description.helpTopicLink?.let {
-        appendLine()
-        appendLine("[Read more]($it)")
+fun buildKDoc(description: HA_Description?, experimental: HA_Experimental? = null) = buildString {
+    if (description != null) {
+        appendLine(description.text)
+    }
+    if (experimental != null) {
+        append("Experimental")
+        appendLine(if (experimental.message != null) ". ${experimental.message}" else "")
+    }
+    if (description != null) {
+        description.helpTopicLink?.let {
+            appendLine()
+            appendLine("[Read more]($it)")
+        }
+    }
+}.takeUnless { it.isEmpty() }
+
+fun paramDescription(paramField: HA_Field): String? {
+    if (paramField.description == null && paramField.deprecation == null && paramField.experimental == null)
+        return null
+
+    val prefix = "@param ${paramField.name} "
+    val indent = " ".repeat(prefix.length)
+    return buildString {
+        if (paramField.description != null) {
+            paramField.description.text.splitToSequence('\n').forEachIndexed { ix, s ->
+                append(if (ix == 0) prefix else indent)
+                appendLine(s)
+            }
+            paramField.description.helpTopicLink?.let {
+                if (length > prefix.length) {
+                    append(indent)
+                    appendLine("([read more]($it))")
+                } else {
+                    append(prefix)
+                    appendLine("[Read more]($it)")
+                }
+            }
+        }
+        paramField.deprecation
+            ?.run {
+                "deprecated since $since" +
+                        ", scheduled for removal".takeIf { forRemoval }.orEmpty() +
+                        ". $message"
+            }
+            ?.let {
+                val descPresent = length > prefix.length
+                append(if (descPresent) indent else prefix)
+                appendLine(if (descPresent) it.replaceFirstChar { it.uppercaseChar() } else it)
+            }
+        paramField.experimental
+            ?.run {
+                val descPresent = length > prefix.length
+                append(if (descPresent) indent else prefix)
+                append("Experimental")
+                appendLine(if (message != null) ". $message" else "")
+            }
     }
 }

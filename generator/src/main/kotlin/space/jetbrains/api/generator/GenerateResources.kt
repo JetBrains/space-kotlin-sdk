@@ -69,17 +69,17 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                     FunSpec.builder(endpoint.functionName).also { funcBuilder ->
                         val kDoc = buildString {
-                            endpoint.description?.let {
-                                appendKDoc(it)
+                            buildKDoc(endpoint.description)?.let {
+                                append(it)
                             }
-                            funcParams.mapNotNull { it.second }.joinToString("\n").takeUnless { it.isBlank() }?.let {
-                                appendLine()
+                            funcParams.mapNotNull { it.second }.joinToString("").takeUnless { it.isBlank() }?.let {
                                 append(it)
                             }
                         }
 
                         kDoc.takeUnless { it.isBlank() }?.let { funcBuilder.addKdoc(it) }
                         funcBuilder.annotations.deprecation(endpoint.deprecation)
+                        funcBuilder.annotations.experimental(endpoint.experimental)
                         funcBuilder.addModifiers(KModifier.SUSPEND)
                         funcBuilder.addParameters(funcParams.map { it.first })
                         if (returnType != null) funcBuilder.returns(returnType)
@@ -352,42 +352,6 @@ private fun getFuncParams(
     hasUrlBatchInfo: Boolean,
     partialInterface: TypeName?
 ): List<Pair<ParameterSpec, String?>> {
-
-    fun paramDescription(paramField: HA_Field): String? {
-        if (paramField.description == null && paramField.deprecation == null)
-            return null
-
-        val prefix = "@param ${paramField.name} "
-        val indent = " ".repeat(prefix.length)
-        return buildString {
-            if (paramField.description != null) {
-                paramField.description.text.splitToSequence('\n').forEachIndexed { ix, s ->
-                    append(if (ix == 0) prefix else indent)
-                    appendLine(s)
-                }
-                paramField.description.helpTopicLink?.let {
-                    if (length > prefix.length) {
-                        append(indent)
-                        appendLine("([read more]($it))")
-                    } else {
-                        append(prefix)
-                        appendLine("[Read more]($it)")
-                    }
-                }
-            }
-            paramField.deprecation
-                ?.run {
-                    "deprecated since $since" +
-                            ", scheduled for removal".takeIf { forRemoval }.orEmpty() +
-                            ". $message"
-                }
-                ?.let {
-                    val descPresent = length > prefix.length
-                    append(if (descPresent) indent else prefix)
-                    appendLine(if (descPresent) it.replaceFirstChar { it.uppercaseChar() } else it)
-                }
-        }
-    }
 
     fun paramWithDefault(paramField: HA_Field): Pair<ParameterSpec, String?> {
         val parameter = ParameterSpec.builder(
