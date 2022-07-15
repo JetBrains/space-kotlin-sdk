@@ -115,31 +115,32 @@ enum class HA_Primitive(val presentation: kotlin.String) {
 )
 sealed class HA_Type {
     abstract val nullable: Boolean
+    abstract val tags: List<String>
 
-    data class Primitive(val primitive: HA_Primitive, override val nullable: Boolean) : HA_Type()
-    data class Array(val elementType: HA_Type, override val nullable: Boolean) : HA_Type()
-    data class Map(val valueType: HA_Type, override val nullable: Boolean) : HA_Type()
+    data class Primitive(val primitive: HA_Primitive, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
+    data class Array(val elementType: HA_Type, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
+    data class Map(val valueType: HA_Type, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
-    data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean) : HA_Type() {
+    data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean, override val tags: List<String>) : HA_Type() {
         enum class Kind(val isBatch: Boolean = false) {
             PAIR, TRIPLE, BATCH(true), SYNC_BATCH(true), MOD, REQUEST_BODY
         }
     }
-    data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
-    data class Ref(val dto: HA_Dto.Ref, override val nullable: Boolean) : HA_Type()
-    data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean) : HA_Type()
-    data class UrlParam(val urlParam: HA_UrlParameter.Ref, override val nullable: Boolean) : HA_Type()
+    data class Dto(val dto: HA_Dto.Ref, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
+    data class Ref(val dto: HA_Dto.Ref, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
+    data class Enum(val enum: HA_Enum.Ref, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
+    data class UrlParam(val urlParam: HA_UrlParameter.Ref, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
 
     fun copy(nullable: Boolean): HA_Type = when (this) {
-        is Primitive -> Primitive(primitive, nullable)
-        is Array -> Array(elementType, nullable)
-        is Map -> Map(valueType, nullable)
-        is Object -> Object(fields, kind, nullable)
-        is Dto -> Dto(dto, nullable)
-        is Ref -> Ref(dto, nullable)
-        is Enum -> Enum(enum, nullable)
-        is UrlParam -> UrlParam(urlParam, nullable)
+        is Primitive -> Primitive(primitive, nullable, tags)
+        is Array -> Array(elementType, nullable, tags)
+        is Map -> Map(valueType, nullable, tags)
+        is Object -> Object(fields, kind, nullable, tags)
+        is Dto -> Dto(dto, nullable, tags)
+        is Ref -> Ref(dto, nullable, tags)
+        is Enum -> Enum(enum, nullable, tags)
+        is UrlParam -> UrlParam(urlParam, nullable, tags)
     }
 }
 

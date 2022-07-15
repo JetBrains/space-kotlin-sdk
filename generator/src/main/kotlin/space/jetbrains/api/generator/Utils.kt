@@ -78,6 +78,10 @@ val parametersType = ClassName("io.ktor.http", "Parameters")
 
 const val INDENT = "    "
 
+const val WEBHOOK_PAYLOAD_FIELDS_TAG = "wh-payload-fields"
+val webhookEventPartialType = ClassName(TYPES_PACKAGE, "WebhookEvent").dtoToPartialInterface()
+val webhookPayloadFieldsPartialFunction = MemberName(ROOT_PACKAGE, "webhookPayloadFieldsPartial")
+
 data class PartialDetectionResult(val partial: HA_Type?, val batch: Boolean)
 
 // TODO nested partials
@@ -130,7 +134,7 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): Typ
     is HA_Type.UrlParam -> model.dtoAndUrlParams.getValue(urlParam.id).getClassName() // TODO: Support UrlParam
 }.copy(nullable, option)
 
-private fun TypeName.copy(nullable: Boolean, option: Boolean): TypeName {
+fun TypeName.copy(nullable: Boolean, option: Boolean): TypeName {
     val type = if (isNullable != nullable) copy(nullable) else this
 
     return if (option) {
