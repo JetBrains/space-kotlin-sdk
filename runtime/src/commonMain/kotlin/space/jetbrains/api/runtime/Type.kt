@@ -7,6 +7,8 @@ import space.jetbrains.api.runtime.Type.NumberType.IntType
 import space.jetbrains.api.runtime.Type.NumberType.LongType
 import space.jetbrains.api.runtime.Type.PrimitiveType.BooleanType
 import space.jetbrains.api.runtime.Type.PrimitiveType.StringType
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 public sealed class Type<T> {
     public abstract fun deserialize(context: DeserializationContext): T
@@ -78,6 +80,17 @@ public sealed class Type<T> {
 
             override fun serialize(value: Instant): JsonValue {
                 return jsonObject("timestamp" to jsonNumber(value.toEpochMilliseconds()))
+            }
+        }
+
+        @OptIn(ExperimentalTime::class)
+        public object DurationType : PrimitiveType<Duration>() {
+            override fun deserialize(context: DeserializationContext): Duration {
+                return Duration.parse(context.requireJson().asString(context.link))
+            }
+
+            override fun serialize(value: Duration): JsonValue {
+                return jsonString(value.toIsoString())
             }
         }
     }

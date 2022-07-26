@@ -99,7 +99,8 @@ enum class HA_Primitive(val presentation: kotlin.String) {
     Boolean("boolean"),
     String("string"),
     Date("date"),
-    DateTime("datetime")
+    DateTime("datetime"),
+    Duration("duration")
 }
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")

@@ -1,7 +1,8 @@
 package space.jetbrains.api.generator
 
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import space.jetbrains.api.generator.HA_Type.Object.Kind.*
-import com.squareup.kotlinpoet.*
 
 fun CodeBlock.Builder.appendStructure(type: HA_Type, model: HttpApiEntitiesById): CodeBlock.Builder {
     return when (type) {
@@ -75,6 +76,7 @@ fun CodeBlock.Builder.appendType(
                     HA_Primitive.String -> stringTypeType.importNested()
                     HA_Primitive.Date -> dateTypeType.importNested()
                     HA_Primitive.DateTime -> dateTimeTypeType.importNested()
+                    HA_Primitive.Duration -> durationTypeType.importNested()
                 }
             )
         }

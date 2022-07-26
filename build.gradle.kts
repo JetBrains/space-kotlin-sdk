@@ -1,5 +1,5 @@
 buildscript {
-    val this_version: String by extra("0.2.6")
+    val this_version: String by extra("0.2.7")
 
     val kotlin_version: String by extra("1.6.10")
     val jackson_version: String by extra("2.13.1")

@@ -2,9 +2,12 @@ package space.jetbrains.api.runtime
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import kotlin.js.*
-import kotlin.properties.*
-import kotlin.reflect.*
+import kotlin.js.JsName
+import kotlin.properties.PropertyDelegateProvider
+import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KProperty
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
     public abstract fun deserialize(context: DeserializationContext): D
@@ -69,6 +72,11 @@ public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
     @JsName("datetime_property")
     protected fun datetime(isExtension: Boolean = false): PropertyProvider<Instant> =
         property(Type.PrimitiveType.DateTimeType, isExtension)
+
+    @OptIn(ExperimentalTime::class)
+    @JsName("duration_property")
+    protected fun duration(isExtension: Boolean = false): PropertyProvider<Duration> =
+        property(Type.PrimitiveType.DurationType, isExtension)
 
     @JsName("string_property")
     protected fun string(isExtension: Boolean = false): PropertyProvider<String> =

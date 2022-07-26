@@ -1,8 +1,8 @@
 package space.jetbrains.api.generator
 
-import space.jetbrains.api.generator.HA_Type.Object.Kind.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import space.jetbrains.api.generator.HA_Type.Object.Kind.*
 
 const val ROOT_PACKAGE = "space.jetbrains.api.runtime"
 const val TYPES_PACKAGE = "$ROOT_PACKAGE.types"
@@ -13,6 +13,8 @@ const val MENU_PACKAGE = "$ROOT_PACKAGE.menu"
 
 private val localDateType = ClassName("kotlinx.datetime", "LocalDate")
 private val instantType = ClassName("kotlinx.datetime", "Instant")
+private val durationType = ClassName("kotlin.time", "Duration")
+
 val batchType = ClassName(ROOT_PACKAGE, "Batch")
 val syncBatchType = ClassName(ROOT_PACKAGE, "SyncBatch")
 val batchInfoType = ClassName(ROOT_PACKAGE, "BatchInfo")
@@ -61,6 +63,7 @@ val booleanTypeType = primitiveTypeType.nestedClass("BooleanType")
 val stringTypeType = primitiveTypeType.nestedClass("StringType")
 val dateTypeType = primitiveTypeType.nestedClass("DateType")
 val dateTimeTypeType = primitiveTypeType.nestedClass("DateTimeType")
+val durationTypeType = primitiveTypeType.nestedClass("DurationType")
 
 val nullableType = typeType.nestedClass("Nullable")
 val optionalType = typeType.nestedClass("Optional")
@@ -107,6 +110,7 @@ fun HA_Type.kotlinPoet(model: HttpApiEntitiesById, option: Boolean = false): Typ
         HA_Primitive.String -> String::class.asClassName()
         HA_Primitive.Date -> localDateType
         HA_Primitive.DateTime -> instantType
+        HA_Primitive.Duration -> durationType
     }
 
     is HA_Type.Array -> List::class.asClassName().parameterizedBy(elementType.kotlinPoet(model))

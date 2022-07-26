@@ -25,6 +25,7 @@ private fun CodeBlock.Builder.appendPropertyDelegate(
             HA_Primitive.String -> add("string($isExtensionArg)")
             HA_Primitive.Date -> add("date($isExtensionArg)")
             HA_Primitive.DateTime -> add("datetime($isExtensionArg)")
+            HA_Primitive.Duration -> add("duration($isExtensionArg)")
         }
         is HA_Type.Array -> {
             add("list(")
