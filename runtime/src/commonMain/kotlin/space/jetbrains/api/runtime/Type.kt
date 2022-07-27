@@ -84,7 +84,7 @@ public sealed class Type<T> {
 
         public object DurationType : PrimitiveType<Duration>() {
             override fun deserialize(context: DeserializationContext): Duration {
-                return Duration.parse(context.requireJson().asString(context.link))
+                return Duration.parseIsoString(context.requireJson().asString(context.link))
             }
 
             override fun serialize(value: Duration): JsonValue {
