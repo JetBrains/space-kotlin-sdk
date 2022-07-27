@@ -7,7 +7,6 @@ import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 
 public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
     public abstract fun deserialize(context: DeserializationContext): D
@@ -73,7 +72,6 @@ public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
     protected fun datetime(isExtension: Boolean = false): PropertyProvider<Instant> =
         property(Type.PrimitiveType.DateTimeType, isExtension)
 
-    @OptIn(ExperimentalTime::class)
     @JsName("duration_property")
     protected fun duration(isExtension: Boolean = false): PropertyProvider<Duration> =
         property(Type.PrimitiveType.DurationType, isExtension)
