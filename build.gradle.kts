@@ -1,5 +1,5 @@
 buildscript {
-    val this_version: String by extra("0.2.6-webhook-partials")
+    val this_version: String by extra("0.2.8")
 
     val kotlin_version: String by extra("1.6.20")
     val jackson_version: String by extra("2.13.1")

@@ -17,10 +17,8 @@ val kotlin_version: String by rootProject.extra
 val jackson_version: String by rootProject.extra
 val assertk_version: String by rootProject.extra
 
-fun setGroupAndVersion(publication: MavenPublication) {
-    publication.groupId = "org.jetbrains"
-    publication.version = this_version
-}
+group = "org.jetbrains"
+version = this_version
 
 kotlin {
     explicitApi()
@@ -35,28 +33,12 @@ kotlin {
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
         }
-        mavenPublication {
-            setGroupAndVersion(this)
-            artifactId = "space-sdk-runtime-jvm"
-            pom {
-                name.set("Space SDK runtime")
-                description.set("Runtime for JetBrains Space SDK")
-            }
-        }
     }
 
     js(BOTH) {
         browser {
         }
         nodejs {
-        }
-        mavenPublication {
-            setGroupAndVersion(this)
-            artifactId = "space-sdk-runtime-js"
-            pom {
-                name.set("Space SDK runtime")
-                description.set("Runtime for JetBrains Space SDK")
-            }
         }
 
         compilations.configureEach {
@@ -107,9 +89,8 @@ kotlin {
 publishing {
     mavenForPublishing(this)
     publications {
-        getByName("kotlinMultiplatform", MavenPublication::class) {
-            setGroupAndVersion(this)
-            artifactId = "space-sdk-runtime"
+        withType(MavenPublication::class) {
+            artifactId = "space-sdk-$artifactId"
             pom {
                 name.set("Space SDK runtime")
                 description.set("Runtime for JetBrains Space SDK")
