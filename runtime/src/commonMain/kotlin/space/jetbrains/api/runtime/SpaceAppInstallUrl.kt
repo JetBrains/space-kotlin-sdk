@@ -2,8 +2,51 @@ package space.jetbrains.api.runtime
 
 import io.ktor.http.*
 
+private const val spaceAppInstallBaseUrl = "https://jetbrains.com/space/app/install-app"
+
 /**
- * Creates a URL for installing app to particular Space organization.
+ * Creates a URL for installing a marketplace app. When a user follows the URL, they will first be presented with a
+ * list of their organizations. After they choose one, they are directed to installation screen of the app inside
+ * the chosen organization.
+ *
+ * @param marketplaceAppId Application ID can be found on application page. For example: `slack.channel.tunnel`
+ * @param name Name of the application. The parameter is currently required because of a technical limitation
+ * and should be removed soon.
+ */
+public fun Space.marketplaceAppInstallUrl(
+    marketplaceAppId: String,
+    name: String,
+): String = with(URLBuilder(spaceAppInstallBaseUrl)) {
+    parameters.append("marketplace-app", marketplaceAppId)
+    parameters.append("name", name)
+
+    build().toString()
+}
+
+/**
+ * Creates a URL for installing an app. When a user follows the URL, they will first be presented with a
+ * list of their organizations. After they choose one, they are directed to installation screen of the app inside
+ * the chosen organization.
+ *
+ * @param name Default application name. Can be changed by users in each Space organization.
+ * @param appEndpoint HTTPS url that Space will use to send messages to the app
+ * @param state a string that will be passed to the application in `InitPayload` when user installs the app.
+ * Allows to track the installation process across different systems while user is redirected in the browser.
+ * @param authFlows authentication flows that application will use to access Space API
+ * @param authForMessagesFromSpace authentication for messages sent by Space to the app. Recommended value is [AuthForMessagesFromSpace.PUBLIC_KEY_SIGNATURE]
+ */
+public fun Space.appInstallUrl(
+    name: String,
+    appEndpoint: String,
+    state: String? = null,
+    authFlows: Set<SpaceAuthFlow> = setOf(SpaceAuthFlow.ClientCredentials),
+    authForMessagesFromSpace: AuthForMessagesFromSpace = AuthForMessagesFromSpace.PUBLIC_KEY_SIGNATURE,
+): String = with(URLBuilder(spaceAppInstallBaseUrl)) {
+    installUrlImpl(name, appEndpoint, authFlows, state, authForMessagesFromSpace)
+}
+
+/**
+ * Creates a URL for installing an app to particular Space organization.
  *
  * @param spaceServerUrl HTTPS url for Space organization, for example: `https://my-org.jetbrains.space`
  * @param name Default application name. Can be changed by users in each Space organization.
@@ -23,6 +66,16 @@ public fun Space.appInstallUrl(
 ): String = with(URLBuilder(spaceServerUrl)) {
     path("extensions", "installedApplications", "new")
 
+    installUrlImpl(name, appEndpoint, authFlows, state, authForMessagesFromSpace)
+}
+
+private fun URLBuilder.installUrlImpl(
+    name: String,
+    appEndpoint: String,
+    authFlows: Set<SpaceAuthFlow>,
+    state: String?,
+    authForMessagesFromSpace: AuthForMessagesFromSpace
+): String {
     parameters.append("name", name)
     parameters.append("pair", "true")
     parameters.append("endpoint", appEndpoint)
@@ -52,7 +105,7 @@ public fun Space.appInstallUrl(
         AuthForMessagesFromSpace.SIGNING_KEY -> parameters.append("has-signing-key", "true")
     }
 
-    build().toString()
+    return build().toString()
 }
 
 public sealed class SpaceAuthFlow {
