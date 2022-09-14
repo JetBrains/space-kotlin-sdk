@@ -169,8 +169,13 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                 while (fieldIterator.hasNext()) {
                                     val field = fieldIterator.next()
                                     fun serialize(expr: String = field.name) {
-                                        code.appendType(field.type, model, field.requiresOption)
-                                        code.add(".serialize($expr)")
+                                        if (WEBHOOK_PAYLOAD_FIELDS_TAG in field.type.tags) {
+                                            code.appendType(field.type, model, field.requiresOption)
+                                            code.add(".serialize(%M($expr))", webhookPayloadFieldsPartialFunction)
+                                        } else {
+                                            code.appendType(field.type, model, field.requiresOption)
+                                            code.add(".serialize($expr)")
+                                        }
                                     }
                                     when {
                                         field.requiresOption -> {
@@ -354,9 +359,13 @@ private fun getFuncParams(
 ): List<Pair<ParameterSpec, String?>> {
 
     fun paramWithDefault(paramField: HA_Field): Pair<ParameterSpec, String?> {
+        val type = if (WEBHOOK_PAYLOAD_FIELDS_TAG in paramField.type.tags) {
+            LambdaTypeName.get(receiver = webhookEventPartialType, returnType = UNIT)
+                .copy(nullable = paramField.type.nullable, option = paramField.requiresOption)
+        } else paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
         val parameter = ParameterSpec.builder(
             paramField.name,
-            paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
+            type
         )
         when {
             paramField.requiresOption -> parameter.defaultValue("%T", optionNoneType)

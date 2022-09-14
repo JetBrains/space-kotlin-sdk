@@ -165,7 +165,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
                             urlParamToString(
                                 model = model,
                                 expr = "this",
-                                type = HA_Type.UrlParam(HA_UrlParameter.Ref(dto.id), nullable = false),
+                                type = HA_Type.UrlParam(HA_UrlParameter.Ref(dto.id), nullable = false, tags = emptyList()),
                                 funcCode = it
                             )
                         }.build())

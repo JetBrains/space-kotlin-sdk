@@ -1,7 +1,7 @@
 buildscript {
-    val this_version: String by extra("0.2.7")
+    val this_version: String by extra("0.2.9")
 
-    val kotlin_version: String by extra("1.6.10")
+    val kotlin_version: String by extra("1.6.20")
     val jackson_version: String by extra("2.13.1")
     val kotlinx_coroutines_version: String by extra("1.6.1")
     val ktor_version: String by extra("2.0.1")
@@ -31,6 +31,6 @@ buildscript {
 }
 
 plugins {
-    id("org.jetbrains.kotlin.jvm") version "1.6.10" apply false
-    id("org.jetbrains.kotlin.multiplatform") version "1.6.10" apply false
+    id("org.jetbrains.kotlin.jvm") version "1.6.20" apply false
+    id("org.jetbrains.kotlin.multiplatform") version "1.6.20" apply false
 }
