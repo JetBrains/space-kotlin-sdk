@@ -117,6 +117,36 @@ public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
         }
     }
 
+    protected fun compactIdToFieldNamesAndJson(compactId: String): Pair<Set<String>, JsonValue> {
+        fun getFieldToValue(component: String): Pair<String, JsonValue> =
+            component.substringBefore(':') to
+                (component.substringAfter(':').takeIf { it != component }?.let(::jsonString) ?: jsonNull())
+
+        if (!compactId.startsWith('{')) {
+            val fieldToValue = getFieldToValue(compactId)
+            return setOf(fieldToValue.first) to jsonObject(fieldToValue)
+        }
+
+        val resultMap = mutableMapOf<String, JsonValue>()
+        var prevIndex = 0
+        var depth = 0
+        (compactId.removePrefix("{").removeSuffix("}") + ',').forEachIndexed { i, c ->
+            when (c) {
+                ',' -> {
+                    if (depth == 0) {
+                        resultMap += getFieldToValue(compactId.substring(prevIndex, i))
+                        prevIndex = i + 1
+                    }
+                }
+
+                '{' -> depth++
+                '}' -> depth--
+            }
+        }
+        return resultMap.keys to jsonObject(resultMap)
+    }
+
+
     protected fun minorDeserializationError(message: String, link: ReferenceChainLink): Nothing =
         throw DeserializationException.Minor(message, link)
 

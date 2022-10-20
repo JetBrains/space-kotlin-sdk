@@ -172,6 +172,9 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                         if (WEBHOOK_PAYLOAD_FIELDS_TAG in field.type.tags) {
                                             code.appendType(field.type, model, field.requiresOption)
                                             code.add(".serialize(%M($expr))", webhookPayloadFieldsPartialFunction)
+                                        } else if (PERMISSION_SCOPE_TAG in field.type.tags) {
+                                            code.appendType(field.type, model, field.requiresOption)
+                                            code.add(".serialize(%M($expr))", permissionScopeToStringFunction)
                                         } else {
                                             code.appendType(field.type, model, field.requiresOption)
                                             code.add(".serialize($expr)")
@@ -249,30 +252,6 @@ private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String
     }
 }
 
-fun urlParamToString(model: HttpApiEntitiesById, expr: String, type: HA_Type.UrlParam, funcCode: CodeBlock.Builder) {
-    val param = model.urlParams.getValue(type.urlParam.id)
-    funcCode.add("when (val it = $expr) {\n")
-    funcCode.indent()
-    param.options.forEach { option ->
-        funcCode.add("is %T -> ", option.getClassName())
-        when (option) {
-            is HA_UrlParameterOption.Const -> funcCode.add("%S\n", option.value)
-            is HA_UrlParameterOption.Var -> {
-                if (option.parameters.size != 1) funcCode.add("\"{\"·+ ")
-                option.parameters.forEachIndexed { i, field ->
-                    if (i != 0) funcCode.add("·+ \",\"·+ ")
-                    funcCode.add("%S·+ ", field.name + ":")
-                    parameterConversion(model, "it." + field.name, field.type, funcCode)
-                }
-                if (option.parameters.size != 1) funcCode.add("·+ \"}\"")
-                funcCode.add("\n")
-            }
-        }
-    }
-    funcCode.unindent()
-    funcCode.add("}")
-}
-
 // String -> String
 // String? -> String?
 // <primitive>? -> String
@@ -281,12 +260,17 @@ fun urlParamToString(model: HttpApiEntitiesById, expr: String, type: HA_Type.Url
 // <Ref> -> String
 // <Ref>? -> String?
 // List<T>? -> List<String>?
-private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: HA_Type, funcCode: CodeBlock.Builder) {
+// PermissionScope -> String
+// PermissionScope? -> String?
+fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: HA_Type, funcCode: CodeBlock.Builder) {
     @Exhaustive
     when (type) {
         is HA_Type.Primitive -> {
             funcCode.add(expr)
             if (type.primitive != HA_Primitive.String) {
+                funcCode.add(".toString()")
+            } else if (PERMISSION_SCOPE_TAG in type.tags) {
+                if (type.nullable) funcCode.add("?")
                 funcCode.add(".toString()")
             }
         }
@@ -359,10 +343,16 @@ private fun getFuncParams(
 ): List<Pair<ParameterSpec, String?>> {
 
     fun paramWithDefault(paramField: HA_Field): Pair<ParameterSpec, String?> {
-        val type = if (WEBHOOK_PAYLOAD_FIELDS_TAG in paramField.type.tags) {
-            LambdaTypeName.get(receiver = webhookEventPartialType, returnType = UNIT)
-                .copy(nullable = paramField.type.nullable, option = paramField.requiresOption)
-        } else paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
+        val type = when {
+            WEBHOOK_PAYLOAD_FIELDS_TAG in paramField.type.tags -> {
+                LambdaTypeName.get(receiver = webhookEventPartialType, returnType = UNIT)
+                    .copy(nullable = paramField.type.nullable, option = paramField.requiresOption)
+            }
+            PERMISSION_SCOPE_TAG in paramField.type.tags -> {
+                permissionScopeType.copy(nullable = paramField.type.nullable, option = paramField.requiresOption)
+            }
+            else -> paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
+        }
         val parameter = ParameterSpec.builder(
             paramField.name,
             type

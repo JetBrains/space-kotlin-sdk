@@ -23,9 +23,9 @@ internal actual fun jsonNumber(number: Number): JsonValue = when (number) {
     else -> throw IllegalArgumentException("Unsupported number type: ${number.javaClass.name}")
 }
 
-internal actual fun JsonValue.asStringOrNull(): String? = if (isTextual) asText() else null
+public actual fun JsonValue.asStringOrNull(): String? = if (isTextual) asText() else null
 
-internal actual fun jsonString(string: String): JsonValue = jsonNodes.textNode(string)
+public actual fun jsonString(string: String): JsonValue = jsonNodes.textNode(string)
 
 internal actual fun JsonValue.asBooleanOrNull(): Boolean? = if (isBoolean) asBoolean() else null
 
@@ -43,6 +43,10 @@ internal actual fun JsonValue.getField(key: String): JsonValue? {
 
 public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
     return ObjectNode(jsonNodes, properties.toMap(hashMapOf()))
+}
+
+internal actual fun jsonObject(properties: Map<String, JsonValue>): JsonValue {
+    return ObjectNode(jsonNodes, properties)
 }
 
 internal actual operator fun JsonValue.set(property: String, value: JsonValue) {

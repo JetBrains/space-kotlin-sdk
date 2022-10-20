@@ -10,8 +10,8 @@ private fun Any?.asJsonValue(): JsonValue = unsafeCast<JsonValue>()
 internal actual fun JsonValue.asNumberOrNull(): Number? = asDynamic() as? Number
 internal actual fun jsonNumber(number: Number): JsonValue = number.asJsonValue()
 
-internal actual fun JsonValue.asStringOrNull(): String? = asDynamic() as? String
-internal actual fun jsonString(string: String): JsonValue = string.asJsonValue()
+public actual fun JsonValue.asStringOrNull(): String? = asDynamic() as? String
+public actual fun jsonString(string: String): JsonValue = string.asJsonValue()
 
 internal actual fun JsonValue.asBooleanOrNull(): Boolean? = asDynamic() as? Boolean
 internal actual fun jsonBoolean(boolean: Boolean): JsonValue = boolean.asJsonValue()
@@ -25,6 +25,14 @@ internal actual fun JsonValue.getField(key: String): JsonValue? {
 }
 
 public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
+    val result = js("{}")
+    for ((key, value) in properties) {
+        result[key] = value
+    }
+    return result.unsafeCast<JsonValue>()
+}
+
+internal actual fun jsonObject(properties: Map<String, JsonValue>): JsonValue {
     val result = js("{}")
     for ((key, value) in properties) {
         result[key] = value

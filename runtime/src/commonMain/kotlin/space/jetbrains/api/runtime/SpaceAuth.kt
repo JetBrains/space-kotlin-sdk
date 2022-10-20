@@ -1,7 +1,7 @@
 package space.jetbrains.api.runtime
 
-import io.ktor.client.HttpClient
-import io.ktor.http.Parameters
+import io.ktor.client.*
+import io.ktor.http.*
 import kotlinx.datetime.Instant
 
 public interface SpaceAuth {
@@ -27,22 +27,28 @@ public interface SpaceAuth {
     }
 
     public class ClientCredentials(
-        scope: String = "**",
+        scope: PermissionScope = PermissionScope.All,
     ) : SpaceAuth by expiringTokenSourceAuth(getToken = { spaceClient, appInstance ->
         auth(
             ktorClient = spaceClient,
             url = appInstance.spaceServer.oauthTokenUrl,
             methodBody = Parameters.build {
                 append("grant_type", "client_credentials")
-                append("scope", scope)
+                append("scope", scope.toString())
             },
             authHeaderValue = "Basic " + base64("${appInstance.clientId}:${appInstance.clientSecret}"),
         )
-    })
+    }) {
+        @Deprecated(
+            "Use PermissionScope",
+            ReplaceWith("SpaceAuth.ClientCredentials(PermissionScope.fromString(scope))")
+        )
+        public constructor(scope: String) : this(PermissionScope.fromString(scope))
+    }
 
     public class RefreshToken(
         refreshToken: String,
-        scope: String,
+        scope: PermissionScope,
     ) : SpaceAuth by expiringTokenSourceAuth(getToken = { spaceClient, appInstance ->
         auth(
             ktorClient = spaceClient,
@@ -50,11 +56,17 @@ public interface SpaceAuth {
             methodBody = Parameters.build {
                 append("grant_type", "refresh_token")
                 append("refresh_token", value = refreshToken)
-                append("scope", value = scope)
+                append("scope", value = scope.toString())
             },
             authHeaderValue = "Basic " + base64("${appInstance.clientId}:${appInstance.clientSecret}"),
         )
-    })
+    }) {
+        @Deprecated(
+            "Use PermissionScope",
+            ReplaceWith("SpaceAuth.RefreshToken(refreshToken, PermissionScope.fromString(scope))")
+        )
+        public constructor(refreshToken: String, scope: String) : this(refreshToken, PermissionScope.fromString(scope))
+    }
 }
 
 public class TokenExpiredException : Exception()
@@ -75,10 +87,7 @@ public fun expiringTokenSourceAuth(getToken: suspend (HttpClient, SpaceAppInstan
 
 @Deprecated(
     "Create SpaceClient with SpaceAuth.Token",
-    ReplaceWith(
-        "SpaceClient(this, serverUrl = serverUrl, token = token)",
-        "space.jetbrains.api.runtime.SpaceClient"
-    ),
+    ReplaceWith("SpaceClient(this, serverUrl = serverUrl, token = token)"),
 )
 public fun HttpClient.withPermanentToken(token: String, serverUrl: String): SpaceClient =
     SpaceClient(this, serverUrl = serverUrl, token = token)
@@ -86,9 +95,8 @@ public fun HttpClient.withPermanentToken(token: String, serverUrl: String): Spac
 @Deprecated(
     "Create SpaceClient with SpaceAuth.ClientCredentials",
     ReplaceWith(
-        "SpaceClient(this, InstalledApp(clientId, clientSecret, serverUrl), SpaceAuth.ClientCredentials(scope))",
-        "space.jetbrains.api.runtime.SpaceClient",
-        "space.jetbrains.api.runtime.InstalledApp"
+        "SpaceClient(this, SpaceAppInstance(clientId, clientSecret, serverUrl), " +
+                "SpaceAuth.ClientCredentials(PermissionScope.fromString(scope)))",
     ),
 )
 public fun HttpClient.withServiceAccountTokenSource(
@@ -96,7 +104,11 @@ public fun HttpClient.withServiceAccountTokenSource(
     clientSecret: String,
     serverUrl: String,
     scope: String = "**",
-): SpaceClient = SpaceClient(this, SpaceAppInstance(clientId, clientSecret, serverUrl), SpaceAuth.ClientCredentials(scope))
+): SpaceClient = SpaceClient(
+    ktorClient = this,
+    appInstance = SpaceAppInstance(clientId, clientSecret, serverUrl),
+    auth = SpaceAuth.ClientCredentials(PermissionScope.fromString(scope))
+)
 
 @Deprecated("Use SpaceAuth", ReplaceWith("SpaceAuth"))
 public typealias TokenSource = SpaceAuth

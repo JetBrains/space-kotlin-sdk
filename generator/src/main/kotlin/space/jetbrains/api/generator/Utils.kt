@@ -43,6 +43,8 @@ val partialImplType = ClassName(ROOT_PACKAGE, "PartialImpl")
 
 val jsonValueType = ClassName(ROOT_PACKAGE, "JsonValue")
 val jsonObjectFunction = MemberName(ROOT_PACKAGE, "jsonObject")
+val jsonStringFunction = MemberName(ROOT_PACKAGE, "jsonString")
+val asStringOrNullFunction = MemberName(ROOT_PACKAGE, "asStringOrNull")
 
 val typeStructureType = ClassName(ROOT_PACKAGE, "TypeStructure")
 val restResourceType = ClassName(ROOT_PACKAGE, "RestResource")
@@ -84,6 +86,11 @@ const val INDENT = "    "
 const val WEBHOOK_PAYLOAD_FIELDS_TAG = "wh-payload-fields"
 val webhookEventPartialType = ClassName(TYPES_PACKAGE, "WebhookEvent").dtoToPartialInterface()
 val webhookPayloadFieldsPartialFunction = MemberName(ROOT_PACKAGE, "webhookPayloadFieldsPartial")
+
+val permissionScopeType = ClassName(ROOT_PACKAGE, "PermissionScope")
+val permissionScopeStructureType = ClassName(ROOT_PACKAGE, "PermissionScopeStructure")
+const val PERMISSION_SCOPE_TAG = "scope"
+val permissionScopeToStringFunction = MemberName(ROOT_PACKAGE, "permissionScopeToString")
 
 data class PartialDetectionResult(val partial: HA_Type?, val batch: Boolean)
 

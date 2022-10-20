@@ -10,8 +10,8 @@ internal expect fun JsonValue.asNumberOrNull(): Number?
 internal fun JsonValue.asNumber(link: ReferenceChainLink) = asNumberOrNull()
     ?: deserializationError("Value is expected to be a number: " + link.referenceChain())
 
-internal expect fun jsonString(string: String): JsonValue
-internal expect fun JsonValue.asStringOrNull(): String?
+public expect fun jsonString(string: String): JsonValue
+public expect fun JsonValue.asStringOrNull(): String?
 internal fun JsonValue.asString(link: ReferenceChainLink): String = asStringOrNull()
     ?: deserializationError("Value is expected to be a string: " + link.referenceChain())
 
@@ -25,6 +25,7 @@ internal expect fun JsonValue.isNull(): Boolean
 
 public expect fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue
 internal fun jsonObject(vararg properties: Pair<String, JsonValue>): JsonValue = jsonObject(properties.asIterable())
+internal expect fun jsonObject(properties: Map<String, JsonValue>): JsonValue
 internal expect fun JsonValue.getField(key: String): JsonValue?
 internal expect operator fun JsonValue.set(property: String, value: JsonValue)
 internal expect fun JsonValue.getFieldsOrNull(): Iterable<Map.Entry<String, JsonValue>>?

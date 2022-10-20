@@ -22,7 +22,13 @@ private fun CodeBlock.Builder.appendPropertyDelegate(
             HA_Primitive.Float -> add("float($isExtensionArg)")
             HA_Primitive.Double -> add("double($isExtensionArg)")
             HA_Primitive.Boolean -> add("boolean($isExtensionArg)")
-            HA_Primitive.String -> add("string($isExtensionArg)")
+            HA_Primitive.String -> if (PERMISSION_SCOPE_TAG in type.tags) {
+                add("obj(%T", permissionScopeStructureType)
+                if (isExtension) add(", $isExtensionArg")
+                add(")")
+            } else {
+                add("string($isExtensionArg)")
+            }
             HA_Primitive.Date -> add("date($isExtensionArg)")
             HA_Primitive.DateTime -> add("datetime($isExtensionArg)")
             HA_Primitive.Duration -> add("duration($isExtensionArg)")
@@ -74,6 +80,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     .addMember("%S", "UnusedImport")
                     .addMember("%S", "REDUNDANT_ELSE_IN_WHEN")
                     .addMember("%S", "RemoveExplicitTypeArguments")
+                    .addMember("%S", "KotlinRedundantDiagnosticSuppress")
                     .build()
             )
 
@@ -90,19 +97,69 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
 
+                    fun HA_DtoField.fieldKotlinPoetType(): TypeName = if (
+                        field.type is HA_Type.Primitive && field.type.primitive == HA_Primitive.String &&
+                        PERMISSION_SCOPE_TAG in field.type.tags
+                    ) {
+                        permissionScopeType.copy(nullable = type.nullable, option = requiresOption)
+                    } else {
+                        type.kotlinPoet(model, requiresOption)
+                    }
+
                     typeBuilder.addProperties(fields.map {
                         PropertySpec.builder(
                             name = it.field.name,
-                            type = propertyType.importNested().parameterizedBy(it.field.type.kotlinPoet(model)),
+                            type = propertyType.importNested().parameterizedBy(it.field.fieldKotlinPoetType()),
                             modifiers = listOf(KModifier.PRIVATE),
                         ).delegate(buildCodeBlock { appendPropertyDelegate(it.field, model) })
                             .build()
                     })
 
-                    typeBuilder.addFunction(FunSpec.builder("deserialize").also { funcBuilder ->
+                    typeBuilder.addFunction(FunSpec.builder("deserialize").also func@{ funcBuilder ->
                         funcBuilder.addModifiers(KModifier.OVERRIDE)
                         funcBuilder.addParameter("context", deserializationContextType)
                         funcBuilder.returns(dtoClassName)
+
+                        if (dto.id in model.urlParams) {
+                            funcBuilder.beginControlFlow(
+                                "context.json?.%M()?.let·{ compactId ->",
+                                asStringOrNullFunction
+                            )
+                            val urlParam = model.urlParams.getValue(dto.id)
+                            funcBuilder.addCode("val (fieldNames, json) = compactIdToFieldNamesAndJson(compactId)\n")
+                            funcBuilder.addCode("val newContext = context.copy(json = json)\n")
+                            funcBuilder.beginControlFlow("return·when (fieldNames) {")
+                            urlParam.options.forEach { option ->
+                                when (option) {
+                                    is HA_UrlParameterOption.Const -> {
+                                        funcBuilder.addCode("setOf(%S", option.value)
+                                    }
+                                    is HA_UrlParameterOption.Var -> {
+                                        funcBuilder.addCode("setOf(")
+                                        option.parameters.forEachIndexed { i, param ->
+                                            if (i != 0) funcBuilder.addCode(", ")
+                                            funcBuilder.addCode("%S", param.name)
+                                        }
+                                    }
+                                }
+                                funcBuilder.addCode(
+                                    ") -> %T.deserialize(newContext)\n",
+                                    option.getClassName().getStructureClassName()
+                                )
+                            }
+                            funcBuilder.addCode("else -> ")
+                            urlParam.options.firstNotNullOfOrNull { it as? HA_UrlParameterOption.Var }?.let {
+                                funcBuilder.addCode(
+                                    "%T.deserialize(newContext)\n",
+                                    it.getClassName().getStructureClassName()
+                                )
+                            } ?: funcBuilder.addCode(
+                                "minorDeserializationError(\"Unsupported parameter set: '\$fieldNames'\", context.link)\n"
+                            )
+
+                            funcBuilder.endControlFlow()
+                            funcBuilder.endControlFlow()
+                        }
 
                         val codeReferences = mutableListOf<Any>()
 
@@ -144,14 +201,22 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                 } else "") +
                                 "${INDENT}else -> minorDeserializationError(\"Unsupported class name: '\$className'\", context.link)\n}"
                         }
-
-                        funcBuilder.addCode("return $toReturn", *codeReferences.toTypedArray())
+                        if (dto.id in model.urlParams) {
+                            funcBuilder.addCode("return·$toReturn", *codeReferences.toTypedArray())
+                        } else {
+                            funcBuilder.addCode("return $toReturn", *codeReferences.toTypedArray())
+                        }
                     }.build())
 
-                    typeBuilder.addFunction(FunSpec.builder("serialize").also { func ->
+                    typeBuilder.addFunction(FunSpec.builder("serialize").also func@{ func ->
                         func.addModifiers(KModifier.OVERRIDE)
                         func.addParameter("value", dtoClassName)
                         func.returns(jsonValueType)
+
+                        if (dto.id in model.urlParams || dto.extends?.id in model.urlParams) {
+                            func.addCode("return %M(value.compactId)", jsonStringFunction)
+                            return@func
+                        }
 
                         val codeReferences = mutableListOf<Any>()
 

@@ -19,7 +19,7 @@ public class SpaceClient private constructor(
      * When this constructor is used, the caller is responsible for closing the [ktorClient],
      * closing this [SpaceClient] doesn't do anything.
      * Use it when you want to reuse [HttpClient] for multiple instances of [SpaceClient],
-     * for example when you make calls on behalf of different users.
+     * for example, when you make calls on behalf of different users.
      *
      * [ktorClient] must be either created with [ktorClientForSpace] or configured with [configureKtorClientForSpace].
      *
@@ -47,7 +47,7 @@ public class SpaceClient private constructor(
      * When this constructor is used, the caller is responsible for closing the [ktorClient],
      * closing this [SpaceClient] doesn't do anything.
      * Use it when you want to reuse [HttpClient] for multiple instances of [SpaceClient],
-     * for example when you make calls on behalf of different users.
+     * for example, when you make calls on behalf of different users.
      *
      * [ktorClient] must be either created with [ktorClientForSpace] or configured with [configureKtorClientForSpace].
      *
@@ -146,14 +146,13 @@ public class SpaceHttpClientCallContext(serverUrl: String, public val tokenSourc
     public val server: SpaceServerLocation = SpaceServerLocation(serverUrl)
 }
 
-@Deprecated("Use SpaceClient", ReplaceWith("SpaceClient", "space.jetbrains.api.runtime.SpaceClient"))
+@Deprecated("Use SpaceClient", ReplaceWith("SpaceClient"))
 public typealias SpaceHttpClientWithCallContext = SpaceClient
 
 @Deprecated(
     message = "Create SpaceClient explicitly",
     replaceWith = ReplaceWith(
-        "SpaceClient(this, InstalledApp.withoutCredentials(callContext.server.serverUrl), callContext.tokenSource)",
-        "space.jetbrains.api.runtime.SpaceClient"
+        "SpaceClient(this, SpaceAppInstance.withoutCredentials(callContext.server.serverUrl), callContext.tokenSource)",
     ),
 )
 public fun HttpClient.withCallContext(callContext: @Suppress("DEPRECATION") SpaceHttpClientCallContext): SpaceClient =
@@ -166,8 +165,7 @@ public fun HttpClient.withCallContext(callContext: @Suppress("DEPRECATION") Spac
 @Deprecated(
     "Create SpaceClient explicitly",
     ReplaceWith(
-        "SpaceClient(this, InstalledApp.withoutCredentials(serverUrl), tokenSource)",
-        "space.jetbrains.api.runtime.SpaceClient"
+        "SpaceClient(this, SpaceAppInstance.withoutCredentials(serverUrl), tokenSource)",
     ),
 )
 public fun HttpClient.withCallContext(serverUrl: String, tokenSource: SpaceAuth): SpaceClient =

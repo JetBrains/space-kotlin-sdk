@@ -54,10 +54,10 @@ public object Space {
      * the first redirect URI from application configuration in Space will be used.
      * @param requestCredentials specifies in which cases the login form should be shown to the user.
      * @param accessType indicates whether the application requires access to Space when the user is not online.
-    */
+     */
     public fun authCodeSpaceUrl(
         appInstance: SpaceAppInstance,
-        scope: String,
+        scope: PermissionScope,
         state: String? = null,
         redirectUri: String? = null,
         requestCredentials: OAuthRequestCredentials? = null,
@@ -74,9 +74,24 @@ public object Space {
             it.parameters.append("request_credentials", requestCredentials.parameterValue)
         }
         it.parameters.append("client_id", appInstance.clientId)
-        it.parameters.append("scope", scope)
+        it.parameters.append("scope", scope.toString())
         it.parameters.append("access_type", accessType.parameterValue)
     }.build().toString()
+
+    @Deprecated(
+        "Use PermissionScope",
+        ReplaceWith(
+            "Space.authCodeSpaceUrl(appInstance, PermissionScope.fromString(scope), state, redirectUri, requestCredentials, accessType)",
+        )
+    )
+    public fun authCodeSpaceUrl(
+        appInstance: SpaceAppInstance,
+        scope: String,
+        state: String? = null,
+        redirectUri: String? = null,
+        requestCredentials: OAuthRequestCredentials? = null,
+        accessType: OAuthAccessType = OAuthAccessType.ONLINE,
+    ): String = authCodeSpaceUrl(appInstance, PermissionScope.fromString(scope), state, redirectUri, requestCredentials, accessType)
 
     // TODO PKCE
     /**

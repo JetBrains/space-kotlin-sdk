@@ -87,7 +87,14 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
 
     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
     fields.forEach {
-        val kotlinPoetType = it.field.type.kotlinPoet(model, it.field.requiresOption)
+        val kotlinPoetType = if (
+            it.field.field.type is HA_Type.Primitive && it.field.field.type.primitive == HA_Primitive.String &&
+            PERMISSION_SCOPE_TAG in it.field.type.tags
+        ) {
+            permissionScopeType.copy(nullable = it.field.type.nullable, option = it.field.requiresOption)
+        } else {
+            it.field.type.kotlinPoet(model, it.field.requiresOption)
+        }
         primaryConstructor
             .addParameter(it.field.name, propertyValueType.parameterizedBy(kotlinPoetType))
         secondaryConstructor
@@ -156,18 +163,30 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
     }
 
     if (dto.id in model.urlParams) {
+        typeBuilder.addProperty(PropertySpec.builder("compactId", STRING, KModifier.ABSTRACT).build())
+    }
+
+    if (dto.extends?.id != null && dto.extends.id in model.urlParams) {
         typeBuilder.addProperty(
-            PropertySpec.builder("compactId", STRING)
+            PropertySpec.builder("compactId", STRING, OVERRIDE)
                 .getter(
                     FunSpec.getterBuilder()
-                        .addCode(CodeBlock.builder().also {
-                            it.add("return ")
-                            urlParamToString(
-                                model = model,
-                                expr = "this",
-                                type = HA_Type.UrlParam(HA_UrlParameter.Ref(dto.id), nullable = false, tags = emptyList()),
-                                funcCode = it
-                            )
+                        .addCode(CodeBlock.builder().also { getterBuilder ->
+                            getterBuilder.add("return ")
+                            val param = model.urlParams.getValue(dto.extends.id)
+                            when (val option = param.options.first { it.optionName == dto.name }) {
+                                is HA_UrlParameterOption.Const -> getterBuilder.add("%S\n", option.value)
+                                is HA_UrlParameterOption.Var -> {
+                                    if (option.parameters.size != 1) getterBuilder.add("\"{\"·+ ")
+                                    option.parameters.forEachIndexed { i, field ->
+                                        if (i != 0) getterBuilder.add("·+ \",\"·+ ")
+                                        getterBuilder.add("%S·+ ", field.name + ":")
+                                        parameterConversion(model, "this." + field.name, field.type, getterBuilder)
+                                    }
+                                    if (option.parameters.size != 1) getterBuilder.add("·+ \"}\"")
+                                    getterBuilder.add("\n")
+                                }
+                            }
                         }.build())
                         .build()
                 )
