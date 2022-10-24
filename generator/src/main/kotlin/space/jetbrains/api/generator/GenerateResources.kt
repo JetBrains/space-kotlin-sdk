@@ -314,8 +314,8 @@ private fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: 
 
         is HA_Type.Map -> error("Maps cannot occur in URL parameters")
 
-        is HA_Type.Object,
-        is HA_Type.Dto -> error("Objects cannot occur in URL parameters")
+        is HA_Type.Object -> error("Objects cannot occur in URL parameters")
+        is HA_Type.Dto -> error("${type.dto.id}: DTOs cannot occur as URL parameters or as fields inside @HttpApiUrlParam classes")
     }
 }
 
