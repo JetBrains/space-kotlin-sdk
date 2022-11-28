@@ -119,9 +119,9 @@ internal suspend fun callSpaceApi(
         }
         val response = ktorClient.request(request)
         val responseText = response.bodyAsText()
-        log.trace { "Response for ${request.method.value} request to ${request.url.buildString()}:\n$responseText" }
+        log.trace { "Response for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText" }
         val content = responseText.let(::parseJson)
-        if (!throwErrorOrReturnWhetherToRetry(response, content, callMethod, path)) {
+        if (!throwErrorOrReturnWhetherToRetry(response, content, functionName)) {
             return DeserializationContext(content, ReferenceChainLink(functionName), partial)
         }
     }
@@ -147,7 +147,7 @@ internal suspend fun auth(
     val responseTime = System.now()
 
     val tokenJson = response.bodyAsText().let(::parseJson)
-    throwErrorOrReturnWhetherToRetry(response, tokenJson, httpMethod, url)
+    throwErrorOrReturnWhetherToRetry(response, tokenJson, url)
 
     val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
     return SpaceTokenInfo(
@@ -167,47 +167,50 @@ internal suspend fun auth(
 private fun throwErrorOrReturnWhetherToRetry(
     response: HttpResponse,
     responseContent: JsonValue?,
-    callMethod: HttpMethod,
-    path: String
+    functionName: String,
 ): Boolean {
     if (!response.status.isSuccess()) {
         val errorDescription = responseContent?.getField("error_description")?.asStringOrNull()
         throw when (responseContent?.getField("error")?.asStringOrNull()) {
-            ErrorCodes.VALIDATION_ERROR -> ValidationException(errorDescription, response)
+            ErrorCodes.VALIDATION_ERROR -> ValidationException(errorDescription, response, functionName)
             ErrorCodes.AUTHENTICATION_REQUIRED -> when (errorDescription) {
                 "Access token has expired" -> return true
                 "Refresh token associated with the access token is revoked" ->
-                    RefreshTokenRevokedException(errorDescription, response)
-                else -> AuthenticationRequiredException(errorDescription, response)
+                    RefreshTokenRevokedException(errorDescription, response, functionName)
+                else -> AuthenticationRequiredException(errorDescription, response, functionName)
             }
-            ErrorCodes.PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response)
-            ErrorCodes.DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, response)
-            ErrorCodes.REQUEST_ERROR -> RequestException(errorDescription, response)
-            ErrorCodes.NOT_FOUND -> NotFoundException(errorDescription, response)
-            ErrorCodes.RATE_LIMITED -> RateLimitedException(errorDescription, response)
-            ErrorCodes.PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, response)
-            ErrorCodes.INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response)
+            ErrorCodes.PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response, functionName)
+            ErrorCodes.DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, response, functionName)
+            ErrorCodes.REQUEST_ERROR -> RequestException(errorDescription, response, functionName)
+            ErrorCodes.NOT_FOUND -> NotFoundException(errorDescription, response, functionName)
+            ErrorCodes.RATE_LIMITED -> RateLimitedException(errorDescription, response, functionName)
+            ErrorCodes.PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, response, functionName)
+            ErrorCodes.INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response, functionName)
             else -> when (response.status) {
-                HttpStatusCode.BadRequest -> RequestException(HttpStatusCode.BadRequest.description, response)
+                HttpStatusCode.BadRequest -> RequestException(HttpStatusCode.BadRequest.description, response, functionName)
                 HttpStatusCode.Unauthorized -> AuthenticationRequiredException(
                     HttpStatusCode.BadRequest.description,
-                    response
+                    response,
+                    functionName
                 )
-                HttpStatusCode.Forbidden -> PermissionDeniedException(HttpStatusCode.Forbidden.description, response)
-                HttpStatusCode.NotFound -> NotFoundException(HttpStatusCode.NotFound.description, response)
+                HttpStatusCode.Forbidden -> PermissionDeniedException(HttpStatusCode.Forbidden.description, response, functionName)
+                HttpStatusCode.NotFound -> NotFoundException(HttpStatusCode.NotFound.description, response, functionName)
                 HttpStatusCode.TooManyRequests -> RateLimitedException(
                     HttpStatusCode.TooManyRequests.description,
-                    response
+                    response,
+                    functionName
                 )
                 HttpStatusCode.PayloadTooLarge -> PayloadTooLargeException(
                     HttpStatusCode.PayloadTooLarge.description,
-                    response
+                    response,
+                    functionName
                 )
                 HttpStatusCode.InternalServerError -> InternalServerErrorException(
                     HttpStatusCode.InternalServerError.description,
-                    response
+                    response,
+                    functionName
                 )
-                else -> IOException("${callMethod.value} request to $path failed")
+                else -> IOException("${response.request.method.value} request to ${response.request.url.encodedPath} failed (calling $functionName)")
             }
         }
     }
