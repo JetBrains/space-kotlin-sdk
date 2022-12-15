@@ -87,14 +87,7 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
 
     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
     fields.forEach {
-        val kotlinPoetType = if (
-            it.field.field.type is HA_Type.Primitive && it.field.field.type.primitive == HA_Primitive.String &&
-            PERMISSION_SCOPE_TAG in it.field.type.tags
-        ) {
-            permissionScopeType.copy(nullable = it.field.type.nullable, option = it.field.requiresOption)
-        } else {
-            it.field.type.kotlinPoet(model, it.field.requiresOption)
-        }
+        val kotlinPoetType = it.field.fieldKotlinPoetType(model)
         primaryConstructor
             .addParameter(it.field.name, propertyValueType.parameterizedBy(kotlinPoetType))
         secondaryConstructor

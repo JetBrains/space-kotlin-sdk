@@ -4,7 +4,7 @@ import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
 private fun CodeBlock.Builder.appendPropertyDelegate(field: HA_DtoField, model: HttpApiEntitiesById) =
-    appendPropertyDelegate(field.type, model, field.requiresOption, field.extension)
+    appendPropertyDelegate(field.field.nullableTypeIfRequired(), model, field.requiresOption, field.extension)
 
 private fun CodeBlock.Builder.appendPropertyDelegate(
     type: HA_Type,
@@ -97,19 +97,10 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
 
-                    fun HA_DtoField.fieldKotlinPoetType(): TypeName = if (
-                        field.type is HA_Type.Primitive && field.type.primitive == HA_Primitive.String &&
-                        PERMISSION_SCOPE_TAG in field.type.tags
-                    ) {
-                        permissionScopeType.copy(nullable = type.nullable, option = requiresOption)
-                    } else {
-                        type.kotlinPoet(model, requiresOption)
-                    }
-
                     typeBuilder.addProperties(fields.map {
                         PropertySpec.builder(
                             name = it.field.name,
-                            type = propertyType.importNested().parameterizedBy(it.field.fieldKotlinPoetType()),
+                            type = propertyType.importNested().parameterizedBy(it.field.fieldKotlinPoetType(model)),
                             modifiers = listOf(KModifier.PRIVATE),
                         ).delegate(buildCodeBlock { appendPropertyDelegate(it.field, model) })
                             .build()
@@ -222,7 +213,11 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                         val createJson = "%M(listOfNotNull(" + (fields.takeIf { it.isNotEmpty() }
                             ?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
-                                "this.${it.field.name}.serialize(value.${it.field.name})"
+                                if (it.field.field.requiresAddedNullability) {
+                                    "value.${it.field.name}?.let·{ this.${it.field.name}.serialize(it) }"
+                                } else {
+                                    "this.${it.field.name}.serialize(value.${it.field.name})"
+                                }
                             } ?: "") + "))"
 
                         val toReturn = if (dto.inheritors.isEmpty() && !dto.hierarchyRole2.isAbstract) {
@@ -274,6 +269,15 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
             }
         }.build()
     }
+}
+
+fun HA_DtoField.fieldKotlinPoetType(model: HttpApiEntitiesById): TypeName = if (
+    field.type is HA_Type.Primitive && field.type.primitive == HA_Primitive.String &&
+    PERMISSION_SCOPE_TAG in field.type.tags
+) {
+    permissionScopeType.copy(nullable = field.nullableTypeIfRequired().nullable, option = requiresOption)
+} else {
+    field.nullableTypeIfRequired().kotlinPoet(model, requiresOption)
 }
 
 private fun String.indentNonFirst() = if ('\n' in this) {

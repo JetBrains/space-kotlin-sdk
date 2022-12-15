@@ -138,7 +138,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
                                     when {
                                         param.type is HA_Type.Array -> {
-                                            parameterConversion(model, param.name, param.funcParameterHaType(), code)
+                                            parameterConversion(model, param.name, param.nullableTypeIfRequired(), code)
                                             code.add("?.let·{ appendAll(%S, it) }\n", param.name)
                                         }
                                         param.requiresAddedNullability || param.defaultValue == HA_DefaultValue.NULL -> {
@@ -227,9 +227,9 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
 
 val HA_Field.requiresOption get() = optional && defaultValue == null && type.nullable
 
-private val HA_Field.requiresAddedNullability get() = optional && defaultValue == null && !type.nullable
+val HA_Field.requiresAddedNullability get() = optional && defaultValue == null && !type.nullable
 
-private fun HA_Field.funcParameterHaType() = type.let {
+fun HA_Field.nullableTypeIfRequired(): HA_Type = type.let {
     if (requiresAddedNullability) it.copy(nullable = true) else it
 }
 
@@ -351,7 +351,7 @@ private fun getFuncParams(
             PERMISSION_SCOPE_TAG in paramField.type.tags -> {
                 permissionScopeType.copy(nullable = paramField.type.nullable, option = paramField.requiresOption)
             }
-            else -> paramField.funcParameterHaType().kotlinPoet(model, paramField.requiresOption)
+            else -> paramField.nullableTypeIfRequired().kotlinPoet(model, paramField.requiresOption)
         }
         val parameter = ParameterSpec.builder(
             paramField.name,
