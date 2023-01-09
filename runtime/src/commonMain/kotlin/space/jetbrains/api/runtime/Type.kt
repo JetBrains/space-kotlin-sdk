@@ -96,7 +96,7 @@ public sealed class Type<T> {
     public class Nullable<T : Any>(public val type: Type<T>) : Type<T?>() {
         override fun deserialize(context: DeserializationContext): T? {
             return if (context.json != null && !context.json.isNull()) {
-                tryDeserialize(context.link) {
+                tryDeserialize(context.link, "Setting " + context.link.referenceChain() + " to null.") {
                     type.deserialize(context)
                 }.valueOrNull
             } else null
@@ -121,9 +121,12 @@ public sealed class Type<T> {
 
     public class ArrayType<T>(public val elementType: Type<T>) : Type<List<T>>() {
         override fun deserialize(context: DeserializationContext): List<T> = mutableListOf<T>().apply {
-            context.elements().forEach {
-                tryDeserialize(context.link) {
-                    elementType.deserialize(it)
+            context.elements().forEachIndexed { index, elemContext ->
+                tryDeserialize(
+                    link = elemContext.link,
+                    additionalMessage = "Skipping element $index of " + context.link.referenceChain() + "."
+                ) {
+                    elementType.deserialize(elemContext)
                 }.ifValue { add(it) }
             }
         }
@@ -138,7 +141,7 @@ public sealed class Type<T> {
             return mutableMapOf<String, V>().apply {
                 context.requireJson().getFields(context.link).forEach { (key, json) ->
                     val elemContext = context.child("[\"$key\"]", json, partial = context.partial)
-                    tryDeserialize(elemContext.link) {
+                    tryDeserialize(elemContext.link, "Skipping element '$key' of " + context.link.referenceChain() + ".") {
                         valueType.deserialize(elemContext)
                     }.ifValue { put(key, it) }
                 }
@@ -195,7 +198,6 @@ public sealed class Type<T> {
     public class ObjectType<T : Any>(public val structure: TypeStructure<T>) : Type<T>() {
         override fun deserialize(context: DeserializationContext): T {
             context.requireJson()
-            @Suppress("UNCHECKED_CAST")
             return structure.deserialize(context)
         }
 
@@ -229,12 +231,17 @@ public sealed class Type<T> {
     private companion object {
         val log = KotlinLogging.logger {}
 
-        inline fun <T> tryDeserialize(link: ReferenceChainLink, deserialize: () -> T): Option<T> {
+        inline fun <T> tryDeserialize(
+            link: ReferenceChainLink,
+            additionalMessage: String,
+            deserialize: () -> T
+        ): Option<T> {
             return try {
                 Option.Value(deserialize())
             } catch (e: DeserializationException) {
-                val msg = "Deserialization failed. Setting " + link.referenceChain() + " to null\n" +
-                        "Error: " + e.message
+                val msg = "Deserialization failed. $additionalMessage\n" + "Error: " + e.message +
+                    if (e is DeserializationException.Minor) " at " + e.link.referenceChain() else ""
+
                 when (e) {
                     is DeserializationException.Major -> log.error { msg }
                     is DeserializationException.Minor -> {
