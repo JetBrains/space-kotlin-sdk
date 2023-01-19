@@ -1,16 +1,22 @@
 package space.jetbrains.api.runtime
 
-public data class ReferenceChainLink(val name: String, val parent: ReferenceChainLink? = null) {
+public data class ReferenceChainLink(val name: String, val actualType: String? = null, val parent: ReferenceChainLink? = null) {
 
     public fun referenceChain(): String = buildString { referenceChain(this) }
 
     private fun referenceChain(sb: StringBuilder): StringBuilder {
         parent?.referenceChain(sb)?.append("->")
-        return sb.append(name)
+        return sb.append(name).also {
+            if (actualType != null) {
+                sb.append(":").append(actualType)
+            }
+        }
     }
 }
 
-public fun ReferenceChainLink.child(name: String): ReferenceChainLink = ReferenceChainLink(name, this)
+public fun ReferenceChainLink.child(name: String): ReferenceChainLink = ReferenceChainLink(name, parent = this)
+
+public fun ReferenceChainLink.withActualType(type: String): ReferenceChainLink = ReferenceChainLink(name, type, parent)
 
 public sealed class DeserializationException(override val message: String) : RuntimeException(message) {
     public class Major internal constructor(message: String) : DeserializationException(message)
@@ -38,6 +44,16 @@ public data class DeserializationContext(
         link: ReferenceChainLink = this.link.child(name),
         partial: PartialBuilder? = this.partial?.children?.get(name)
     ): DeserializationContext = DeserializationContext(json, link, partial)
+
+    public fun className(): String {
+        val childContext = child("className")
+        return childContext.json?.let { Type.PrimitiveType.StringType.deserialize(childContext) }
+            ?: inaccessibleFieldErrorMessagesByFieldName["className"]?.let { deserializationError("$it ${link.referenceChain()}") }
+            ?: deserializationError("Missing required property: ${childContext.link.referenceChain()}")
+    }
+
+    public fun withActualType(actualType: String): DeserializationContext =
+        DeserializationContext(json, link.withActualType(actualType), partial)
 
     public fun elements(): Iterable<DeserializationContext> = sequence {
         for ((index, element) in requireJson().arrayElements(link).withIndex()) {

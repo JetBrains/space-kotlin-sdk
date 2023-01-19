@@ -173,8 +173,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                             codeReferences += dtoClassName
                             createInstance
                         } else {
-                            codeReferences += stringTypeType.importNested()
-                            "when (val className = %T.deserialize(context.child(\"className\"))) {" +
+                            "when (val className = context.className()) {" +
                                 dto.inheritors.joinToString("\n$INDENT", "\n$INDENT", "\n") {
                                     val inheritor = model.resolveDto(it)
                                     val inheritorClassName = inheritor.getClassName()
@@ -183,7 +182,8 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                         codeReferences += inheritorClassName.getStructureClassName()
                                         ", in %T.childClassNames"
                                     } else ""
-                                    "$condition -> %T.deserialize(context)"
+                                    val withActualTypeCall = if (inheritor.inheritors.isEmpty()) ".withActualType(className)" else ""
+                                    "$condition -> %T.deserialize(context$withActualTypeCall)"
                                 } +
                                 (if (!dto.hierarchyRole2.isAbstract) {
                                     codeReferences += dtoClassName
