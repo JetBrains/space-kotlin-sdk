@@ -170,8 +170,8 @@ private fun throwErrorOrReturnWhetherToRetry(
     functionName: String,
 ): Boolean {
     if (!response.status.isSuccess()) {
-        val errorDescription = responseContent?.getField("error_description")?.asStringOrNull()
-        throw when (responseContent?.getField("error")?.asStringOrNull()) {
+        val errorDescription = responseContent?.getFieldOrNull("error_description")?.asStringOrNull()
+        throw when (responseContent?.getFieldOrNull("error")?.asStringOrNull()) {
             ErrorCodes.VALIDATION_ERROR -> ValidationException(errorDescription, response, functionName)
             ErrorCodes.AUTHENTICATION_REQUIRED -> when (errorDescription) {
                 "Access token has expired" -> return true

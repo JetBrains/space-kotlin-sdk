@@ -24,6 +24,14 @@ internal actual fun JsonValue.getField(key: String): JsonValue? {
     return asDynamic()[key]?.unsafeCast<JsonValue>()
 }
 
+internal actual fun JsonValue.getFieldOrNull(key: String): JsonValue? {
+    return if (jsTypeOf(this) == "object") {
+        getField(key)
+    } else {
+        null
+    }
+}
+
 public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
     val result = js("{}")
     for ((key, value) in properties) {

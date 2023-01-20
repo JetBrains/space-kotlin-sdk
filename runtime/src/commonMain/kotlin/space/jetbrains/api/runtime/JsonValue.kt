@@ -27,6 +27,11 @@ public expect fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): Jso
 internal fun jsonObject(vararg properties: Pair<String, JsonValue>): JsonValue = jsonObject(properties.asIterable())
 internal expect fun jsonObject(properties: Map<String, JsonValue>): JsonValue
 internal expect fun JsonValue.getField(key: String): JsonValue?
+
+/**
+ * Must return `null` when receiver [JsonValue] is not an object.
+ */
+internal expect fun JsonValue.getFieldOrNull(key: String): JsonValue?
 internal expect operator fun JsonValue.set(property: String, value: JsonValue)
 internal expect fun JsonValue.getFieldsOrNull(): Iterable<Map.Entry<String, JsonValue>>?
 internal fun JsonValue.getFields(link: ReferenceChainLink): Iterable<Map.Entry<String, JsonValue>> = getFieldsOrNull()

@@ -41,6 +41,10 @@ internal actual fun JsonValue.getField(key: String): JsonValue? {
     return this[key]
 }
 
+internal actual fun JsonValue.getFieldOrNull(key: String): JsonValue? {
+    return this[key]
+}
+
 public actual fun jsonObject(properties: Iterable<Pair<String, JsonValue>>): JsonValue {
     return ObjectNode(jsonNodes, properties.toMap(hashMapOf()))
 }
