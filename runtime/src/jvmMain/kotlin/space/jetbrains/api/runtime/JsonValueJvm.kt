@@ -1,5 +1,6 @@
 package space.jetbrains.api.runtime
 
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.node.*
 import com.fasterxml.jackson.databind.node.JsonNodeFactory.instance as jsonNodes
@@ -7,6 +8,14 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory.instance as jsonNodes
 private val jackson = ObjectMapper()
 
 public actual fun parseJson(json: String): JsonValue? = jackson.readTree(json)
+public actual fun tryParseJson(json: String): JsonValue? {
+    return try {
+        parseJson(json)
+    } catch (e: JsonParseException) {
+        null
+    }
+}
+
 public actual fun JsonValue.print(): String = jackson.writeValueAsString(this)
 
 public actual typealias JsonValue = JsonNode

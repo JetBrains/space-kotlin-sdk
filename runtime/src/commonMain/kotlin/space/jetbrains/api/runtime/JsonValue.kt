@@ -3,6 +3,12 @@ package space.jetbrains.api.runtime
 public expect abstract class JsonValue
 
 public expect fun parseJson(json: String): JsonValue?
+
+/**
+ * Must return `null` if [json] is not a valid JSON
+ */
+public expect fun tryParseJson(json: String): JsonValue?
+
 public expect fun JsonValue.print(): String
 
 internal expect fun jsonNumber(number: Number): JsonValue

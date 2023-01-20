@@ -3,6 +3,15 @@ package space.jetbrains.api.runtime
 public actual abstract external class JsonValue
 
 public actual fun parseJson(json: String): JsonValue? = json.takeIf { it.isNotEmpty() }?.let(JSON::parse)
+
+public external class SyntaxError: Throwable
+public actual fun tryParseJson(json: String): JsonValue? {
+    return try {
+        parseJson(json)
+    } catch (e: SyntaxError) {
+        null
+    }
+}
 public actual fun JsonValue.print(): String = JSON.stringify(this)
 
 private fun Any?.asJsonValue(): JsonValue = unsafeCast<JsonValue>()

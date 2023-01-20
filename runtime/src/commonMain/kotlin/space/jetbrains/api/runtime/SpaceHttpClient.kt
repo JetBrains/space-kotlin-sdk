@@ -146,7 +146,7 @@ internal suspend fun auth(
     }
     val responseTime = System.now()
 
-    val tokenJson = response.bodyAsText().let(::parseJson)
+    val tokenJson = response.bodyAsText().let(::tryParseJson)
     throwErrorOrReturnWhetherToRetry(response, tokenJson, url)
 
     val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
