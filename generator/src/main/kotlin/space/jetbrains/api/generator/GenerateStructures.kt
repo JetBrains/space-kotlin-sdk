@@ -204,7 +204,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                         func.addParameter("value", dtoClassName)
                         func.returns(jsonValueType)
 
-                        if (dto.id in model.urlParams || dto.extends?.id in model.urlParams) {
+                        if (dto.id in model.urlParams) {
                             func.addCode("return %M(value.compactId)", jsonStringFunction)
                             return@func
                         }

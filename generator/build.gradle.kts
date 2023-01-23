@@ -2,7 +2,6 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("application")
     id("maven-publish")
-    id("app.cash.exhaustive") version "0.1.1"
 }
 
 repositories {

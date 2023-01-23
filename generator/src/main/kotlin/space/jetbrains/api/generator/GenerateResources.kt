@@ -1,6 +1,5 @@
 package space.jetbrains.api.generator
 
-import app.cash.exhaustive.Exhaustive
 import com.squareup.kotlinpoet.*
 import space.jetbrains.api.generator.HA_Method.*
 import space.jetbrains.api.generator.HA_PathSegment.*
@@ -263,7 +262,6 @@ private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String
 // PermissionScope -> String
 // PermissionScope? -> String?
 fun parameterConversion(model: HttpApiEntitiesById, expr: String, type: HA_Type, funcCode: CodeBlock.Builder) {
-    @Exhaustive
     when (type) {
         is HA_Type.Primitive -> {
             funcCode.add(expr)
