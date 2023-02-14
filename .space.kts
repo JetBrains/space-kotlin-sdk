@@ -1,4 +1,4 @@
-job("space-api-client: build and publish") {
+job("Space SDK runtime & generator: build and publish") {
     startOn {
         gitPush { enabled = false }
     }
