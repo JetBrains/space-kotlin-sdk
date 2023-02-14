@@ -5,10 +5,6 @@ plugins {
     id("maven-publish")
 }
 
-repositories {
-    mavenCentral()
-}
-
 val this_version: String by rootProject.extra
 val mavenForPublishing: (PublishingExtension) -> Unit by rootProject.extra
 val ktor_version: String by rootProject.extra
