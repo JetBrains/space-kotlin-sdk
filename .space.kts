@@ -2,6 +2,7 @@ job("space-api-client: build and publish") {
     startOn {
         gitPush { enabled = false }
     }
+    buildAndZip()
 }
 
 fun Job.buildAndZip() {
