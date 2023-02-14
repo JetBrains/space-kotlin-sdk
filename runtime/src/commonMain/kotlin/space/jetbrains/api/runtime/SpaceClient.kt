@@ -1,12 +1,12 @@
 package space.jetbrains.api.runtime
 
-import io.ktor.client.HttpClient
-import io.ktor.client.HttpClientConfig
+import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.plugins.*
-import io.ktor.utils.io.core.Closeable
+import io.ktor.utils.io.core.*
 import kotlinx.datetime.*
 import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
+import space.jetbrains.api.runtime.stacktrace.withPreservedStacktrace
 import kotlin.reflect.KFunction1
 
 public class SpaceClient private constructor(
@@ -117,21 +117,28 @@ public class SpaceClient private constructor(
 
     init {
         class Hack(val value: Boolean) : Throwable()
+
         val expectSuccess = try {
             ktorClient.config { throw Hack(expectSuccess) }
             error("Unreachable")
-        } catch (e: Hack) { e.value }
+        } catch (e: Hack) {
+            e.value
+        }
 
         require(!expectSuccess && ktorClient.pluginOrNull(EpochTrackingPlugin) != null) {
             val ktorClientForSpace: KFunction1<Nothing, HttpClient> = ::ktorClientForSpace
             "${::ktorClient.name} should be either created with ${ktorClientForSpace.name}() or configured with " +
-                "${HttpClientConfig<*>::configureKtorClientForSpace.name}()"
+                    "${HttpClientConfig<*>::configureKtorClientForSpace.name}()"
         }
     }
 
     public val server: SpaceServerLocation get() = appInstance.spaceServer
 
-    public suspend fun token(): SpaceTokenInfo = auth.token(ktorClient, appInstance)
+    public suspend fun token(): SpaceTokenInfo {
+        return withPreservedStacktrace("exception while requesting access token from Space") {
+            auth.token(ktorClient, appInstance)
+        }
+    }
 
     @Deprecated("Use ktorClient", ReplaceWith("ktorClient"))
     public val client: HttpClient get() = ktorClient

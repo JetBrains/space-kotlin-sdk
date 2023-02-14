@@ -12,6 +12,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
 import mu.KotlinLogging
 import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
+import space.jetbrains.api.runtime.stacktrace.withPreservedStacktrace
 
 public fun HttpClientConfig<*>.configureKtorClientForSpace() {
     expectSuccess = false
@@ -114,14 +115,22 @@ internal suspend fun callSpaceApi(
 
     while (true) {
         val request = HttpRequestBuilder().takeFrom(templateRequest)
-        auth.token(ktorClient, appInstance).accessToken.takeIf { it.isNotEmpty() }?.let {
-            request.header(HttpHeaders.Authorization, "Bearer $it")
+
+        withPreservedStacktrace("exception while getting access token for Space API call: $functionName") {
+            auth.token(ktorClient, appInstance).accessToken.takeIf { it.isNotEmpty() }?.let {
+                request.header(HttpHeaders.Authorization, "Bearer $it")
+            }
         }
-        val response = ktorClient.request(request)
-        val responseText = response.bodyAsText()
-        log.trace { "Response for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText" }
-        val content = responseText.let(::parseJson)
-        if (!throwErrorOrReturnWhetherToRetry(response, content, functionName)) {
+
+        val (retry, content) = withPreservedStacktrace("exception during Space API call: $functionName") {
+            val response = ktorClient.request(request)
+            val responseText = response.bodyAsText()
+            log.trace { "Response for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText" }
+            val content = responseText.let(::parseJson)
+            throwErrorOrReturnWhetherToRetry(response, content, functionName) to content
+        }
+
+        if (!retry) {
             return DeserializationContext(content, ReferenceChainLink(functionName), partial)
         }
     }
@@ -177,8 +186,10 @@ private fun throwErrorOrReturnWhetherToRetry(
                 "Access token has expired" -> return true
                 "Refresh token associated with the access token is revoked" ->
                     RefreshTokenRevokedException(errorDescription, response, functionName)
+
                 else -> AuthenticationRequiredException(errorDescription, response, functionName)
             }
+
             ErrorCodes.PERMISSION_DENIED -> PermissionDeniedException(errorDescription, response, functionName)
             ErrorCodes.DUPLICATED_ENTITY -> DuplicatedEntityException(errorDescription, response, functionName)
             ErrorCodes.REQUEST_ERROR -> RequestException(errorDescription, response, functionName)
@@ -187,29 +198,48 @@ private fun throwErrorOrReturnWhetherToRetry(
             ErrorCodes.PAYLOAD_TOO_LARGE -> PayloadTooLargeException(errorDescription, response, functionName)
             ErrorCodes.INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response, functionName)
             else -> when (response.status) {
-                HttpStatusCode.BadRequest -> RequestException(HttpStatusCode.BadRequest.description, response, functionName)
+                HttpStatusCode.BadRequest -> RequestException(
+                    HttpStatusCode.BadRequest.description,
+                    response,
+                    functionName
+                )
+
                 HttpStatusCode.Unauthorized -> AuthenticationRequiredException(
                     HttpStatusCode.BadRequest.description,
                     response,
                     functionName
                 )
-                HttpStatusCode.Forbidden -> PermissionDeniedException(HttpStatusCode.Forbidden.description, response, functionName)
-                HttpStatusCode.NotFound -> NotFoundException(HttpStatusCode.NotFound.description, response, functionName)
+
+                HttpStatusCode.Forbidden -> PermissionDeniedException(
+                    HttpStatusCode.Forbidden.description,
+                    response,
+                    functionName
+                )
+
+                HttpStatusCode.NotFound -> NotFoundException(
+                    HttpStatusCode.NotFound.description,
+                    response,
+                    functionName
+                )
+
                 HttpStatusCode.TooManyRequests -> RateLimitedException(
                     HttpStatusCode.TooManyRequests.description,
                     response,
                     functionName
                 )
+
                 HttpStatusCode.PayloadTooLarge -> PayloadTooLargeException(
                     HttpStatusCode.PayloadTooLarge.description,
                     response,
                     functionName
                 )
+
                 HttpStatusCode.InternalServerError -> InternalServerErrorException(
                     HttpStatusCode.InternalServerError.description,
                     response,
                     functionName
                 )
+
                 else -> IOException("${response.request.method.value} request to ${response.request.url.encodedPath} failed (calling $functionName)")
             }
         }
