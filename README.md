@@ -32,7 +32,7 @@ val spaceClient = SpaceClient(
         clientSecret,     // from settings/secrets
         organizationUrl  // i.e. "https://<organization>.jetbrains.space/"
     ),
-    SpaceAuth.ClientCredentials
+    SpaceAuth.ClientCredentials()
 )
 ```
 
