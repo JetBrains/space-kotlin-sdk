@@ -71,6 +71,11 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation("com.willowtreeapps.assertk:assertk-jvm:$assertk_version")
+
+                implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
+                implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
+                implementation("io.ktor:ktor-client-apache:$ktor_version")
+                implementation("ch.qos.logback:logback-classic:1.4.1")
             }
         }
 

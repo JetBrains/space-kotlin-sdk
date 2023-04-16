@@ -10,22 +10,14 @@ package space.jetbrains.api.runtime.stacktrace
  */
 public suspend fun <T> withPreservedStacktrace(message: String, block: suspend () -> T): T {
     // record stacktrace
-    val stacktraceInfo = SuspendAwareThrowable(message)
+    val stacktraceInfo = StackTraceInfo(message)
     try {
         return block()
-    } catch (e: Throwable) {
-        stacktraceInfo.rethrow(e)
+    } catch (e: Exception) {
+        rethrow(e, stacktraceInfo)
     }
 }
 
-/**
- * Originally taken from here: https://gist.github.com/morj/223e53326a6df994a92c260a474fa0a1
- */
-private class SuspendAwareThrowable(message: String) : Throwable(message) {
-    override var cause: Throwable? = null
+public class StackTraceInfo(message: String) : Exception(message)
 
-    fun rethrow(cause: Throwable): Nothing {
-        this.cause = cause
-        throw this
-    }
-}
+public expect fun rethrow(cause: Exception, stackTraceInfo: StackTraceInfo): Nothing
