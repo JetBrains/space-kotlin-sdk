@@ -56,7 +56,7 @@ public class SpaceClient private constructor(
      *     users.forEach { user ->
      *         val userStarredProjects = SpaceClient(
      *             ktorClient,
-     *             installedApp,
+     *             appInstance,
      *             SpaceAuth.RefreshToken(user.getRefreshToken(), scope)
      *         ).projects.getAllProjects(starred = true)
      *         // ...
