@@ -99,10 +99,10 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                     typeBuilder.addProperties(fields.map {
                         PropertySpec.builder(
-                            name = it.field.name,
-                            type = propertyType.importNested().parameterizedBy(it.field.fieldKotlinPoetType(model)),
+                            name = it.dtoField.name,
+                            type = propertyType.importNested().parameterizedBy(it.dtoField.field.fieldKotlinPoetType(model)),
                             modifiers = listOf(KModifier.PRIVATE),
-                        ).delegate(buildCodeBlock { appendPropertyDelegate(it.field, model) })
+                        ).delegate(buildCodeBlock { appendPropertyDelegate(it.dtoField, model) })
                             .build()
                     })
 
@@ -161,7 +161,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                                     append("%T(\n$INDENT")
                                     fields.forEachIndexed { i, field ->
                                         if (i != 0) append(",\n$INDENT")
-                                        append("${field.field.name} = this.${field.field.name}.deserialize(context)")
+                                        append("${field.dtoField.name} = this.${field.dtoField.name}.deserialize(context)")
                                     }
                                     append("\n)")
                                 }
@@ -213,10 +213,10 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
 
                         val createJson = "%M(listOfNotNull(" + (fields.takeIf { it.isNotEmpty() }
                             ?.joinToString(",\n$INDENT", "\n$INDENT", "\n") {
-                                if (it.field.field.requiresAddedNullability) {
-                                    "value.${it.field.name}?.let·{ this.${it.field.name}.serialize(it) }"
+                                if (it.dtoField.field.requiresAddedNullability) {
+                                    "value.${it.dtoField.name}?.let·{ this.${it.dtoField.name}.serialize(it) }"
                                 } else {
-                                    "this.${it.field.name}.serialize(value.${it.field.name})"
+                                    "this.${it.dtoField.name}.serialize(value.${it.dtoField.name})"
                                 }
                             } ?: "") + "))"
 
@@ -271,13 +271,13 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
     }
 }
 
-fun HA_DtoField.fieldKotlinPoetType(model: HttpApiEntitiesById): TypeName = if (
-    field.type is HA_Type.Primitive && field.type.primitive == HA_Primitive.String &&
-    PERMISSION_SCOPE_TAG in field.type.tags
+fun HA_Field.fieldKotlinPoetType(model: HttpApiEntitiesById): TypeName = if (
+    type is HA_Type.Primitive && type.primitive == HA_Primitive.String &&
+    PERMISSION_SCOPE_TAG in type.tags
 ) {
-    permissionScopeType.copy(nullable = field.nullableTypeIfRequired().nullable, option = requiresOption)
+    permissionScopeType.copy(nullable = nullableTypeIfRequired().nullable, option = requiresOption)
 } else {
-    field.nullableTypeIfRequired().kotlinPoet(model, requiresOption)
+    nullableTypeIfRequired().kotlinPoet(model, requiresOption)
 }
 
 private fun String.indentNonFirst() = if ('\n' in this) {

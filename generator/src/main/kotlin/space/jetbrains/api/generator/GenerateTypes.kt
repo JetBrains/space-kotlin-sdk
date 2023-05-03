@@ -56,7 +56,11 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
     }
 }
 
-private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescriptorsByDtoId: Map<TID, List<FieldDescriptor>>): TypeSpec {
+private fun dtoDeclaration(
+    dto: HA_Dto,
+    model: HttpApiEntitiesById,
+    fieldDescriptorsByDtoId: Map<TID, List<FieldDescriptor>>
+): TypeSpec {
     Log.info { "Generating DTO class for '${dto.name}'" }
     val dtoClassName = dto.getClassName()
     val typeBuilder = when (dto.hierarchyRole2) {
@@ -86,49 +90,62 @@ private fun dtoDeclaration(dto: HA_Dto, model: HttpApiEntitiesById, fieldDescrip
     val superclassConstructorArgs = TreeMap<Int, String>()
 
     val fields = fieldDescriptorsByDtoId.getValue(dto.id)
-    fields.forEach {
-        val kotlinPoetType = it.field.fieldKotlinPoetType(model)
+    fields.forEach { fieldDescriptor ->
+        val field = fieldDescriptor.dtoField.field
+        val kotlinPoetType = field.fieldKotlinPoetType(model)
         primaryConstructor
-            .addParameter(it.field.name, propertyValueType.parameterizedBy(kotlinPoetType))
+            .addParameter(field.name, propertyValueType.parameterizedBy(kotlinPoetType))
         secondaryConstructor
-            .addParameter(it.field.name, kotlinPoetType)
-        constructorArgs += CodeBlock.of("%T(${it.field.name})", propertyValueValueType)
+            .addParameter(
+                ParameterSpec.builder(field.name, kotlinPoetType)
+                    .also { param ->
+                        if (field.defaultValue != null) {
+                            param.defaultValue(buildCodeBlock { default(field.type, model, field.defaultValue) })
+                        } else if (field.requiresAddedNullability) {
+                            param.defaultValue("null")
+                        } else if (field.requiresOption) {
+                            param.defaultValue("%T", optionNoneType)
+                        }
+                    }
+                    .build()
+            )
+        constructorArgs += CodeBlock.of("%T(${field.name})", propertyValueValueType)
 
-        paramDescription(it.field.field)?.let {
+        paramDescription(field)?.let {
             typeBuilder.addKdoc(it)
             secondaryConstructor.addKdoc(it)
         }
 
-        when (val fieldsState = it.state) {
+        when (val fieldsState = fieldDescriptor.state) {
             OwnFinal -> {
                 typeBuilder.addProperty(
-                    PropertySpec.builder(it.field.name, kotlinPoetType)
-                        .delegate(it.field.name)
-                        .addKDocAndDeprecation(it.field)
+                    PropertySpec.builder(field.name, kotlinPoetType)
+                        .delegate(field.name)
+                        .addKDocAndDeprecation(field)
                         .build()
                 )
 
             }
             OwnOpen -> {
                 typeBuilder.addProperty(
-                    PropertySpec.builder(it.field.name, kotlinPoetType)
-                        .delegate(it.field.name)
+                    PropertySpec.builder(field.name, kotlinPoetType)
+                        .delegate(field.name)
                         .addModifiers(KModifier.OPEN)
-                        .addKDocAndDeprecation(it.field)
+                        .addKDocAndDeprecation(field)
                         .build()
                 )
             }
             is Inherited -> {
-                superclassConstructorArgs[fieldsState.field.index] = it.field.name
+                superclassConstructorArgs[fieldsState.field.index] = field.name
                 null
             }
             is Overrides -> {
-                superclassConstructorArgs[fieldsState.field.index] = it.field.name
+                superclassConstructorArgs[fieldsState.field.index] = field.name
                 typeBuilder.addProperty(
-                    PropertySpec.builder(it.field.name, kotlinPoetType)
-                        .delegate(it.field.name)
+                    PropertySpec.builder(field.name, kotlinPoetType)
+                        .delegate(field.name)
                         .addModifiers(OVERRIDE)
-                        .addKDocAndDeprecation(it.field)
+                        .addKDocAndDeprecation(field)
                         .build()
                 )
             }
@@ -218,13 +235,18 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
             val fields = result.computeIfAbsent(dto.id) { mutableListOf() }
 
             dto.fields.forEachIndexed { index, dtoField ->
-                fields += parentFields?.find { it.field.name == dtoField.field.name }?.override(dtoField, index)
+                fields += parentFields?.find { it.dtoField.name == dtoField.field.name }?.override(dtoField, index)
                     ?: FieldDescriptor(dtoField, index, OwnFinal, dtoField.extension)
             }
 
             parentFields?.forEachIndexed { parentIndex, parentField ->
-                if (fields.none { it.field.name == parentField.field.name }) {
-                    fields += FieldDescriptor(parentField.field, parentIndex, Inherited(parentField), parentField.isExtension)
+                if (fields.none { it.dtoField.name == parentField.dtoField.name }) {
+                    fields += FieldDescriptor(
+                        parentField.dtoField,
+                        parentIndex,
+                        Inherited(parentField),
+                        parentField.isExtension
+                    )
                 }
             }
         }
@@ -232,7 +254,7 @@ fun HttpApiEntitiesById.buildFieldsByDtoId(): Map<TID, List<FieldDescriptor>> {
     return result
 }
 
-class FieldDescriptor(val field: HA_DtoField, val index: Int, var state: FieldState, val isExtension: Boolean) {
+class FieldDescriptor(val dtoField: HA_DtoField, val index: Int, var state: FieldState, val isExtension: Boolean) {
     fun override(field: HA_DtoField, index: Int): FieldDescriptor = when (val state = state) {
         OwnFinal -> {
             this.state = OwnOpen
@@ -244,7 +266,7 @@ class FieldDescriptor(val field: HA_DtoField, val index: Int, var state: FieldSt
     }
 }
 
-fun PropertySpec.Builder.addKDocAndDeprecation(field: HA_DtoField) = apply {
+fun PropertySpec.Builder.addKDocAndDeprecation(field: HA_Field) = apply {
     buildKDoc(field.description, field.experimental)?.let { addKdoc(it) }
     annotations.deprecation(field.deprecation)
 }
