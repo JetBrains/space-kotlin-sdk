@@ -80,9 +80,26 @@ Communication with Space is requires the Space organization URL and an access to
 
 Scope is a mechanism in OAuth 2.0 to limit an application's access to a user's account.
 
-When setting up the `SpaceClient` with the `SpaceAuth.ClientCredentials` or `SpaceAuth.RefreshToken` auth method, use the `scope` parameter to specify the scope required by an application.
+When setting up the `SpaceClient` with the `SpaceAuth.ClientCredentials` or `SpaceAuth.RefreshToken` auth method, or when creating a URL to request permissions from the user with `Space.authCodeSpaceUrl()`, use the `scope` parameter to specify the scope required by an application.
 
-> **Warning:** By default, the Space API client uses the `**` scope for `SpaceAuth.ClientCredentials`, which requests all available scopes. It is recommended to limit the scope to just those permissions that are needed by your application.
+Scopes can be defined the following way:
+```kotlin
+val scope = PermissionScope.build(
+    PermissionScopeElement(
+        context = GlobalPermissionContextIdentifier,
+        permission = PermissionIdentifier.ViewMemberProfiles
+    ),
+    PermissionScopeElement(
+        context = ProjectPermissionContextIdentifier(
+            project = ProjectIdentifier.Key("PROJ")
+        ),
+        permission = PermissionIdentifier.ViewIssues
+    )
+)
+```
+Alternatively, if you already have a scope string, you can use `PermissionScope.fromString(scopeString)`.
+
+> **Warning:** By default, the Space API client uses the `PermissionScope.All` scope for `SpaceAuth.ClientCredentials`, which requests all available scopes. It is recommended to limit the scope to just those permissions that are needed by your application.
 
 Examples of [available scopes](https://www.jetbrains.com/help/space/oauth-2-0-authorization.html) are available in the Space documentation.
 
@@ -132,7 +149,7 @@ val memberProfile = spaceClient.teamDirectory.profiles
             username()          //   and their username
             name {              //   and their name
                 firstName()     //     with firstName
-                lastName()      //     and firstName
+                lastName()      //     and lastName
             }
         }
     }
