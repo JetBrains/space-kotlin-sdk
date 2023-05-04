@@ -207,7 +207,10 @@ public sealed class Type<T> {
     public class EnumType<T : Enum<T>> @PublishedApi internal constructor(private val values: List<T>) : Type<T>() {
         override fun deserialize(context: DeserializationContext): T {
             val name = StringType.deserialize(context)
-            return values.first { it.name == name }
+            return values.firstOrNull { it.name == name } ?: throw DeserializationException.Minor(
+                "Unknown enum value '$name'.",
+                context.link
+            )
         }
 
         override fun serialize(value: T): JsonValue = jsonString(value.name)
