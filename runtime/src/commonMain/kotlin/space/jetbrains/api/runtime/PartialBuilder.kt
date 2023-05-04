@@ -23,8 +23,8 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
     internal abstract val hasAllDefault: Boolean
 
     public class Full(parent: Explicit) : PartialBuilder(parent) {
-        internal override val children: Nothing? get() = null
-        internal override val hasAllDefault: Boolean get() = true
+        override val children: Nothing? get() = null
+        override val hasAllDefault: Boolean get() = true
     }
 
     public class Recursive internal constructor(
@@ -32,8 +32,8 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
         private val sameAs: Explicit,
         parent: Explicit,
     ) : PartialBuilder(parent) {
-        internal override val children: Map<String, PartialBuilder> get() = sameAs.children
-        internal override val hasAllDefault: Boolean get() = sameAs.hasAllDefault
+        override val children: Map<String, PartialBuilder> get() = sameAs.children
+        override val hasAllDefault: Boolean get() = sameAs.hasAllDefault
     }
 
     public class Explicit(
@@ -41,8 +41,8 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
         parent: Explicit? = null,
     ) : PartialBuilder(parent) {
         private val _children: MutableMap<String, PartialBuilder> = mutableMapOf()
-        internal override val children: Map<String, PartialBuilder> get() = _children
-        internal override var hasAllDefault: Boolean = false
+        override val children: Map<String, PartialBuilder> get() = _children
+        override var hasAllDefault: Boolean = false
             private set
 
         public fun add(propertyName: String): Unit = merge(propertyName, Full(this))
@@ -94,7 +94,7 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
                 else -> "$query,*"
             }
 
-            /** Both [Batch] and [ContinuousExportBatch] have `data` field, other fields are different **/
+            /** Both [Batch] and [SyncBatch] have `data` field, other fields are different **/
             return if (isBatch) "*,data($queryWithDefault)" else queryWithDefault
         }
     }
