@@ -36,7 +36,7 @@ public interface SpaceAuth {
                 append("grant_type", "client_credentials")
                 append("scope", scope.toString())
             },
-            authHeaderValue = "Basic " + base64("${appInstance.clientId}:${appInstance.clientSecret}"),
+            authHeaderValue = appInstance.basicAuthHeaderValue(),
         )
     }) {
         @Deprecated(
@@ -58,7 +58,7 @@ public interface SpaceAuth {
                 append("refresh_token", value = refreshToken)
                 append("scope", value = scope.toString())
             },
-            authHeaderValue = "Basic " + base64("${appInstance.clientId}:${appInstance.clientSecret}"),
+            authHeaderValue = appInstance.basicAuthHeaderValue(),
         )
     }) {
         @Deprecated(

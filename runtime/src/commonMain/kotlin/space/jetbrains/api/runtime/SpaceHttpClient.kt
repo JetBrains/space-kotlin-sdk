@@ -199,43 +199,43 @@ private fun throwErrorOrReturnWhetherToRetry(
             ErrorCodes.INTERNAL_SERVER_ERROR -> InternalServerErrorException(errorDescription, response, functionName)
             else -> when (response.status) {
                 HttpStatusCode.BadRequest -> RequestException(
-                    HttpStatusCode.BadRequest.description,
+                    HttpStatusCode.BadRequest.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )
 
                 HttpStatusCode.Unauthorized -> AuthenticationRequiredException(
-                    HttpStatusCode.BadRequest.description,
+                    HttpStatusCode.BadRequest.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )
 
                 HttpStatusCode.Forbidden -> PermissionDeniedException(
-                    HttpStatusCode.Forbidden.description,
+                    HttpStatusCode.Forbidden.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )
 
                 HttpStatusCode.NotFound -> NotFoundException(
-                    HttpStatusCode.NotFound.description,
+                    HttpStatusCode.NotFound.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )
 
                 HttpStatusCode.TooManyRequests -> RateLimitedException(
-                    HttpStatusCode.TooManyRequests.description,
+                    HttpStatusCode.TooManyRequests.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )
 
                 HttpStatusCode.PayloadTooLarge -> PayloadTooLargeException(
-                    HttpStatusCode.PayloadTooLarge.description,
+                    HttpStatusCode.PayloadTooLarge.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )
 
                 HttpStatusCode.InternalServerError -> InternalServerErrorException(
-                    HttpStatusCode.InternalServerError.description,
+                    HttpStatusCode.InternalServerError.description + errorDescription?.let { ": $it" }.orEmpty(),
                     response,
                     functionName
                 )

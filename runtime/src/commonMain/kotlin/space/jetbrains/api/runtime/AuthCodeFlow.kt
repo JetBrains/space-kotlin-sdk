@@ -47,35 +47,46 @@ public object Space {
      * and for
      * [details on parameters](https://www.jetbrains.com/help/space/authorization-code.html#parameters).
      *
-     * @param scope is a space-separated list of rights required to access specific resources in Space.
-     * @param state An identifier for the current application state.
-     * The value will be passed the application after the authorization.
-     * @param redirectUri A URI in your application that can handle responses from Space. If it is not specified,
-     * the first redirect URI from application configuration in Space will be used.
-     * @param requestCredentials specifies in which cases the login form should be shown to the user.
+     * @param scope is a collection of permissions required to access specific resources in Space.
+     * @param state This value will be added as a parameter to redirectUri by Space.
+     * Your application should use this to identify and continue the authorization process.
+     * @param redirectUri Space redirects user to this URI after the authorization.
+     * Your application should handle the request and extract the auth code from parameters.
+     * @param requestCredentials specifies whether to show the authorization form to the user each time,
+     * even when the consent has already been given.
      * @param accessType indicates whether the application requires access to Space when the user is not online.
+     * Specify [OAuthAccessType.OFFLINE] if you need to receive a refresh token.
+     * @param codeVerifier if you'd like to use PKCE extension, pass a high-entropy cryptographic random string that
+     * uses the unreserved characters [A-Z] / [a-z] / [0-9] / "-" / "." / "_" / "~", with a minimum length of 43 characters and a maximum length of
+     * 128 characters. Can be generated using [Space.generateCodeVerifier].
+     *
+     * The proof key for code exchange (PKCE) is an additional protection code that further enhances the authorization
+     * flow. [Read more](https://www.jetbrains.com/help/space/authorization-code.html#basics).
      */
     public fun authCodeSpaceUrl(
         appInstance: SpaceAppInstance,
         scope: PermissionScope,
         state: String? = null,
-        redirectUri: String? = null,
+        redirectUri: String,
         requestCredentials: OAuthRequestCredentials? = null,
         accessType: OAuthAccessType = OAuthAccessType.ONLINE,
+        codeVerifier: String? = null,
     ): String = URLBuilder(appInstance.spaceServer.oauthAuthUrl).also {
-        it.parameters.append("response_type", "code")
-        if (state != null) {
-            it.parameters.append("state", state)
+        it.takeFrom(
+            authCodeSpaceUrl(
+                appInstance = appInstance,
+                scope = scope,
+                state = state,
+                redirectUri = redirectUri,
+                requestCredentials = requestCredentials,
+                accessType = accessType,
+            )
+        )
+        if (codeVerifier != null) {
+            val (codeChallenge, codeChallengeMethod) = codeChallenge(codeVerifier)
+            it.parameters.append("code_challenge_method", codeChallengeMethod.parameterValue)
+            it.parameters.append("code_challenge", codeChallenge)
         }
-        if (redirectUri != null) {
-            it.parameters.append("redirect_uri", redirectUri)
-        }
-        if (requestCredentials != null) {
-            it.parameters.append("request_credentials", requestCredentials.parameterValue)
-        }
-        it.parameters.append("client_id", appInstance.clientId)
-        it.parameters.append("scope", scope.toString())
-        it.parameters.append("access_type", accessType.parameterValue)
     }.build().toString()
 
     @Deprecated(
@@ -88,12 +99,11 @@ public object Space {
         appInstance: SpaceAppInstance,
         scope: String,
         state: String? = null,
-        redirectUri: String? = null,
+        redirectUri: String,
         requestCredentials: OAuthRequestCredentials? = null,
         accessType: OAuthAccessType = OAuthAccessType.ONLINE,
     ): String = authCodeSpaceUrl(appInstance, PermissionScope.fromString(scope), state, redirectUri, requestCredentials, accessType)
 
-    // TODO PKCE
     /**
      * Exchanges authorization code for an access token. This can be performed only once per each code.
      * See Space documentation on
@@ -104,23 +114,32 @@ public object Space {
      * See Space documentation on
      * [Refresh Token Flow](https://www.jetbrains.com/help/space/refresh-token.html).
      *
-     * If [redirectUri] is missing, the first redirect URI from application configuration in Space will be used.
+     * If you use PKCE extension, and `codeVerifier` was specified during authorization code request
+     * (in [authCodeSpaceUrl]), [codeVerifier] parameter of this function must have the same value.
+     *
+     * The proof key for code exchange (PKCE) is an additional protection code that further enhances the authorization
+     * flow. [Read more](https://www.jetbrains.com/help/space/authorization-code.html#basics).
      */
     public suspend fun exchangeAuthCodeForToken(
         ktorClient: HttpClient,
         appInstance: SpaceAppInstance,
         authCode: String,
-        redirectUri: String? = null
+        redirectUri: String,
+        codeVerifier: String? = null,
     ): SpaceTokenInfo = auth(
         ktorClient = ktorClient,
         url = appInstance.spaceServer.oauthTokenUrl,
         methodBody = Parameters.build {
             append("grant_type", "authorization_code")
             append("code", authCode)
-            if (redirectUri != null) {
-                append("redirect_uri", redirectUri)
+            append("redirect_uri", redirectUri)
+            if (codeVerifier != null) {
+                append("code_verifier", codeVerifier)
             }
         },
-        authHeaderValue = "Basic " + base64("${appInstance.clientId}:${appInstance.clientSecret}")
+        authHeaderValue = appInstance.basicAuthHeaderValue()
     )
+
+    /** Generates `codeVerifier` for use in [authCodeSpaceUrl] and, subsequently, in [exchangeAuthCodeForToken] */
+    public fun generateCodeVerifier(): String = base64UrlSafe(secureRandomBytes(32))
 }
