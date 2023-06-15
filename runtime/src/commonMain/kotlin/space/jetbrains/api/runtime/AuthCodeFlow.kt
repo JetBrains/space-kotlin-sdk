@@ -72,16 +72,17 @@ public object Space {
         accessType: OAuthAccessType = OAuthAccessType.ONLINE,
         codeVerifier: String? = null,
     ): String = URLBuilder(appInstance.spaceServer.oauthAuthUrl).also {
-        it.takeFrom(
-            authCodeSpaceUrl(
-                appInstance = appInstance,
-                scope = scope,
-                state = state,
-                redirectUri = redirectUri,
-                requestCredentials = requestCredentials,
-                accessType = accessType,
-            )
-        )
+        it.parameters.append("response_type", "code")
+        if (state != null) {
+            it.parameters.append("state", state)
+        }
+        it.parameters.append("redirect_uri", redirectUri)
+        if (requestCredentials != null) {
+            it.parameters.append("request_credentials", requestCredentials.parameterValue)
+        }
+        it.parameters.append("client_id", appInstance.clientId)
+        it.parameters.append("scope", scope.toString())
+        it.parameters.append("access_type", accessType.parameterValue)
         if (codeVerifier != null) {
             val (codeChallenge, codeChallengeMethod) = codeChallenge(codeVerifier)
             it.parameters.append("code_challenge_method", codeChallengeMethod.parameterValue)
