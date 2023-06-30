@@ -167,6 +167,7 @@ private fun dtoDeclaration(
 
     typeBuilder.annotationSpecs.deprecation(dto.deprecation)
     typeBuilder.annotationSpecs.experimental(dto.experimental)
+    typeBuilder.annotationSpecs.featureFlag(dto.featureFlag, model)
 
     dto.directlyNestedClasses(model).forEach {
         typeBuilder.addType(dtoDeclaration(it, model, fieldDescriptorsByDtoId))

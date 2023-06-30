@@ -9,7 +9,7 @@ const val TYPES_PACKAGE = "$ROOT_PACKAGE.types"
 const val RESOURCES_PACKAGE = "$ROOT_PACKAGE.resources"
 const val STRUCTURES_PACKAGE = "$TYPES_PACKAGE.structure"
 const val PARTIALS_PACKAGE = "$TYPES_PACKAGE.partials"
-const val MENU_PACKAGE = "$ROOT_PACKAGE.menu"
+const val FF_PACKAGE = "$ROOT_PACKAGE.featureFlags"
 
 private val localDateType = ClassName("kotlinx.datetime", "LocalDate")
 private val instantType = ClassName("kotlinx.datetime", "Instant")
@@ -168,6 +168,12 @@ fun MutableList<AnnotationSpec>.experimental(experimental: HA_Experimental?) {
             .apply { experimental.message?.let { addMember("%S", it) } }
             .build()
     }
+}
+
+fun MutableList<AnnotationSpec>.featureFlag(featureFlag: String?, model: HttpApiEntitiesById) {
+    if (featureFlag == null) return
+    val featureFlagAnnotation = model.featureFlags[featureFlag]?.annotationClassName() ?: return
+    this += AnnotationSpec.builder(featureFlagAnnotation).build()
 }
 
 private inline fun String.splitByPredicate(predicate: (Char) -> Boolean): List<String> {

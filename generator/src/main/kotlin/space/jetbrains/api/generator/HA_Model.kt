@@ -13,7 +13,7 @@ class HA_Model(
     val enums: List<HA_Enum>,
     val urlParams: List<HA_UrlParameter>,
     val resources: List<HA_Resource>,
-    val menuIds: List<HA_MenuId>,
+    val featureFlags: List<HA_FeatureFlag>,
 )
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
@@ -67,7 +67,8 @@ class HA_Endpoint(
     val functionName: String,
     val description: HA_Description? = null,
     val deprecation: HA_Deprecation? = null,
-    val experimental: HA_Experimental? = null
+    val experimental: HA_Experimental? = null,
+    val featureFlag: String?,
 )
 
 class HA_Parameter(
@@ -180,9 +181,6 @@ class HA_DtoField(val field: HA_Field, val extension: Boolean)
 
 val HA_DtoField.name get() = field.name
 val HA_DtoField.type get() = field.type
-val HA_DtoField.description get() = field.description
-val HA_DtoField.deprecation get() = field.deprecation
-val HA_DtoField.experimental get() = field.experimental
 val HA_DtoField.requiresOption get() = field.requiresOption
 
 class HA_Dto(
@@ -196,7 +194,8 @@ class HA_Dto(
     val description: HA_Description?,
     val deprecation: HA_Deprecation?,
     val experimental: HA_Experimental?,
-    val record: Boolean
+    val record: Boolean,
+    val featureFlag: String?,
 ) {
     data class Ref(val id: TID)
 }
@@ -240,13 +239,15 @@ sealed class HA_UrlParameterOption {
     abstract val description: HA_Description?
     abstract val deprecation: HA_Deprecation?
     abstract val experimental: HA_Experimental?
+    abstract val featureFlag: String?
 
     class Const(
         val value: String,
         override val optionName: String,
         override val description: HA_Description?,
         override val deprecation: HA_Deprecation?,
-        override val experimental: HA_Experimental?
+        override val experimental: HA_Experimental?,
+        override val featureFlag: String?,
     ) : HA_UrlParameterOption()
 
     class Var(
@@ -255,8 +256,9 @@ sealed class HA_UrlParameterOption {
         override val optionName: String,
         override val description: HA_Description?,
         override val deprecation: HA_Deprecation?,
-        override val experimental: HA_Experimental?
+        override val experimental: HA_Experimental?,
+        override val featureFlag: String?,
     ) : HA_UrlParameterOption()
 }
 
-data class HA_MenuId(val menuId: String, val context: HA_Dto.Ref)
+data class HA_FeatureFlag(val name: String, val displayName: String)

@@ -27,14 +27,14 @@ class HttpApiEntitiesById private constructor(
     val enums: Map<TID, HA_Enum>,
     val urlParams: Map<TID, HA_UrlParameter>,
     val resources: Map<TID, HA_Resource>,
-    val menuIds: List<HA_MenuId>,
+    val featureFlags: Map<String, HA_FeatureFlag>,
 ) {
     constructor(model: HA_Model) : this(
         dtoAndUrlParams = model.dto.associateBy { it.id } + model.urlParams.flatMap { it.toDtos() },
         enums = model.enums.associateBy { it.id },
         urlParams = model.urlParams.associateBy { it.id },
         resources = model.resources.asSequence().flatMap { dfs(it, HA_Resource::nestedResources) }.associateBy { it.id },
-        menuIds = model.menuIds
+        featureFlags = model.featureFlags.associateBy { it.name }
     )
 }
 
@@ -55,7 +55,8 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
             description = option.description,
             deprecation = option.deprecation,
             experimental = option.experimental,
-            record = false
+            record = false,
+            featureFlag = option.featureFlag,
         )
     } + (id to HA_Dto(
         id = id,
@@ -68,7 +69,8 @@ private fun HA_UrlParameter.toDtos(): Iterable<Pair<TID, HA_Dto>> {
         description = null,
         deprecation = deprecation,
         experimental = experimental,
-        record = false
+        record = false,
+        featureFlag = null,
     ))
 }
 
@@ -96,10 +98,10 @@ fun main(vararg args: String) {
     val generatedStructures = generateStructures(model)
     Log.info { "Generating partials for SDK" }
     val generatedPartials = generatePartials(model)
-    Log.info { "Generating menu IDs for SDK" }
-    val generatedMenuIds = generateMenuIds(model)
+    Log.info { "Generating feature flags for SDK" }
+    val generatedFeatureFlags = generateFeatureFlags(model)
 
-    (generatedTypes + generatedResources + generatedStructures + generatedPartials + generatedMenuIds).forEach {
+    (generatedTypes + generatedResources + generatedStructures + generatedPartials + generatedFeatureFlags).forEach {
         it.writeTo(out)
     }
 }

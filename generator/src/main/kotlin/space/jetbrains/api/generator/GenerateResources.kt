@@ -79,6 +79,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                         kDoc.takeUnless { it.isBlank() }?.let { funcBuilder.addKdoc(it) }
                         funcBuilder.annotations.deprecation(endpoint.deprecation)
                         funcBuilder.annotations.experimental(endpoint.experimental)
+                        funcBuilder.annotations.featureFlag(endpoint.featureFlag, model)
                         funcBuilder.addModifiers(KModifier.SUSPEND)
                         funcBuilder.addParameters(funcParams.map { it.first })
                         if (returnType != null) funcBuilder.returns(returnType)
