@@ -137,8 +137,11 @@ public object Space {
             if (codeVerifier != null) {
                 append("code_verifier", codeVerifier)
             }
+            if (appInstance.clientSecretOrNull == null) {
+                append("client_id", appInstance.clientId)
+            }
         },
-        authHeaderValue = appInstance.basicAuthHeaderValue()
+        authHeaderValue = appInstance.basicAuthHeaderValue(),
     )
 
     /** Generates `codeVerifier` for use in [authCodeSpaceUrl] and, subsequently, in [exchangeAuthCodeForToken] */

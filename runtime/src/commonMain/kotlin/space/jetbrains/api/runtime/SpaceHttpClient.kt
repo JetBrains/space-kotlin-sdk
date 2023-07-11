@@ -140,7 +140,7 @@ internal suspend fun auth(
     ktorClient: HttpClient,
     url: String,
     methodBody: Parameters,
-    authHeaderValue: String
+    authHeaderValue: String?,
 ): SpaceTokenInfo {
     val httpMethod = HttpMethod.Post
     val response = ktorClient.request(url) {

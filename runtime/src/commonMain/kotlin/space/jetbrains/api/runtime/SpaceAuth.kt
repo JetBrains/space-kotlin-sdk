@@ -36,7 +36,10 @@ public interface SpaceAuth {
                 append("grant_type", "client_credentials")
                 append("scope", scope.toString())
             },
-            authHeaderValue = appInstance.basicAuthHeaderValue(),
+            authHeaderValue = appInstance.basicAuthHeaderValue() ?: error(
+                "${SpaceAuth::class.simpleName}.${ClientCredentials::class.simpleName} requires credentials " +
+                    "to be defined in ${SpaceAppInstance::class.simpleName}"
+            ),
         )
     }) {
         @Deprecated(
@@ -48,7 +51,7 @@ public interface SpaceAuth {
 
     public class RefreshToken(
         refreshToken: String,
-        scope: PermissionScope,
+        scope: PermissionScope? = null,
     ) : SpaceAuth by expiringTokenSourceAuth(getToken = { spaceClient, appInstance ->
         auth(
             ktorClient = spaceClient,
@@ -56,7 +59,12 @@ public interface SpaceAuth {
             methodBody = Parameters.build {
                 append("grant_type", "refresh_token")
                 append("refresh_token", value = refreshToken)
-                append("scope", value = scope.toString())
+                if (scope != null) {
+                    append("scope", value = scope.toString())
+                }
+                if (appInstance.clientSecretOrNull == null) {
+                    append("client_id", appInstance.clientId)
+                }
             },
             authHeaderValue = appInstance.basicAuthHeaderValue(),
         )
