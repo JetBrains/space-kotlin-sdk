@@ -19,7 +19,7 @@ fun generateFeatureFlags(model: HttpApiEntitiesById): FileSpec {
                             "would like to enable the feature for your organization.",
                     )
                     reqOptIn.addMember(
-                        format = "%T.${RequiresOptIn.Level.WARNING.name}",
+                        format = "%T.${RequiresOptIn.Level.ERROR.name}",
                         RequiresOptIn.Level::class,
                     )
                 }.build())
