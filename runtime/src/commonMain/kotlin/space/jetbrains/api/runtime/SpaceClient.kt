@@ -39,7 +39,7 @@ public class SpaceClient private constructor(
     public constructor(
         ktorClient: HttpClient,
         appInstance: SpaceAppInstance,
-        auth: SpaceAuth,
+        auth: SpaceAuth = SpaceAuth.ClientCredentials(),
     ) : this(ktorClient, appInstance, auth, manageKtorClient = false)
 
 
