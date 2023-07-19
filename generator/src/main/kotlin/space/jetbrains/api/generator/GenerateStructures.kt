@@ -84,6 +84,14 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     .build()
             )
 
+            addAnnotation(
+                AnnotationSpec.builder(ClassName("kotlin", "OptIn")).also { ann ->
+                    model.featureFlags.values.forEach {
+                        ann.addMember("%T::class", it.annotationClassName())
+                    }
+                }.build()
+            )
+
             root.subclasses(model).forEach { dto ->
                 val dtoClassName = dto.getClassName()
                 val dtoStructureClassName = dtoClassName.getStructureClassName()

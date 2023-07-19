@@ -34,6 +34,13 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
         Log.info { "Generating file with DTO classes for '${root.name}' and its subclasses" }
         FileSpec.builder(rootClassName.packageName, rootClassName.simpleNames.joinToString("")).also { fileBuilder ->
             fileBuilder.indent(INDENT)
+            fileBuilder.addAnnotation(
+                AnnotationSpec.builder(ClassName("kotlin", "OptIn")).also { ann ->
+                    model.featureFlags.values.forEach {
+                        ann.addMember("%T::class", it.annotationClassName())
+                    }
+                }.build()
+            )
 
             fileBuilder.addImport(ROOT_PACKAGE, "getValue")
 
@@ -45,6 +52,14 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
         val enumClassName = enumType.name.kotlinClassNameJoined()
 
         FileSpec.builder(TYPES_PACKAGE, enumClassName).apply {
+            addAnnotation(
+                AnnotationSpec.builder(ClassName("kotlin", "OptIn")).also { ann ->
+                    model.featureFlags.values.forEach {
+                        ann.addMember("%T::class", it.annotationClassName())
+                    }
+                }.build()
+            )
+
             addType(TypeSpec.enumBuilder(enumClassName).apply {
                 enumType.values.forEach {
                     addEnumConstant(it)

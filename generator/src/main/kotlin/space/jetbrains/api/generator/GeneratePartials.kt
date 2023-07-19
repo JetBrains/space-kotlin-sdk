@@ -28,6 +28,14 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                     .build()
             )
 
+            file.addAnnotation(
+                AnnotationSpec.builder(ClassName("kotlin", "OptIn")).also { ann ->
+                    model.featureFlags.values.forEach {
+                        ann.addMember("%T::class", it.annotationClassName())
+                    }
+                }.build()
+            )
+
             root.subclasses(model).forEach { dto ->
                 val dtoClassName = dto.getClassName()
                 val dtoPartialClassName = dtoClassName.dtoToPartialInterface()
@@ -211,7 +219,7 @@ fun CodeBlock.Builder.partialImplConstructor(partialInterfaceOrNothing: TypeName
 
         is ParameterizedTypeName -> {
             val impl = partialInterfaceOrNothing.rawType.partialInterfaceToImpl()
-            add("%T(\n", impl.parameterizedBy(partialInterfaceOrNothing.typeArguments))
+            add("%T(\n", impl)
             indent()
             partialInterfaceOrNothing.typeArguments.forEach {
                 add("{ ")

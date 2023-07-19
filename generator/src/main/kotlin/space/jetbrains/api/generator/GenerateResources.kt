@@ -19,6 +19,20 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
         FileSpec.builder(className.packageName, className.simpleName).also { fileBuilder ->
             fileBuilder.indent(INDENT)
 
+            fileBuilder.addAnnotation(
+                AnnotationSpec.builder(Suppress::class)
+                    .addMember("%S", "UNUSED_VARIABLE")
+                    .build()
+            )
+
+            fileBuilder.addAnnotation(
+                AnnotationSpec.builder(ClassName("kotlin", "OptIn")).also { ann ->
+                    model.featureFlags.values.forEach {
+                        ann.addMember("%T::class", it.annotationClassName())
+                    }
+                }.build()
+            )
+
             if (displayPath.size == 1) { // top-level resource
                 fileBuilder.addProperty(
                     PropertySpec.builder(resourceGroup.first().displayPlural.displayNameToMemberName(), className)
