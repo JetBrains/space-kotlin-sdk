@@ -105,7 +105,9 @@ internal suspend fun callSpaceApi(
 
 
         requestBody?.let {
-            setBody(TextContent(it.print(), ContentType.Application.Json))
+            val bodyText = it.print()
+            log.trace { "Request to Space: $functionName (${callMethod.value} request to ${url.buildString()}):\n$bodyText" }
+            setBody(TextContent(bodyText, ContentType.Application.Json))
         }
 
         requestHeaders?.forEach {
@@ -125,7 +127,7 @@ internal suspend fun callSpaceApi(
         val (retry, content) = withPreservedStacktrace("exception during Space API call: $functionName") {
             val response = ktorClient.request(request)
             val responseText = response.bodyAsText()
-            log.trace { "Response for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText" }
+            log.trace { "Response from Space for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText" }
             val content = responseText.let(::parseJson)
             throwErrorOrReturnWhetherToRetry(response, content, functionName) to content
         }
