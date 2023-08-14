@@ -1,17 +1,21 @@
+@file:Suppress("PrivatePropertyName")
+
 package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
 public class Mod<out T : Any>(old: PropertyValue<T?>, new: PropertyValue<T?>) {
-    public val old: T? by old
-    public val new: T? by new
+    private val __old: PropertyValue<T?> = old
+    public val old: T? get() = __old.getValue("old")
+    private val __new: PropertyValue<T?> = new
+    public val new: T? get() = __new.getValue("new")
 
     public constructor(old: T?, new: T?) : this(Value(old), Value(new))
 }
 
 public class ModStructure<T : Any>(type: Type<T>) : TypeStructure<Mod<T>>(isRecord = false) {
-    private val old: Property<T?> by property(type).nullable()
-    private val new: Property<T?> by property(type).nullable()
+    private val old: Property<T?> = property(type).nullable().toProperty("old")
+    private val new: Property<T?> = property(type).nullable().toProperty("new")
 
     override fun deserialize(context: DeserializationContext): Mod<T> = Mod(
         old.deserialize(context),

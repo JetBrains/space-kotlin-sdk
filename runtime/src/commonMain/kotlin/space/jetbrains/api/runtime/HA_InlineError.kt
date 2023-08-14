@@ -1,4 +1,4 @@
-@file:Suppress("ClassName")
+@file:Suppress("ClassName", "PrivatePropertyName")
 
 package space.jetbrains.api.runtime
 
@@ -7,16 +7,18 @@ public abstract class HA_InlineError {
         fields: PropertyValue<List<String>>,
         message: PropertyValue<String>,
     ) : HA_InlineError() {
-        public val fields: List<String> by fields
-        public val message: String by message
+        private val __fields: PropertyValue<List<String>> = fields
+        public val fields: List<String> get() = __fields.getValue("fields")
+        private val __message: PropertyValue<String> = message
+        public val message: String get() = __message.getValue("message")
     }
 }
 
 public object HA_InlineErrorInaccessibleFieldsStructure : TypeStructure<HA_InlineError.InaccessibleFields>(
     isRecord = false
 ) {
-    private val fields: Property<List<String>> by list(string())
-    private val message: Property<String> by string()
+    private val fields: Property<List<String>> = list(string()).toProperty("fields")
+    private val message: Property<String> = string().toProperty("message")
 
     override fun deserialize(context: DeserializationContext): HA_InlineError.InaccessibleFields {
         return HA_InlineError.InaccessibleFields(

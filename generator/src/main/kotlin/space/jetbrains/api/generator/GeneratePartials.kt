@@ -10,8 +10,9 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
     val childFieldsById = getChildFields(model)
     val fieldsRequiringJvmName = fieldsRequiringJvmName(model, childFieldsById)
 
-    return model.dtoAndUrlParams.values.mapNotNull { root ->
-        if (root.extends != null) return@mapNotNull null
+    val notInputOnlyDtos = model.dtoAndUrlParams.keys - findInputOnlyDtoIds(model)
+    return notInputOnlyDtos.map { model.dtoAndUrlParams.getValue(it) }.mapNotNull { root ->
+        if (root.extends != null && root.extends.id in notInputOnlyDtos) return@mapNotNull null
 
         val rootClassName = root.getClassName()
         if (rootClassName == batchInfoType) return@mapNotNull null
@@ -85,7 +86,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                     fieldName: String,
                     buildPartialParameter: ParameterSpec,
                     partialInterface: TypeName,
-                    batch: Boolean
+                    batch: Boolean,
                 ) {
                     if (fieldName in requiringJvmName) {
                         impl.addJvmName(fieldName, partialInterface)
@@ -94,12 +95,9 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                     impl.addParameter(buildPartialParameter)
 
                     impl.addCode(buildCodeBlock {
-                        add("builder.add(%S, {\n", fieldName)
-                        indent()
-                        partialImplConstructor(partialInterface, "it")
-                        add("\n")
-                        unindent()
-                        add("}, build")
+                        add("builder.add(%S, ", fieldName)
+                        partialImplConstructorLambda(partialInterface)
+                        add(", build")
                         if (batch) {
                             add(", isBatch = true")
                         }
@@ -208,10 +206,84 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
     }
 }
 
+private fun findInputOnlyDtoIds(model: HttpApiEntitiesById): Set<String> {
+    val visitedIds = mutableSetOf<String>()
+    fun traverseType(type: HA_Type) {
+        fun traverseDto(dto: HA_Dto) {
+            if (!visitedIds.add(dto.id)) return
+            dto.fields.forEach {
+                traverseType(it.type)
+            }
+            dto.inheritors.forEach {
+                traverseDto(model.resolveDto(it))
+            }
+        }
+        when (type) {
+            is HA_Type.Array -> traverseType(type.elementType)
+            is HA_Type.Dto -> traverseDto(model.resolveDto(type))
+            is HA_Type.Map -> traverseType(type.valueType)
+            is HA_Type.Object -> type.fields.forEach { traverseType(it.type) }
+            is HA_Type.Enum, is HA_Type.Primitive -> {}
+            is HA_Type.Ref -> traverseDto(model.resolveDto(type))
+            is HA_Type.UrlParam -> traverseDto(model.resolveUrlParam(type))
+        }
+    }
+
+    model.resources.values.asSequence()
+        .flatMap { it.endpoints.asSequence() }
+        .forEach { endpoint -> endpoint.responseBody?.let { traverseType(it) } }
+
+    // at this point visitedIds contains DTOs used in outputs
+    val outputDtos = visitedIds.toSet()
+
+    model.resources.values.asSequence()
+        .flatMap { it.endpoints.asSequence() }
+        .forEach { endpoint ->
+            endpoint.parameters.forEach { traverseType(it.field.type) }
+            endpoint.requestBody?.let { traverseType(it) }
+        }
+
+    // at this point visitedIds contains both DTOs used in inputs and in outputs
+    // notInputOrOutputDtos contains DTOs not used in endpoints at all, most notably - ApplicationPayload
+    // these exceptions will need to have generated partials, as those can be customized for webhook payload
+    val notInputOrOutputDtos = model.dtoAndUrlParams.keys - visitedIds
+    visitedIds.clear()
+
+    notInputOrOutputDtos.forEach {
+        traverseType(HA_Type.Dto(HA_Dto.Ref(it), false, emptyList()))
+    }
+
+    // at this point visitedIds contains notInputOrOutputDtos and everything that these DTOs depend on
+    // they don't need to be considered "input-only" for the reason above
+    return model.dtoAndUrlParams.keys - outputDtos - visitedIds
+}
+
+private fun CodeBlock.Builder.partialImplConstructorLambda(partialInterfaceOrNothing: TypeName, newlines: Boolean = true) {
+    if (partialInterfaceOrNothing == NOTHING) {
+        add("%T.throwPrimitivesAndEnumsError", partialImplType)
+        return
+    }
+    add("{")
+    if (newlines) {
+        add("\n")
+        indent()
+    } else {
+        add(" ")
+    }
+    partialImplConstructor(partialInterfaceOrNothing, "it")
+    if (newlines) {
+        add("\n")
+        unindent()
+    } else {
+        add(" ")
+    }
+    add("}")
+}
+
 fun CodeBlock.Builder.partialImplConstructor(partialInterfaceOrNothing: TypeName, partialBuilderVar: String) {
     return when (partialInterfaceOrNothing) {
         NOTHING -> {
-            add("throw %T(%S)", ClassName("kotlin", IllegalArgumentException::class.simpleName!!), "Primitives and enums do not have partials")
+            add("%T.throwPrimitivesAndEnumsError()", partialImplType)
         }
         is ClassName -> {
             add("%T($partialBuilderVar)", partialInterfaceOrNothing.partialInterfaceToImpl())
@@ -222,9 +294,8 @@ fun CodeBlock.Builder.partialImplConstructor(partialInterfaceOrNothing: TypeName
             add("%T(\n", impl)
             indent()
             partialInterfaceOrNothing.typeArguments.forEach {
-                add("{ ")
-                partialImplConstructor(it, "it")
-                add(" },\n")
+                partialImplConstructorLambda(it, newlines = false)
+                add(",\n")
             }
             add("$partialBuilderVar\n")
             unindent()
@@ -240,9 +311,7 @@ fun CodeBlock.Builder.partialImplConstructor(partialInterfaceOrNothing: TypeName
 
 
 fun HA_Type.partialToPartialInterface(model: HttpApiEntitiesById): TypeName {
-    fun TypeName?.orNothing(): TypeName = this ?: NOTHING
-
-    fun HA_Type.recurse() = partial().partial?.partialToPartialInterface(model).orNothing()
+    fun HA_Type.recurse() = partial().partial?.partialToPartialInterface(model) ?: NOTHING
 
     return when (this) {
         is HA_Type.Primitive, is HA_Type.Enum, is HA_Type.Array, is HA_Type.Map -> error("Such partials should not be returned")

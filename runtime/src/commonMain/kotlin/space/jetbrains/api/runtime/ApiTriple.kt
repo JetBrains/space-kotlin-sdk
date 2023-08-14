@@ -1,11 +1,16 @@
+@file:Suppress("PrivatePropertyName")
+
 package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
 public class ApiTriple<out A, out B, out C>(first: PropertyValue<A>, second: PropertyValue<B>, third: PropertyValue<C>) {
-    public val first: A by first
-    public val second: B by second
-    public val third: C by third
+    private val __first: PropertyValue<A> = first
+    public val first: A get() = __first.getValue("first")
+    private val __second: PropertyValue<B> = second
+    public val second: B get() = __second.getValue("second")
+    private val __third: PropertyValue<C> = third
+    public val third: C get() = __third.getValue("third")
 
     public constructor(first: A, second: B, third: C) : this(
         Value(first),
@@ -20,9 +25,9 @@ public fun <A, B, C> Triple<A, B, C>.toApiTriple(): ApiTriple<A, B, C> = ApiTrip
 
 public class ApiTripleStructure<A, B, C>(typeA: Type<A>, typeB: Type<B>, typeC: Type<C>) :
     TypeStructure<ApiTriple<A, B, C>>(isRecord = false) {
-    private val first: Property<A> by property(typeA)
-    private val second: Property<B> by property(typeB)
-    private val third: Property<C> by property(typeC)
+    private val first: Property<A> = property(typeA).toProperty("first")
+    private val second: Property<B> = property(typeB).toProperty("second")
+    private val third: Property<C> = property(typeC).toProperty("third")
 
     override fun deserialize(context: DeserializationContext): ApiTriple<A, B, C> = ApiTriple(
         first.deserialize(context),

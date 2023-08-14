@@ -1,7 +1,7 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.KModifier.OVERRIDE
+import com.squareup.kotlinpoet.KModifier.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import space.jetbrains.api.generator.FieldState.*
 import space.jetbrains.api.generator.HierarchyRole2.*
@@ -79,12 +79,12 @@ private fun dtoDeclaration(
     Log.info { "Generating DTO class for '${dto.name}'" }
     val dtoClassName = dto.getClassName()
     val typeBuilder = when (dto.hierarchyRole2) {
-        SEALED_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.SEALED)
-        OPEN_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.OPEN)
+        SEALED_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(SEALED)
+        OPEN_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(OPEN)
         FINAL_CLASS -> if (dto.isObject) TypeSpec.objectBuilder(dtoClassName) else TypeSpec.classBuilder(dtoClassName)
-        ABSTRACT_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(KModifier.ABSTRACT)
+        ABSTRACT_CLASS -> TypeSpec.classBuilder(dtoClassName).addModifiers(ABSTRACT)
         INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName)
-        SEALED_INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName).addModifiers(KModifier.SEALED)
+        SEALED_INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName).addModifiers(SEALED)
     }
 
     dto.superclass(model)?.let {
@@ -133,21 +133,37 @@ private fun dtoDeclaration(
 
         when (val fieldsState = fieldDescriptor.state) {
             OwnFinal -> {
+                val backingPropName = "__${field.name}"
                 typeBuilder.addProperty(
-                    PropertySpec.builder(field.name, kotlinPoetType)
-                        .delegate(field.name)
-                        .addKDocAndDeprecation(field)
+                    PropertySpec.builder(backingPropName, propertyValueType.parameterizedBy(kotlinPoetType), PRIVATE)
+                        .initializer(field.name)
                         .build()
                 )
-
-            }
-            OwnOpen -> {
                 typeBuilder.addProperty(
                     PropertySpec.builder(field.name, kotlinPoetType)
-                        .delegate(field.name)
-                        .addModifiers(KModifier.OPEN)
                         .addKDocAndDeprecation(field)
+                        .getter(
+                            FunSpec.getterBuilder()
+                                .addCode("return $backingPropName.getValue(%S)", field.name)
+                                .build()
+                        ).build()
+                )
+            }
+            OwnOpen -> {
+                val backingPropName = "__${field.name}"
+                typeBuilder.addProperty(
+                    PropertySpec.builder(backingPropName, propertyValueType.parameterizedBy(kotlinPoetType), PRIVATE)
+                        .initializer(field.name)
                         .build()
+                )
+                typeBuilder.addProperty(
+                    PropertySpec.builder(field.name, kotlinPoetType, OPEN)
+                        .addKDocAndDeprecation(field)
+                        .getter(
+                            FunSpec.getterBuilder()
+                                .addCode("return __$backingPropName.getValue(%S)", field.name)
+                                .build()
+                        ).build()
                 )
             }
             is Inherited -> {
@@ -156,12 +172,20 @@ private fun dtoDeclaration(
             }
             is Overrides -> {
                 superclassConstructorArgs[fieldsState.field.index] = field.name
+                val backingPropName = "__${field.name}"
                 typeBuilder.addProperty(
-                    PropertySpec.builder(field.name, kotlinPoetType)
-                        .delegate(field.name)
-                        .addModifiers(OVERRIDE)
-                        .addKDocAndDeprecation(field)
+                    PropertySpec.builder(backingPropName, propertyValueType.parameterizedBy(kotlinPoetType), PRIVATE)
+                        .initializer(field.name)
                         .build()
+                )
+                typeBuilder.addProperty(
+                    PropertySpec.builder(field.name, kotlinPoetType, OVERRIDE)
+                        .addKDocAndDeprecation(field)
+                        .getter(
+                            FunSpec.getterBuilder()
+                                .addCode("return $backingPropName.getValue(%S)", field.name)
+                                .build()
+                        ).build()
                 )
             }
         }.let {}
@@ -189,7 +213,7 @@ private fun dtoDeclaration(
     }
 
     if (dto.id in model.urlParams) {
-        typeBuilder.addProperty(PropertySpec.builder("compactId", STRING, KModifier.ABSTRACT).build())
+        typeBuilder.addProperty(PropertySpec.builder("compactId", STRING, ABSTRACT).build())
     }
 
     if (dto.extends?.id != null && dto.extends.id in model.urlParams) {

@@ -3,9 +3,6 @@ package space.jetbrains.api.runtime
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlin.js.JsName
-import kotlin.properties.PropertyDelegateProvider
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 import kotlin.time.Duration
 
 public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
@@ -166,18 +163,14 @@ public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
         internal val type: Type<T>,
         internal val isExtension: Boolean,
         private val isOuterRecord: Boolean,
-    ) : PropertyDelegateProvider<TypeStructure<*>, ReadOnlyProperty<TypeStructure<*>, Property<T>>> {
-        public override operator fun provideDelegate(
-            thisRef: TypeStructure<*>,
-            property: KProperty<*>,
-        ): ReadOnlyProperty<TypeStructure<*>, Property<T>> {
+    ) {
+        public fun toProperty(name: String): Property<T> {
             val inclusionStrategy = when {
                 isExtension -> InclusionStrategy.ONLY_EXPLICIT
-                isOuterRecord && property.name == "id" -> InclusionStrategy.ONLY_EXPLICIT_OR_PARENT_EXPLICIT
+                isOuterRecord && name == "id" -> InclusionStrategy.ONLY_EXPLICIT_OR_PARENT_EXPLICIT
                 else -> InclusionStrategy.PARENT
             }
-            val prop = Property(property.name, type, inclusionStrategy)
-            return ReadOnlyProperty { _, _ -> prop }
+            return Property(name, type, inclusionStrategy)
         }
     }
 }

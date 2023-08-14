@@ -1,5 +1,7 @@
 package space.jetbrains.api.runtime
 
+import kotlin.js.JsName
+
 @DslMarker
 private annotation class PartialQueryDsl
 
@@ -13,8 +15,17 @@ public abstract class PartialImpl(protected val builder: PartialBuilder.Explicit
         builder.addDefault()
     }
 
-    protected companion object {
+    public companion object {
         public fun getPartialBuilder(partial: Partial): PartialBuilder.Explicit = (partial as PartialImpl).builder
+
+        @JsName("throwPrimitivesAndEnumsError_lambda")
+        public val throwPrimitivesAndEnumsError: (PartialBuilder.Explicit) -> Nothing = {
+            throwPrimitivesAndEnumsError()
+        }
+
+        public fun throwPrimitivesAndEnumsError(): Nothing {
+            throw IllegalArgumentException("Primitives and enums do not have partials")
+        }
     }
 }
 
@@ -47,10 +58,10 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
 
         public fun add(propertyName: String): Unit = merge(propertyName, Full(this))
 
-        public fun add(propertyName: String, buildPartial: (Explicit) -> Unit, isBatch: Boolean = false): Unit =
+        public inline fun add(propertyName: String, buildPartial: (Explicit) -> Unit, isBatch: Boolean = false): Unit =
             merge(propertyName, Explicit(isBatch, this).also(buildPartial))
 
-        public fun <T : Partial> add(
+        public inline fun <T : Partial> add(
             propertyName: String,
             providePartial: (Explicit) -> T,
             buildPartial: T.() -> Unit,
@@ -66,7 +77,8 @@ public sealed class PartialBuilder(private val parent: Explicit?) {
             hasAllDefault = true
         }
 
-        private fun merge(name: String, partial: PartialBuilder) {
+        @PublishedApi
+        internal fun merge(name: String, partial: PartialBuilder) {
             when (val old = _children[name]) {
                 null, is Full -> _children[name] = partial
                 is Recursive -> error("Recursive partials cannot be merged")

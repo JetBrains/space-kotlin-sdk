@@ -23,17 +23,17 @@ public sealed class PropertyValue<out T> {
 
 public class PropertyValueInaccessibleException(message: String) : Exception(message)
 
-public operator fun <T> PropertyValue<T>.getValue(instance: Any?, prop: KProperty<*>): T {
+public fun <T> PropertyValue<T>.getValue(propName: String): T {
     return when (this) {
         is None -> {
             if (returnNull) {
                 PropertyValue.log.warn {
-                    "Property '${prop.name}' is not present, using null. Reference chain:\n${link.referenceChain()}"
+                    "Property '${propName}' is not present, using null. Reference chain:\n${link.referenceChain()}"
                 }
                 @Suppress("UNCHECKED_CAST")
                 return null as T
             }
-            error("Property '${prop.name}' was not requested. Reference chain:\n${link.referenceChain()}")
+            error("Property '${propName}' was not requested. Reference chain:\n${link.referenceChain()}")
         }
         is ValueInaccessible -> throw PropertyValueInaccessibleException(message)
         is Value -> value

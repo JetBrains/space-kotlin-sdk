@@ -3,10 +3,12 @@ package space.jetbrains.api.generator
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
-private fun CodeBlock.Builder.appendPropertyDelegate(field: HA_DtoField, model: HttpApiEntitiesById) =
-    appendPropertyDelegate(field.field.nullableTypeIfRequired(), model, field.requiresOption, field.extension)
+private fun CodeBlock.Builder.appendPropertyProvider(field: HA_DtoField, model: HttpApiEntitiesById) {
+    appendPropertyProvider(field.field.nullableTypeIfRequired(), model, field.requiresOption, field.extension)
+    add(".toProperty(%S)", field.name)
+}
 
-private fun CodeBlock.Builder.appendPropertyDelegate(
+private fun CodeBlock.Builder.appendPropertyProvider(
     type: HA_Type,
     model: HttpApiEntitiesById,
     option: Boolean,
@@ -35,12 +37,12 @@ private fun CodeBlock.Builder.appendPropertyDelegate(
         }
         is HA_Type.Array -> {
             add("list(")
-            appendPropertyDelegate(type.elementType, model, false, isExtension)
+            appendPropertyProvider(type.elementType, model, false, isExtension)
             add(")")
         }
         is HA_Type.Map -> {
             add("map(")
-            appendPropertyDelegate(type.valueType, model, false, isExtension)
+            appendPropertyProvider(type.valueType, model, false, isExtension)
             add(")")
         }
         is HA_Type.Object, is HA_Type.Dto, is HA_Type.Ref, is HA_Type.UrlParam -> {
@@ -110,7 +112,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                             name = it.dtoField.name,
                             type = propertyType.importNested().parameterizedBy(it.dtoField.field.fieldKotlinPoetType(model)),
                             modifiers = listOf(KModifier.PRIVATE),
-                        ).delegate(buildCodeBlock { appendPropertyDelegate(it.dtoField, model) })
+                        ).initializer(buildCodeBlock { appendPropertyProvider(it.dtoField, model) })
                             .build()
                     })
 

@@ -1,10 +1,14 @@
+@file:Suppress("PrivatePropertyName")
+
 package space.jetbrains.api.runtime
 
 import space.jetbrains.api.runtime.PropertyValue.Value
 
 public class ApiPair<out A, out B>(first: PropertyValue<A>, second: PropertyValue<B>) {
-    public val first: A by first
-    public val second: B by second
+    private val __first: PropertyValue<A> = first
+    public val first: A get() = __first.getValue("first")
+    private val __second: PropertyValue<B> = second
+    public val second: B get() = __second.getValue("second")
 
     public constructor(first: A, second: B) : this(Value(first), Value(second))
 
@@ -16,8 +20,8 @@ public fun <A, B> Pair<A, B>.toApiPair(): ApiPair<A, B> = ApiPair(first, second)
 public class ApiPairStructure<A, B>(typeA: Type<A>, typeB: Type<B>) : TypeStructure<ApiPair<A, B>>(
     isRecord = false
 ) {
-    private val first: Property<A> by property(typeA)
-    private val second: Property<B> by property(typeB)
+    private val first: Property<A> = property(typeA).toProperty("first")
+    private val second: Property<B> = property(typeB).toProperty("second")
 
     override fun deserialize(context: DeserializationContext): ApiPair<A, B> = ApiPair(
         first.deserialize(context),
