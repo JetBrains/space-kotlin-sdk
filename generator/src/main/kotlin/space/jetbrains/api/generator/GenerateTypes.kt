@@ -161,7 +161,7 @@ private fun dtoDeclaration(
                         .addKDocAndDeprecation(field)
                         .getter(
                             FunSpec.getterBuilder()
-                                .addCode("return __$backingPropName.getValue(%S)", field.name)
+                                .addCode("return $backingPropName.getValue(%S)", field.name)
                                 .build()
                         ).build()
                 )
