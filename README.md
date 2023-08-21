@@ -1,15 +1,8 @@
 # Space SDK ![](https://jb.gg/badges/incubator-flat-square.svg)
 
-The Space SDK is a Kotlin library to work with the [JetBrains Space](https://jetbrains.com/space/) API. 
-
-> **Disclaimer:** This is a beta version of the Space SDK. It relies on the Space API, which is still in beta and subject to change. By using the current beta Space SDK, you expressly acknowledge that this version of the beta Space SDK may not be reliable, may not work as intended, and may contain errors. Any use of this beta Space SDK is at your own risk.
+The Space SDK is a Kotlin library to work with the [JetBrains Space](https://jetbrains.com/space/) API.
 
 ## Overview
-
-The Space SDK comes in two flavours:
-
-* `org.jetbrains:space-sdk-jvm` — Space SDK that can be used on the Java Virtual Machine (JVM).
-* `org.jetbrains:space-sdk-js` — Space SDK that can be used with Kotlin/JS.
 
 Let's have a look at how we can start working with the Space SDK.
 
@@ -23,7 +16,7 @@ For this example, we will use a *Client application*. Make sure to enable the *C
 
 ### Create a Connection
 
-After installing `org.jetbrains:space-sdk-jvm` in our project, we can use the *Client ID* and *Client Secret* of our Space application to create a `SpaceHttpClient` that can connect to our Space organization:
+After installing `org.jetbrains:space-sdk` in our project, we can use the *Client ID* and *Client Secret* of our Space application to create a `SpaceHttpClient` that can connect to our Space organization:
 
 ```kotlin
 val spaceClient = SpaceClient(

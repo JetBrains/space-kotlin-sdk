@@ -10,7 +10,6 @@ import io.ktor.utils.io.errors.*
 import kotlinx.datetime.Clock.System
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
-import mu.KotlinLogging
 import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
 import space.jetbrains.api.runtime.stacktrace.withPreservedStacktrace
 
@@ -53,7 +52,7 @@ public typealias SpaceHttpClient = HttpClient
 @Suppress("FunctionName")
 public fun SpaceHttpClient(ktorClient: HttpClient): HttpClient = ktorClient.config { configureKtorClientForSpace() }
 
-private val log = KotlinLogging.logger {}
+private val log = getLogger("space.jetbrains.api.runtime.SpaceHttpClient")
 
 @Suppress("DeprecatedCallableAddReplaceWith")
 @Deprecated("Use SpaceClient to call Space API")
@@ -106,7 +105,7 @@ internal suspend fun callSpaceApi(
 
         requestBody?.let {
             val bodyText = it.print()
-            log.trace { "Request to Space: $functionName (${callMethod.value} request to ${url.buildString()}):\n$bodyText" }
+            log.trace("Request to Space: $functionName (${callMethod.value} request to ${url.buildString()}):\n$bodyText")
             setBody(TextContent(bodyText, ContentType.Application.Json))
         }
 
@@ -127,7 +126,7 @@ internal suspend fun callSpaceApi(
         val (retry, content) = withPreservedStacktrace("exception during Space API call: $functionName") {
             val response = ktorClient.request(request)
             val responseText = response.bodyAsText()
-            log.trace { "Response from Space for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText" }
+            log.trace("Response from Space for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText")
             val content = responseText.let(::parseJson)
             throwErrorOrReturnWhetherToRetry(response, content, functionName) to content
         }

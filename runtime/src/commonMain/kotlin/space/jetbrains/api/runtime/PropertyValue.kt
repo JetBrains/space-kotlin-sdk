@@ -1,10 +1,8 @@
 package space.jetbrains.api.runtime
 
-import mu.KotlinLogging
 import space.jetbrains.api.runtime.PropertyValue.None
 import space.jetbrains.api.runtime.PropertyValue.Value
 import space.jetbrains.api.runtime.PropertyValue.ValueInaccessible
-import kotlin.reflect.*
 
 public sealed class PropertyValue<out T> {
     public data class Value<out T>(val value: T) : PropertyValue<T>()
@@ -17,7 +15,7 @@ public sealed class PropertyValue<out T> {
     public class None(public val link: ReferenceChainLink, internal val returnNull: Boolean) : PropertyValue<Nothing>()
 
     internal companion object {
-        val log = KotlinLogging.logger {}
+        val log = getLogger(PropertyValue::class.qualifiedName!!)
     }
 }
 
@@ -27,9 +25,7 @@ public fun <T> PropertyValue<T>.getValue(propName: String): T {
     return when (this) {
         is None -> {
             if (returnNull) {
-                PropertyValue.log.warn {
-                    "Property '${propName}' is not present, using null. Reference chain:\n${link.referenceChain()}"
-                }
+                PropertyValue.log.warn("Property '${propName}' is not present, using null. Reference chain:\n${link.referenceChain()}")
                 @Suppress("UNCHECKED_CAST")
                 return null as T
             }

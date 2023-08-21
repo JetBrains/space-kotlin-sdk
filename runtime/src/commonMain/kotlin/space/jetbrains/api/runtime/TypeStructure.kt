@@ -2,7 +2,6 @@ package space.jetbrains.api.runtime
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import kotlin.js.JsName
 import kotlin.time.Duration
 
 public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
@@ -33,81 +32,62 @@ public abstract class TypeStructure<D : Any>(private val isRecord: Boolean) {
         return type.serialize(value)?.let { name to it }
     }
 
-    @JsName("byte_property")
     protected fun byte(isExtension: Boolean = false): PropertyProvider<Byte> =
         property(Type.NumberType.ByteType, isExtension)
 
-    @JsName("short_property")
     protected fun short(isExtension: Boolean = false): PropertyProvider<Short> =
         property(Type.NumberType.ShortType, isExtension)
 
-    @JsName("int_property")
     protected fun int(isExtension: Boolean = false): PropertyProvider<Int> =
         property(Type.NumberType.IntType, isExtension)
 
-    @JsName("long_property")
     protected fun long(isExtension: Boolean = false): PropertyProvider<Long> =
         property(Type.NumberType.LongType, isExtension)
 
-    @JsName("float_property")
     protected fun float(isExtension: Boolean = false): PropertyProvider<Float> =
         property(Type.NumberType.FloatType, isExtension)
 
-    @JsName("double_property")
     protected fun double(isExtension: Boolean = false): PropertyProvider<Double> =
         property(Type.NumberType.DoubleType, isExtension)
 
-    @JsName("boolean_property")
     protected fun boolean(isExtension: Boolean = false): PropertyProvider<Boolean> =
         property(Type.PrimitiveType.BooleanType, isExtension)
 
-    @JsName("date_property")
     protected fun date(isExtension: Boolean = false): PropertyProvider<LocalDate> =
         property(Type.PrimitiveType.DateType, isExtension)
 
-    @JsName("datetime_property")
     protected fun datetime(isExtension: Boolean = false): PropertyProvider<Instant> =
         property(Type.PrimitiveType.DateTimeType, isExtension)
 
-    @JsName("duration_property")
     protected fun duration(isExtension: Boolean = false): PropertyProvider<Duration> =
         property(Type.PrimitiveType.DurationType, isExtension)
 
-    @JsName("string_property")
     protected fun string(isExtension: Boolean = false): PropertyProvider<String> =
         property(Type.PrimitiveType.StringType, isExtension)
 
-    @JsName("nullable_property")
     protected fun <T : Any> PropertyProvider<T>.nullable(): PropertyProvider<T?> =
         property(Type.Nullable(type), isExtension)
 
-    @JsName("optional_property")
     protected fun <T> PropertyProvider<T>.optional(): PropertyProvider<Option<T>> =
         property(Type.Optional(type), isExtension)
 
-    @JsName("list_property")
     protected fun <T> list(prop: PropertyProvider<T>): PropertyProvider<List<T>> =
         property(Type.ArrayType(prop.type), prop.isExtension)
 
-    @JsName("map_property")
     protected fun <V> map(valueProp: PropertyProvider<V>): PropertyProvider<Map<String, V>> {
         return property(Type.MapType(valueProp.type), valueProp.isExtension)
     }
 
-    @JsName("obj_property")
     protected fun <T : Any> obj(structure: TypeStructure<T>, isExtension: Boolean = false): PropertyProvider<T> {
         return property(Type.ObjectType(structure), isExtension)
     }
 
-    @JsName("enum_property")
     protected inline fun <reified T : Enum<T>> enum(isExtension: Boolean = false): PropertyProvider<T> =
         property(Type.EnumType(), isExtension)
 
-    @JsName("property_provider")
     protected fun <T> property(type: Type<T>, isExtension: Boolean = false): PropertyProvider<T> =
         PropertyProvider(type, isExtension, isRecord)
 
-    @JsName("with_className")
     protected fun JsonValue.withClassName(className: String): JsonValue = also {
         if (it.getField("className") == null) {
             it["className"] = jsonString(className)

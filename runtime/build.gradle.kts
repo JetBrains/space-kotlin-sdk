@@ -31,32 +31,12 @@ kotlin {
         }
     }
 
-    js(BOTH) {
-        browser {
-        }
-        nodejs {
-        }
-
-        compilations.configureEach {
-            tasks.named(compileKotlinTaskName).configure {
-                kotlinOptions {
-                    metaInfo = true
-                    sourceMap = true
-                    sourceMapEmbedSources = "always"
-                    moduleKind = "commonjs"
-                    main = "call"
-                }
-            }
-        }
-    }
-
     sourceSets {
         getByName("commonMain") {
             dependencies {
                 api("io.ktor:ktor-client-core:$ktor_version")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
-                implementation("io.github.microutils:kotlin-logging:2.0.3")
             }
         }
 
@@ -76,12 +56,6 @@ kotlin {
                 implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
                 implementation("io.ktor:ktor-client-apache:$ktor_version")
                 implementation("ch.qos.logback:logback-classic:1.4.1")
-            }
-        }
-
-        getByName("jsMain") {
-            dependencies {
-                api("io.ktor:ktor-client-js:$ktor_version")
             }
         }
     }

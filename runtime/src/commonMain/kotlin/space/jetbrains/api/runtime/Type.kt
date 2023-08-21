@@ -2,7 +2,6 @@ package space.jetbrains.api.runtime
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
-import mu.KotlinLogging
 import space.jetbrains.api.runtime.Type.NumberType.IntType
 import space.jetbrains.api.runtime.Type.NumberType.LongType
 import space.jetbrains.api.runtime.Type.PrimitiveType.BooleanType
@@ -22,47 +21,47 @@ public sealed class Type<T> {
 
         override fun serialize(value: T): JsonValue = jsonNumber(value)
 
-        public object ByteType : NumberType<Byte>() {
+        public data object ByteType : NumberType<Byte>() {
             override fun fromNumber(number: Number): Byte = number.toByte()
         }
 
-        public object ShortType : NumberType<Short>() {
+        public data object ShortType : NumberType<Short>() {
             override fun fromNumber(number: Number): Short = number.toShort()
         }
 
-        public object IntType : NumberType<Int>() {
+        public data object IntType : NumberType<Int>() {
             override fun fromNumber(number: Number): Int = number.toInt()
         }
 
-        public object LongType : NumberType<Long>() {
+        public data object LongType : NumberType<Long>() {
             override fun fromNumber(number: Number): Long = number.toLong()
         }
 
-        public object FloatType : NumberType<Float>() {
+        public data object FloatType : NumberType<Float>() {
             override fun fromNumber(number: Number): Float = number.toFloat()
         }
 
-        public object DoubleType : NumberType<Double>() {
+        public data object DoubleType : NumberType<Double>() {
             override fun fromNumber(number: Number): Double = number.toDouble()
         }
     }
 
     public sealed class PrimitiveType<T : Any> : Type<T>() {
-        public object BooleanType : PrimitiveType<Boolean>() {
+        public data object BooleanType : PrimitiveType<Boolean>() {
             override fun deserialize(context: DeserializationContext): Boolean =
                 context.requireJson().asBoolean(context.link)
 
             override fun serialize(value: Boolean): JsonValue = jsonBoolean(value)
         }
 
-        public object StringType : PrimitiveType<String>() {
+        public data object StringType : PrimitiveType<String>() {
             override fun deserialize(context: DeserializationContext): String =
                 context.requireJson().asString(context.link)
 
             override fun serialize(value: String): JsonValue = jsonString(value)
         }
 
-        public object DateType : PrimitiveType<LocalDate>() {
+        public data object DateType : PrimitiveType<LocalDate>() {
             override fun deserialize(context: DeserializationContext): LocalDate {
                 return LocalDate.parse(StringType.deserialize(context.child("iso")))
             }
@@ -72,7 +71,7 @@ public sealed class Type<T> {
             }
         }
 
-        public object DateTimeType : PrimitiveType<Instant>() {
+        public data object DateTimeType : PrimitiveType<Instant>() {
             override fun deserialize(context: DeserializationContext): Instant {
                 return Instant.fromEpochMilliseconds(LongType.deserialize(context.child("timestamp")))
             }
@@ -82,7 +81,7 @@ public sealed class Type<T> {
             }
         }
 
-        public object DurationType : PrimitiveType<Duration>() {
+        public data object DurationType : PrimitiveType<Duration>() {
             override fun deserialize(context: DeserializationContext): Duration {
                 return Duration.parseIsoString(context.requireJson().asString(context.link))
             }
@@ -232,7 +231,7 @@ public sealed class Type<T> {
     }
 
     private companion object {
-        val log = KotlinLogging.logger {}
+        val log = getLogger(Type::class.qualifiedName!!)
 
         inline fun <T> tryDeserialize(
             link: ReferenceChainLink,
@@ -246,12 +245,12 @@ public sealed class Type<T> {
                     if (e is DeserializationException.Minor) " at " + e.link.referenceChain() else ""
 
                 when (e) {
-                    is DeserializationException.Major -> log.error { msg }
+                    is DeserializationException.Major -> log.error(msg)
                     is DeserializationException.Minor -> {
                         if (e.link === link || e.link.parent === link && e.link.name.startsWith("[")) {
-                            log.warn { msg }
+                            log.warn(msg)
                         } else {
-                            log.error { msg }
+                            log.error(msg)
                         }
                     }
                 }

@@ -1,7 +1,5 @@
 package space.jetbrains.api.runtime
 
-import kotlin.js.JsName
-
 @DslMarker
 private annotation class PartialQueryDsl
 
@@ -18,7 +16,6 @@ public abstract class PartialImpl(protected val builder: PartialBuilder.Explicit
     public companion object {
         public fun getPartialBuilder(partial: Partial): PartialBuilder.Explicit = (partial as PartialImpl).builder
 
-        @JsName("throwPrimitivesAndEnumsError_lambda")
         public val throwPrimitivesAndEnumsError: (PartialBuilder.Explicit) -> Nothing = {
             throwPrimitivesAndEnumsError()
         }
