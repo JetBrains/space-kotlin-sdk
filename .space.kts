@@ -6,7 +6,7 @@ job("Space SDK runtime & generator: build and publish") {
 }
 
 fun Job.buildAndZip() {
-    container("gradle:7.6.0-jdk17") {
+    container("amazoncorretto:17") {
         env["JB_TEAM_MAVEN_REPO_USERNAME"] = Params("jb-team-maven-repo-write-username")
         env["JB_TEAM_MAVEN_REPO_PASSWORD"] = Secrets("jb-team-maven-repo-write-password")
 
