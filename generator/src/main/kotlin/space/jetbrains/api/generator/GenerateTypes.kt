@@ -65,7 +65,6 @@ fun generateTypes(model: HttpApiEntitiesById): List<FileSpec> {
                     addEnumConstant(it)
                 }
                 annotationSpecs.deprecation(enumType.deprecation)
-                annotationSpecs.experimental(enumType.experimental)
             }.build())
         }.build()
     }
@@ -205,7 +204,6 @@ private fun dtoDeclaration(
     }
 
     typeBuilder.annotationSpecs.deprecation(dto.deprecation)
-    typeBuilder.annotationSpecs.experimental(dto.experimental)
     typeBuilder.annotationSpecs.featureFlag(dto.featureFlag, model)
 
     dto.directlyNestedClasses(model).forEach {

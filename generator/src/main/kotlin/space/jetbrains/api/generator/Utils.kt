@@ -162,14 +162,6 @@ fun MutableList<AnnotationSpec>.deprecation(deprecation: HA_Deprecation?) {
     }
 }
 
-fun MutableList<AnnotationSpec>.experimental(experimental: HA_Experimental?) {
-    if (experimental != null) {
-        this += AnnotationSpec.builder(ClassName(packageName = "space.jetbrains.api", "ExperimentalSpaceSdkApi"))
-            .apply { experimental.message?.let { addMember("%S", it) } }
-            .build()
-    }
-}
-
 fun MutableList<AnnotationSpec>.featureFlag(featureFlag: String?, model: HttpApiEntitiesById) {
     if (featureFlag == null) return
     val featureFlagAnnotation = model.featureFlags[featureFlag]?.annotationClassName() ?: return
