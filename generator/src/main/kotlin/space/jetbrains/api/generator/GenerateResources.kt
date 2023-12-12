@@ -65,7 +65,7 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                 typeBuilder.addFunctions(resourceGroup.flatMap { it.endpoints }.map { endpoint ->
                     val urlParams = endpoint.parameters.sortedBy { !it.path }.map { it.field }
                     val queryParams = endpoint.parameters.filter { !it.path }.map { it.field }
-                    val bodyParams = endpoint.requestBody?.fields
+                    val bodyParams = (endpoint.requestBody as? HA_Type.Object)?.fields
                     val returnType = endpoint.responseBody?.kotlinPoet(model)
                     val (partial, batch) = endpoint.responseBody.partial()
                     val partialInterface = partial?.partialToPartialInterface(model)
@@ -73,7 +73,12 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                         it.name == META_PARAMETERS_PREFIX + "skip" || it.name == META_PARAMETERS_PREFIX + "top"
                     }
 
-                    val funcParams = getFuncParams(model, urlParams, bodyParams, hasUrlBatchInfo, partialInterface)
+                    val funcParams = getFuncParams(model, urlParams, bodyParams, hasUrlBatchInfo, partialInterface).let {
+                        if (endpoint.requestBody is HA_RawRequestPayload)
+                            it + (ParameterSpec.builder("payload", outgoingContentType).build() to "Request payload")
+                        else
+                            it
+                    }
 
                     val fullPath = endpoint.path.segments.asReversed().plus(
                         ancestors(model.resources.getValue(endpoint.resource.id), model)
@@ -175,44 +180,50 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                                 code.add("}")
                             }
 
-                            if (endpoint.requestBody != null) {
-                                code.add(", requestBody = %M(listOfNotNull(\n", jsonObjectFunction)
-                                code.indent()
-                                val fieldIterator = endpoint.requestBody.fields.iterator()
-                                while (fieldIterator.hasNext()) {
-                                    val field = fieldIterator.next()
-                                    fun serialize(expr: String = field.name) {
-                                        if (WEBHOOK_PAYLOAD_FIELDS_TAG in field.type.tags) {
-                                            code.appendType(field.type, model, field.requiresOption)
-                                            code.add(".serialize(%M($expr))", webhookPayloadFieldsPartialFunction)
-                                        } else if (PERMISSION_SCOPE_TAG in field.type.tags) {
-                                            code.appendType(field.type, model, field.requiresOption)
-                                            code.add(".serialize(%M($expr))", permissionScopeToStringFunction)
-                                        } else {
-                                            code.appendType(field.type, model, field.requiresOption)
-                                            code.add(".serialize($expr)")
+                            when (val requestBody = endpoint.requestBody) {
+                                is HA_Type.Object -> {
+                                    code.add(", requestBody = %M(listOfNotNull(\n", jsonObjectFunction)
+                                    code.indent()
+                                    val fieldIterator = requestBody.fields.iterator()
+                                    while (fieldIterator.hasNext()) {
+                                        val field = fieldIterator.next()
+                                        fun serialize(expr: String = field.name) {
+                                            if (WEBHOOK_PAYLOAD_FIELDS_TAG in field.type.tags) {
+                                                code.appendType(field.type, model, field.requiresOption)
+                                                code.add(".serialize(%M($expr))", webhookPayloadFieldsPartialFunction)
+                                            } else if (PERMISSION_SCOPE_TAG in field.type.tags) {
+                                                code.appendType(field.type, model, field.requiresOption)
+                                                code.add(".serialize(%M($expr))", permissionScopeToStringFunction)
+                                            } else {
+                                                code.appendType(field.type, model, field.requiresOption)
+                                                code.add(".serialize($expr)")
+                                            }
                                         }
+                                        when {
+                                            field.requiresOption -> {
+                                                serialize()
+                                                code.add("?.let·{ %S·to it }", field.name)
+                                            }
+                                            field.requiresAddedNullability || field.defaultValue == HA_DefaultValue.NULL -> {
+                                                code.add("${field.name}?.let·{ %S·to ", field.name)
+                                                serialize("it")
+                                                code.add(" }")
+                                            }
+                                            else -> {
+                                                code.add("%S·to ", field.name)
+                                                serialize()
+                                            }
+                                        }
+                                        if (fieldIterator.hasNext()) code.add(",")
+                                        code.add("\n")
                                     }
-                                    when {
-                                        field.requiresOption -> {
-                                            serialize()
-                                            code.add("?.let·{ %S·to it }", field.name)
-                                        }
-                                        field.requiresAddedNullability || field.defaultValue == HA_DefaultValue.NULL -> {
-                                            code.add("${field.name}?.let·{ %S·to ", field.name)
-                                            serialize("it")
-                                            code.add(" }")
-                                        }
-                                        else -> {
-                                            code.add("%S·to ", field.name)
-                                            serialize()
-                                        }
-                                    }
-                                    if (fieldIterator.hasNext()) code.add(",")
-                                    code.add("\n")
+                                    code.unindent()
+                                    code.add("))")
                                 }
-                                code.unindent()
-                                code.add("))")
+                                is HA_RawRequestPayload -> {
+                                    code.add(", requestBody = payload")
+                                }
+                                else -> {}
                             }
 
                             if (endpoint.returnsSyncBatch()) {
@@ -247,21 +258,22 @@ fun HA_Field.nullableTypeIfRequired(): HA_Type = type.let {
 }
 
 private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String> {
+    val callWithBodyFunctionName = if (endpoint.requestBody is HA_RawRequestPayload) "callWithRawBody" else "callWithBody"
     return when (endpoint.method) {
         HTTP_POST,
-        REST_CREATE -> "callWithBody" to "Post"
+        REST_CREATE -> callWithBodyFunctionName to "Post"
 
         HTTP_GET,
         REST_GET,
         REST_QUERY -> "callWithParameters" to "Get"
 
         HTTP_PATCH,
-        REST_UPDATE -> "callWithBody" to "Patch"
+        REST_UPDATE -> callWithBodyFunctionName to "Patch"
 
         HTTP_DELETE,
         REST_DELETE -> "callWithParameters" to "Delete"
 
-        HTTP_PUT -> "callWithBody" to "Put"
+        HTTP_PUT -> callWithBodyFunctionName to "Put"
     }
 }
 

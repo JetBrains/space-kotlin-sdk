@@ -1,6 +1,7 @@
 package space.jetbrains.api.runtime
 
 import io.ktor.http.*
+import io.ktor.http.content.*
 import space.jetbrains.api.runtime.epoch.EpochTracker
 import space.jetbrains.api.runtime.epoch.SYNC_EPOCH_HEADER_NAME
 
@@ -13,6 +14,25 @@ public abstract class RestResource(private val client: SpaceClient) {
         path: String,
         method: HttpMethod,
         requestBody: JsonValue? = null,
+        requestHeaders: List<Pair<String, String>>? = null,
+        partial: PartialBuilder.Explicit? = null,
+    ): DeserializationContext = callSpaceApi(
+        ktorClient = client.ktorClient,
+        functionName = functionName,
+        appInstance = client.appInstance,
+        auth = client.auth,
+        callMethod = method,
+        path = path,
+        partial = partial,
+        requestBody = requestBody?.let { TextContent(it.print(), ContentType.Application.Json) },
+        requestHeaders = requestHeaders,
+    )
+
+    protected suspend fun callWithRawBody(
+        functionName: String,
+        path: String,
+        method: HttpMethod,
+        requestBody: OutgoingContent,
         requestHeaders: List<Pair<String, String>>? = null,
         partial: PartialBuilder.Explicit? = null,
     ): DeserializationContext = callSpaceApi(

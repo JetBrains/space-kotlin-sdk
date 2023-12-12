@@ -60,7 +60,7 @@ class HA_Endpoint(
     val resource: HA_Resource.Ref,
     val method: HA_Method,
     val parameters: List<HA_Parameter>,
-    val requestBody: HA_Type.Object?,
+    val requestBody: HA_RequestPayloadType?,
     val responseBody: HA_Type?,
     val path: HA_Path,
     val displayName: String,
@@ -106,6 +106,15 @@ enum class HA_Primitive(val presentation: kotlin.String) {
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
 @JsonSubTypes(
+    Type(value = HA_Type.Object::class, name = "HA_Type.Object"),
+    Type(value = HA_RawRequestPayload::class, name = "HA_RawRequestPayload")
+)
+sealed interface HA_RequestPayloadType
+
+data class HA_RawRequestPayload(val allowedMimeTypes: List<String>) : HA_RequestPayloadType
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "className")
+@JsonSubTypes(
     Type(value = HA_Type.Primitive::class, name = "HA_Type.Primitive"),
     Type(value = HA_Type.Array::class, name = "HA_Type.Array"),
     Type(value = HA_Type.Map::class, name = "HA_Type.Map"),
@@ -124,7 +133,7 @@ sealed class HA_Type {
     data class Map(val valueType: HA_Type, override val nullable: Boolean, override val tags: List<String>) : HA_Type()
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
-    data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean, override val tags: List<String>) : HA_Type() {
+    data class Object(val fields: List<HA_Field>, val kind: Kind, override val nullable: Boolean, override val tags: List<String>) : HA_Type(), HA_RequestPayloadType {
         enum class Kind(val isBatch: Boolean = false) {
             PAIR, TRIPLE, BATCH(true), SYNC_BATCH(true), MOD, REQUEST_BODY
         }

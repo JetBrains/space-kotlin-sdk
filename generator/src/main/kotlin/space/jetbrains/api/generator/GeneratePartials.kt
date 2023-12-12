@@ -240,7 +240,7 @@ private fun findInputOnlyDtoIds(model: HttpApiEntitiesById): Set<String> {
         .flatMap { it.endpoints.asSequence() }
         .forEach { endpoint ->
             endpoint.parameters.forEach { traverseType(it.field.type) }
-            endpoint.requestBody?.let { traverseType(it) }
+            (endpoint.requestBody as? HA_Type.Object)?.let { traverseType(it) }
         }
 
     // at this point visitedIds contains both DTOs used in inputs and in outputs

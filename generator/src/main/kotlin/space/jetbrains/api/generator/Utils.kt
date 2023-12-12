@@ -80,6 +80,7 @@ val clientType = ClassName(ROOT_PACKAGE, "SpaceClient")
 
 val httpMethodType = ClassName("io.ktor.http", "HttpMethod")
 val parametersType = ClassName("io.ktor.http", "Parameters")
+val outgoingContentType = ClassName("io.ktor.http.content", "OutgoingContent")
 
 const val INDENT = "    "
 

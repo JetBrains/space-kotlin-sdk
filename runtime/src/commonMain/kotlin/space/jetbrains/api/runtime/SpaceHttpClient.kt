@@ -74,7 +74,7 @@ public suspend fun HttpClient.call(
     path = path,
     partial = partial,
     parameters = parameters,
-    requestBody = requestBody
+    requestBody = requestBody?.let { TextContent(it.print(), ContentType.Application.Json) }
 )
 
 internal suspend fun callSpaceApi(
@@ -86,7 +86,7 @@ internal suspend fun callSpaceApi(
     path: String,
     partial: PartialBuilder.Explicit?,
     parameters: Parameters = Parameters.Empty,
-    requestBody: JsonValue? = null,
+    requestBody: OutgoingContent? = null,
     requestHeaders: List<Pair<String, String>>? = null,
 ): DeserializationContext {
     val templateRequest = HttpRequestBuilder().apply {
@@ -104,9 +104,9 @@ internal suspend fun callSpaceApi(
 
 
         requestBody?.let {
-            val bodyText = it.print()
+            val bodyText = (it as? TextContent)?.text
             log.trace("Request to Space: $functionName (${callMethod.value} request to ${url.buildString()}):\n$bodyText")
-            setBody(TextContent(bodyText, ContentType.Application.Json))
+            setBody(it)
         }
 
         requestHeaders?.forEach {
