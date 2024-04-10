@@ -117,10 +117,12 @@ internal suspend fun callSpaceApi(
     while (true) {
         val request = HttpRequestBuilder().takeFrom(templateRequest)
 
-        withPreservedStacktrace("exception while getting access token for Space API call: $functionName") {
-            auth.token(ktorClient, appInstance).accessToken.takeIf { it.isNotEmpty() }?.let {
+        val isAccessTokenRefreshable = withPreservedStacktrace("exception while getting access token for Space API call: $functionName") {
+            val spaceTokenInfo = auth.token(ktorClient, appInstance)
+            spaceTokenInfo.accessToken.takeIf { it.isNotEmpty() }?.let {
                 request.header(HttpHeaders.Authorization, "Bearer $it")
             }
+            spaceTokenInfo.expires != null
         }
 
         val (retry, content) = withPreservedStacktrace("exception during Space API call: $functionName") {
@@ -128,7 +130,7 @@ internal suspend fun callSpaceApi(
             val responseText = response.bodyAsText()
             log.trace("Response from Space for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText")
             val content = responseText.let(::parseJson)
-            throwErrorOrReturnWhetherToRetry(response, content, functionName) to content
+            throwErrorOrReturnWhetherToRetry(response, content, functionName, isAccessTokenRefreshable) to content
         }
 
         if (!retry) {
@@ -157,7 +159,7 @@ internal suspend fun auth(
     val responseTime = System.now()
 
     val tokenJson = response.bodyAsText().let(::tryParseJson)
-    throwErrorOrReturnWhetherToRetry(response, tokenJson, url)
+    throwErrorOrReturnWhetherToRetry(response, tokenJson, url, retryExpiredAccessTokenError = false)
 
     val deserialization = DeserializationContext(tokenJson, ReferenceChainLink("auth"), null)
     return SpaceTokenInfo(
@@ -178,13 +180,17 @@ private fun throwErrorOrReturnWhetherToRetry(
     response: HttpResponse,
     responseContent: JsonValue?,
     functionName: String,
+    retryExpiredAccessTokenError: Boolean,
 ): Boolean {
     if (!response.status.isSuccess()) {
         val errorDescription = responseContent?.getFieldOrNull("error_description")?.asStringOrNull()
         throw when (responseContent?.getFieldOrNull("error")?.asStringOrNull()) {
             ErrorCodes.VALIDATION_ERROR -> ValidationException(errorDescription, response, functionName)
             ErrorCodes.AUTHENTICATION_REQUIRED -> when (errorDescription) {
-                "Access token has expired" -> return true
+                "Access token has expired" ->
+                    if (retryExpiredAccessTokenError) return true
+                    else AuthenticationRequiredException(errorDescription, response, functionName)
+
                 "Refresh token associated with the access token is revoked" ->
                     RefreshTokenRevokedException(errorDescription, response, functionName)
 
