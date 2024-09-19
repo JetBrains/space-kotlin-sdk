@@ -1,6 +1,7 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.KModifier.PUBLIC
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
 private fun CodeBlock.Builder.appendPropertyProvider(field: HA_DtoField, model: HttpApiEntitiesById) {
@@ -117,7 +118,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     })
 
                     typeBuilder.addFunction(FunSpec.builder("deserialize").also func@{ funcBuilder ->
-                        funcBuilder.addModifiers(KModifier.OVERRIDE)
+                        funcBuilder.addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
                         funcBuilder.addParameter("context", deserializationContextType)
                         funcBuilder.returns(dtoClassName)
 
@@ -210,7 +211,7 @@ fun generateStructures(model: HttpApiEntitiesById): List<FileSpec> {
                     }.build())
 
                     typeBuilder.addFunction(FunSpec.builder("serialize").also func@{ func ->
-                        func.addModifiers(KModifier.OVERRIDE)
+                        func.addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE)
                         func.addParameter("value", dtoClassName)
                         func.returns(jsonValueType)
 

@@ -86,6 +86,7 @@ private fun dtoDeclaration(
         SEALED_INTERFACE -> TypeSpec.interfaceBuilder(dtoClassName).addModifiers(SEALED)
     }
 
+    typeBuilder.addModifiers(PUBLIC)
     dto.superclass(model)?.let {
         typeBuilder.superclass(it.getClassName())
     }

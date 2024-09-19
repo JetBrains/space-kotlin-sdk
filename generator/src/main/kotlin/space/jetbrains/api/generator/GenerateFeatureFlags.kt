@@ -1,9 +1,6 @@
 package space.jetbrains.api.generator
 
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.*
 
 fun HA_FeatureFlag.annotationClassName(): ClassName = ClassName(FF_PACKAGE, displayName.displayNameToClassName())
 
@@ -23,6 +20,7 @@ fun generateFeatureFlags(model: HttpApiEntitiesById): FileSpec {
                         RequiresOptIn.Level::class,
                     )
                 }.build())
+                annotation.addModifiers(KModifier.PUBLIC)
             }.build())
         }
     }.build()

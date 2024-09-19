@@ -1,8 +1,7 @@
 package space.jetbrains.api.generator
 
 import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.KModifier.ABSTRACT
-import com.squareup.kotlinpoet.KModifier.OVERRIDE
+import com.squareup.kotlinpoet.KModifier.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import space.jetbrains.api.generator.HA_Type.Object.Kind.*
 
@@ -108,7 +107,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                 fun addRecursiveAsImpl(fieldName: String, partialInterface: TypeName) {
                     implBuilder.addFunction(
                         FunSpec.builder(fieldName)
-                            .addModifiers(OVERRIDE)
+                            .addModifiers(PUBLIC, OVERRIDE)
                             .addParameter("recursiveAs", partialInterface)
                             .addStatement("builder.addRecursively(%S, getPartialBuilder(recursiveAs))", fieldName)
                             .also { if (fieldName in requiringJvmName) it.addJvmName(fieldName, partialInterface, true) }
@@ -120,8 +119,8 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                     val field = dtoField.field
                     val (partial, batch) = field.type.partial()
 
-                    val interfaceFunBuilder = FunSpec.builder(field.name).addModifiers(ABSTRACT)
-                    val implFunBuilder = FunSpec.builder(field.name).addModifiers(OVERRIDE)
+                    val interfaceFunBuilder = FunSpec.builder(field.name).addModifiers(PUBLIC, ABSTRACT)
+                    val implFunBuilder = FunSpec.builder(field.name).addModifiers(PUBLIC, OVERRIDE)
 
                     val partialInterface = partial?.partialToPartialInterface(model)
                     val isOverride = if (partial in cf.childFieldNamesToPartials[field.name].orEmpty()) {
@@ -135,9 +134,9 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                         partialInterface!!
                         interfaceBuilder.addFunction(
                             FunSpec.builder(field.name)
-                                .addModifiers(ABSTRACT)
+                                .addModifiers(PUBLIC, ABSTRACT)
                                 .addParameter("recursiveAs", partialInterface)
-                                .also { if (isOverride) it.addModifiers(OVERRIDE) }
+                                .also { if (isOverride) it.addModifiers(PUBLIC, OVERRIDE) }
                                 .also { if (field.name in requiringJvmName) it.addJvmName(field.name, partialInterface, true) }
                                 .build()
                         )
@@ -162,7 +161,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                 }
 
                 fun addImpl(fieldName: String, partialInterface: TypeName?, batch: Boolean) {
-                    val implFunBuilder = FunSpec.builder(fieldName).addModifiers(OVERRIDE)
+                    val implFunBuilder = FunSpec.builder(fieldName).addModifiers(PUBLIC, OVERRIDE)
 
                     if (partialInterface == null) {
                         implFunBuilder.addStatement("builder.add(%S)", fieldName)
@@ -193,7 +192,7 @@ fun generatePartials(model: HttpApiEntitiesById): List<FileSpec> {
                 if (dto.inheritors.isNotEmpty()) {
                     implBuilder.addFunction(
                         FunSpec.builder("defaultPartial")
-                            .addModifiers(OVERRIDE)
+                            .addModifiers(PUBLIC, OVERRIDE)
                             .addCode("super.defaultPartial()")
                             .build()
                     )
