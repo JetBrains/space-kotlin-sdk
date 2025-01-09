@@ -306,7 +306,8 @@ private fun httpCallFuncNameToMethod(endpoint: HA_Endpoint): Pair<String, String
         HTTP_DELETE,
         REST_DELETE -> "callWithParameters" to "Delete"
 
-        HTTP_PUT -> callWithBodyFunctionName to "Put"
+        HTTP_PUT,
+        REST_UPSERT -> callWithBodyFunctionName to "Put"
     }
 }
 

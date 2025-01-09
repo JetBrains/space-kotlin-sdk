@@ -47,6 +47,7 @@ enum class HA_Method(val methodName: String, val hasBody: Boolean) {
     REST_QUERY("GET", hasBody = false),
     REST_GET("GET", hasBody = false),
     REST_UPDATE("PATCH", hasBody = true),
+    REST_UPSERT("PUT", hasBody = true),
     REST_DELETE("DELETE", hasBody = false),
 
     HTTP_GET("GET", hasBody = false),
