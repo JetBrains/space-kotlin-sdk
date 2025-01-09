@@ -102,150 +102,183 @@ fun generateResources(model: HttpApiEntitiesById): List<FileSpec> {
                         funcBuilder.addParameters(funcParams.map { it.first })
                         if (returnType != null) funcBuilder.returns(returnType)
 
-                        funcBuilder.addCode(CodeBlock.builder().also { code ->
-                            if (partialInterface != null) {
-                                code.add("val partial = %T(", partialBuilderType)
-                                if (batch) {
-                                    code.add("isBatch = true")
-                                }
-                                code.add(").also·{\n")
-                                code.indent()
-                                code.partialImplConstructor(partialInterface, "it")
-                                code.add(".apply(buildPartial)\n")
-                                code.unindent()
-                                code.add("}\n")
-                            }
-
-                            val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
-
-                            val pathParams = endpoint.parameters.filter { it.path }.associateBy { it.field.name }
-                            code.add("val response = $httpCallFuncName(%S, \"", endpoint.functionName)
-                            val pathIterator = fullPath.iterator()
-                            pathIterator.forEach { segment ->
-                                fun pathParam(name: String): CodeBlock.Builder {
-                                    code.add("\${pathParam(")
-                                    val paramType = pathParams.getValue(name).field.type
-                                    if (paramType is HA_Type.UrlParam) {
-                                        code.add("$name.compactId")
-                                    } else {
-                                        code.add(name)
-                                    }
-                                    return code.add(")}")
-                                }
-                                when (segment) {
-                                    is Const -> code.add(segment.value)
-                                    is Var -> pathParam(segment.name)
-                                    is PrefixedVar -> {
-                                        code.add(segment.prefix + ":")
-                                        pathParam(segment.name)
-                                    }
-                                }.let {}
-                                if (pathIterator.hasNext()) code.add("/")
-                            }
-                            code.add("\", %T.$httpMethod", httpMethodType)
-
-                            if (queryParams.isNotEmpty()) {
-                                code.add(", parameters = %T.build·{\n", parametersType)
-                                code.indent()
-                                if (hasUrlBatchInfo) {
-                                    code.addStatement("appendBatchInfo(batchInfo)")
-                                }
-                                queryParams.forEach { param ->
-                                    val name = param.name
-                                    if (name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
-
-                                    when {
-                                        param.type is HA_Type.Array -> {
-                                            parameterConversion(model, param.name, param.nullableTypeIfRequired(), code)
-                                            code.add("?.let·{ appendAll(%S, it) }\n", param.name)
-                                        }
-                                        param.requiresAddedNullability || param.defaultValue == HA_DefaultValue.NULL -> {
-                                            code.add(param.name + "?.let·{ append(%S, ", param.name)
-                                            parameterConversion(model, "it", param.type.copy(nullable = false), code)
-                                            code.add(") }\n")
-                                        }
-                                        param.type.nullable -> {
-                                            code.add("append(%S, ${param.name}?.let·{ ", param.name)
-                                            parameterConversion(model, "it", param.type.copy(nullable = false), code)
-                                            code.add(" }.orEmpty())\n")
-                                        }
-                                        else -> {
-                                            code.add("append(%S, ", param.name)
-                                            parameterConversion(model, param.name, param.type, code)
-                                            code.add(")\n")
-                                        }
-                                    }
-                                }
-                                code.unindent()
-                                code.add("}")
-                            }
-
-                            when (val requestBody = endpoint.requestBody) {
-                                is HA_Type.Object -> {
-                                    code.add(", requestBody = %M(listOfNotNull(\n", jsonObjectFunction)
-                                    code.indent()
-                                    val fieldIterator = requestBody.fields.iterator()
-                                    while (fieldIterator.hasNext()) {
-                                        val field = fieldIterator.next()
-                                        fun serialize(expr: String = field.name) {
-                                            if (WEBHOOK_PAYLOAD_FIELDS_TAG in field.type.tags) {
-                                                code.appendType(field.type, model, field.requiresOption)
-                                                code.add(".serialize(%M($expr))", webhookPayloadFieldsPartialFunction)
-                                            } else if (PERMISSION_SCOPE_TAG in field.type.tags) {
-                                                code.appendType(field.type, model, field.requiresOption)
-                                                code.add(".serialize(%M($expr))", permissionScopeToStringFunction)
-                                            } else {
-                                                code.appendType(field.type, model, field.requiresOption)
-                                                code.add(".serialize($expr)")
-                                            }
-                                        }
-                                        when {
-                                            field.requiresOption -> {
-                                                serialize()
-                                                code.add("?.let·{ %S·to it }", field.name)
-                                            }
-                                            field.requiresAddedNullability || field.defaultValue == HA_DefaultValue.NULL -> {
-                                                code.add("${field.name}?.let·{ %S·to ", field.name)
-                                                serialize("it")
-                                                code.add(" }")
-                                            }
-                                            else -> {
-                                                code.add("%S·to ", field.name)
-                                                serialize()
-                                            }
-                                        }
-                                        if (fieldIterator.hasNext()) code.add(",")
-                                        code.add("\n")
-                                    }
-                                    code.unindent()
-                                    code.add("))")
-                                }
-                                is HA_RawRequestPayload -> {
-                                    code.add(", requestBody = payload")
-                                }
-                                else -> {}
-                            }
-
-                            if (endpoint.returnsSyncBatch()) {
-                                code.add(", requestHeaders = listOfNotNull(getSyncEpochHeader())")
-                            }
-
-                            if (partial != null) {
-                                code.add(", partial = partial")
-                            }
-
-                            code.add(")\n")
-
-                            if (endpoint.responseBody != null) {
-                                code.add("return·")
-                                code.appendType(endpoint.responseBody, model, false)
-                                code.add(".deserialize(response)")
-                            }
-                        }.build())
+                        funcBuilder.addCode(
+                            buildFnBody(
+                                partialInterface,
+                                batch,
+                                endpoint,
+                                fullPath,
+                                queryParams,
+                                hasUrlBatchInfo,
+                                model,
+                                partial
+                            ).build()
+                        )
                     }.build()
                 })
             }.build())
         }.build()
+    }
+}
+
+private fun buildFnBody(
+    partialInterface: TypeName?,
+    batch: Boolean,
+    endpoint: HA_Endpoint,
+    fullPath: List<HA_PathSegment>,
+    queryParams: List<HA_Field>,
+    hasUrlBatchInfo: Boolean,
+    model: HttpApiEntitiesById,
+    partial: HA_Type?
+): CodeBlock.Builder = CodeBlock.builder().also { code ->
+    try {
+        if (partialInterface != null) {
+            code.add("val partial = %T(", partialBuilderType)
+            if (batch) {
+                code.add("isBatch = true")
+            }
+            code.add(").also·{\n")
+            code.indent()
+            code.partialImplConstructor(partialInterface, "it")
+            code.add(".apply(buildPartial)\n")
+            code.unindent()
+            code.add("}\n")
+        }
+
+        val (httpCallFuncName, httpMethod) = httpCallFuncNameToMethod(endpoint)
+
+        val pathParams = endpoint.parameters.filter { it.path }.associateBy { it.field.name }
+        code.add("val response = $httpCallFuncName(%S, \"", endpoint.functionName)
+        val pathIterator = fullPath.iterator()
+        pathIterator.forEach { segment ->
+            fun pathParam(name: String): CodeBlock.Builder {
+                code.add("\${pathParam(")
+                val paramType = pathParams.getValue(name).field.type
+                if (paramType is HA_Type.UrlParam) {
+                    code.add("$name.compactId")
+                } else {
+                    code.add(name)
+                }
+                return code.add(")}")
+            }
+            when (segment) {
+                is Const -> code.add(segment.value)
+                is Var -> pathParam(segment.name)
+                is PrefixedVar -> {
+                    code.add(segment.prefix + ":")
+                    pathParam(segment.name)
+                }
+            }.let {}
+            if (pathIterator.hasNext()) code.add("/")
+        }
+        code.add("\", %T.$httpMethod", httpMethodType)
+
+        if (queryParams.isNotEmpty()) {
+            code.add(", parameters = %T.build·{\n", parametersType)
+            code.indent()
+            if (hasUrlBatchInfo) {
+                code.addStatement("appendBatchInfo(batchInfo)")
+            }
+            queryParams.forEach { param ->
+                val name = param.name
+                if (name.startsWith(META_PARAMETERS_PREFIX)) return@forEach
+
+                when {
+                    param.type is HA_Type.Array -> {
+                        parameterConversion(model, param.name, param.nullableTypeIfRequired(), code)
+                        code.add("?.let·{ appendAll(%S, it) }\n", param.name)
+                    }
+
+                    param.requiresAddedNullability || param.defaultValue == HA_DefaultValue.NULL -> {
+                        code.add(param.name + "?.let·{ append(%S, ", param.name)
+                        parameterConversion(model, "it", param.type.copy(nullable = false), code)
+                        code.add(") }\n")
+                    }
+
+                    param.type.nullable -> {
+                        code.add("append(%S, ${param.name}?.let·{ ", param.name)
+                        parameterConversion(model, "it", param.type.copy(nullable = false), code)
+                        code.add(" }.orEmpty())\n")
+                    }
+
+                    else -> {
+                        code.add("append(%S, ", param.name)
+                        parameterConversion(model, param.name, param.type, code)
+                        code.add(")\n")
+                    }
+                }
+            }
+            code.unindent()
+            code.add("}")
+        }
+
+        when (val requestBody = endpoint.requestBody) {
+            is HA_Type.Object -> {
+                code.add(", requestBody = %M(listOfNotNull(\n", jsonObjectFunction)
+                code.indent()
+                val fieldIterator = requestBody.fields.iterator()
+                while (fieldIterator.hasNext()) {
+                    val field = fieldIterator.next()
+                    fun serialize(expr: String = field.name) {
+                        if (WEBHOOK_PAYLOAD_FIELDS_TAG in field.type.tags) {
+                            code.appendType(field.type, model, field.requiresOption)
+                            code.add(".serialize(%M($expr))", webhookPayloadFieldsPartialFunction)
+                        } else if (PERMISSION_SCOPE_TAG in field.type.tags) {
+                            code.appendType(field.type, model, field.requiresOption)
+                            code.add(".serialize(%M($expr))", permissionScopeToStringFunction)
+                        } else {
+                            code.appendType(field.type, model, field.requiresOption)
+                            code.add(".serialize($expr)")
+                        }
+                    }
+                    when {
+                        field.requiresOption -> {
+                            serialize()
+                            code.add("?.let·{ %S·to it }", field.name)
+                        }
+
+                        field.requiresAddedNullability || field.defaultValue == HA_DefaultValue.NULL -> {
+                            code.add("${field.name}?.let·{ %S·to ", field.name)
+                            serialize("it")
+                            code.add(" }")
+                        }
+
+                        else -> {
+                            code.add("%S·to ", field.name)
+                            serialize()
+                        }
+                    }
+                    if (fieldIterator.hasNext()) code.add(",")
+                    code.add("\n")
+                }
+                code.unindent()
+                code.add("))")
+            }
+
+            is HA_RawRequestPayload -> {
+                code.add(", requestBody = payload")
+            }
+
+            else -> {}
+        }
+
+        if (endpoint.returnsSyncBatch()) {
+            code.add(", requestHeaders = listOfNotNull(getSyncEpochHeader())")
+        }
+
+        if (partial != null) {
+            code.add(", partial = partial")
+        }
+
+        code.add(")\n")
+
+        if (endpoint.responseBody != null) {
+            code.add("return·")
+            code.appendType(endpoint.responseBody, model, false)
+            code.add(".deserialize(response)")
+        }
+    } catch (ex: Exception) {
+        throw Exception("Failed to generate code for $endpoint -- already generated: ${code.build()}", ex)
     }
 }
 
