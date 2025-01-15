@@ -2,6 +2,8 @@ package space.jetbrains.api.runtime
 
 import io.ktor.client.*
 import io.ktor.client.engine.*
+import io.ktor.client.plugins.HttpSend
+import io.ktor.client.plugins.plugin
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -10,6 +12,7 @@ import io.ktor.utils.io.errors.*
 import kotlinx.datetime.Clock.System
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
+import space.jetbrains.api.runtime.SpaceClient.Companion.FunctionName
 import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
 import space.jetbrains.api.runtime.stacktrace.withPreservedStacktrace
 
@@ -54,34 +57,9 @@ public fun SpaceHttpClient(ktorClient: HttpClient): HttpClient = ktorClient.conf
 
 private val log = getLogger("space.jetbrains.api.runtime.SpaceHttpClient")
 
-@Suppress("DeprecatedCallableAddReplaceWith")
-@Deprecated("Use SpaceClient to call Space API")
-public suspend fun HttpClient.call(
-    functionName: String,
-    appInstance: SpaceAppInstance,
-    auth: SpaceAuth,
-    callMethod: HttpMethod,
-    path: String,
-    partial: PartialBuilder.Explicit?,
-    parameters: Parameters = Parameters.Empty,
-    requestBody: JsonValue? = null
-): DeserializationContext = callSpaceApi(
-    ktorClient = this,
-    functionName = functionName,
-    appInstance = appInstance,
-    auth = auth,
-    callMethod = callMethod,
-    path = path,
-    partial = partial,
-    parameters = parameters,
-    requestBody = requestBody?.let { TextContent(it.print(), ContentType.Application.Json) }
-)
-
 internal suspend fun callSpaceApi(
-    ktorClient: HttpClient,
+    client: SpaceClient,
     functionName: String,
-    appInstance: SpaceAppInstance,
-    auth: SpaceAuth,
     callMethod: HttpMethod,
     path: String,
     partial: PartialBuilder.Explicit?,
@@ -89,53 +67,37 @@ internal suspend fun callSpaceApi(
     requestBody: OutgoingContent? = null,
     requestHeaders: List<Pair<String, String>>? = null,
 ): DeserializationContext {
-    val templateRequest = HttpRequestBuilder().apply {
-        url {
-            takeFrom(appInstance.spaceServer.apiBaseUrl.removeSuffix("/") + "/" + path.removePrefix("/"))
+    return withPreservedStacktrace("exception during Space API call: $functionName") {
+        val response = client.ktorClient.request {
+            url {
+                takeFrom( client.appInstance.spaceServer.apiBaseUrl.removeSuffix("/") + "/" + path.removePrefix("/"))
 
-            this.parameters.appendAll(parameters)
-            if (partial != null) {
-                this.parameters.append("\$fields", partial.buildQuery())
+                this.parameters.appendAll(parameters)
+                if (partial != null) {
+                    this.parameters.append("\$fields", partial.buildQuery())
+                }
+            }
+
+            method = callMethod
+            accept(ContentType.Application.Json)
+
+            setAttributes {
+                put(FunctionName, functionName)
+            }
+
+            requestBody?.let {
+                val bodyText = (it as? TextContent)?.text
+                log.trace("Request to Space: $functionName (${callMethod.value} request to ${url.buildString()}):\n$bodyText")
+                setBody(it)
+            }
+
+            requestHeaders?.forEach {
+                headers.append(it.first, it.second)
             }
         }
 
-        method = callMethod
-        accept(ContentType.Application.Json)
-
-
-        requestBody?.let {
-            val bodyText = (it as? TextContent)?.text
-            log.trace("Request to Space: $functionName (${callMethod.value} request to ${url.buildString()}):\n$bodyText")
-            setBody(it)
-        }
-
-        requestHeaders?.forEach {
-            headers.append(it.first, it.second)
-        }
-    }
-
-    while (true) {
-        val request = HttpRequestBuilder().takeFrom(templateRequest)
-
-        val isAccessTokenRefreshable = withPreservedStacktrace("exception while getting access token for Space API call: $functionName") {
-            val spaceTokenInfo = auth.token(ktorClient, appInstance)
-            spaceTokenInfo.accessToken.takeIf { it.isNotEmpty() }?.let {
-                request.header(HttpHeaders.Authorization, "Bearer $it")
-            }
-            spaceTokenInfo.expires != null
-        }
-
-        val (retry, content) = withPreservedStacktrace("exception during Space API call: $functionName") {
-            val response = ktorClient.request(request)
-            val responseText = response.bodyAsText()
-            log.trace("Response from Space for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText")
-            val content = responseText.let(::parseJson)
-            throwErrorOrReturnWhetherToRetry(response, content, functionName, isAccessTokenRefreshable) to content
-        }
-
-        if (!retry) {
-            return DeserializationContext(content, ReferenceChainLink(functionName), partial)
-        }
+        val content = response.call.attributes.getOrNull(SpaceClient.JsonResponse)
+        DeserializationContext(content, ReferenceChainLink(functionName), partial)
     }
 }
 
@@ -176,7 +138,7 @@ internal suspend fun auth(
     )
 }
 
-private fun throwErrorOrReturnWhetherToRetry(
+internal fun throwErrorOrReturnWhetherToRetry(
     response: HttpResponse,
     responseContent: JsonValue?,
     functionName: String,

@@ -1,8 +1,14 @@
 package space.jetbrains.api.runtime
 
 import io.ktor.client.*
+import io.ktor.client.call.HttpClientCall
 import io.ktor.client.engine.*
 import io.ktor.client.plugins.*
+import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.request
+import io.ktor.http.HttpHeaders
+import io.ktor.util.AttributeKey
 import io.ktor.utils.io.core.*
 import kotlinx.datetime.*
 import space.jetbrains.api.runtime.epoch.EpochTrackingPlugin
@@ -130,6 +136,32 @@ public class SpaceClient private constructor(
             "${::ktorClient.name} should be either created with ${ktorClientForSpace.name}() or configured with " +
                     "${HttpClientConfig<*>::configureKtorClientForSpace.name}()"
         }
+
+        ktorClient.plugin(HttpSend).intercept { request ->
+            var call: HttpClientCall? = null
+            while (call == null) {
+                val spaceTokenInfo = auth.token(ktorClient, appInstance)
+                spaceTokenInfo.accessToken.takeIf { it.isNotEmpty() }?.let {
+                    request.header(HttpHeaders.Authorization, "Bearer $it")
+                }
+                val isAccessTokenRefreshable = spaceTokenInfo.expires != null
+
+                call = execute(request)
+                val responseText: String = call.response.bodyAsText()
+                val functionName = call.attributes.get(FunctionName)
+                log.trace("Response from Space for $functionName (${request.method.value} request to ${request.url.buildString()}):\n$responseText")
+
+                val content = responseText.let(::parseJson)?.also {
+                    call!!.attributes.put(JsonResponse, it)
+                }
+
+                val retry = throwErrorOrReturnWhetherToRetry(call.response, content, functionName, isAccessTokenRefreshable)
+                if (retry) {
+                    call = null
+                }
+            }
+            call
+        }
     }
 
     public val server: SpaceServerLocation get() = appInstance.spaceServer
@@ -145,6 +177,11 @@ public class SpaceClient private constructor(
 
     override fun close() {
         if (manageKtorClient) ktorClient.close()
+    }
+
+    internal companion object {
+        val FunctionName: AttributeKey<String> = AttributeKey("FunctionName")
+        val JsonResponse: AttributeKey<JsonValue> = AttributeKey("JsonResponse")
     }
 }
 
@@ -181,3 +218,5 @@ public fun HttpClient.withCallContext(serverUrl: String, tokenSource: SpaceAuth)
 internal fun SpaceTokenInfo.expired(gapSeconds: Long = 5): Boolean {
     return expires?.let { Clock.System.now().plus(gapSeconds, DateTimeUnit.SECOND) > it } ?: false
 }
+
+private val log = getLogger("space.jetbrains.api.runtime.SpaceClient")

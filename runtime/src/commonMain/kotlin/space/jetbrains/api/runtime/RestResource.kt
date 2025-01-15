@@ -17,10 +17,8 @@ public abstract class RestResource(private val client: SpaceClient) {
         requestHeaders: List<Pair<String, String>>? = null,
         partial: PartialBuilder.Explicit? = null,
     ): DeserializationContext = callSpaceApi(
-        ktorClient = client.ktorClient,
+        client = client,
         functionName = functionName,
-        appInstance = client.appInstance,
-        auth = client.auth,
         callMethod = method,
         path = path,
         partial = partial,
@@ -36,10 +34,8 @@ public abstract class RestResource(private val client: SpaceClient) {
         requestHeaders: List<Pair<String, String>>? = null,
         partial: PartialBuilder.Explicit? = null,
     ): DeserializationContext = callSpaceApi(
-        ktorClient = client.ktorClient,
+        client = client,
         functionName = functionName,
-        appInstance = client.appInstance,
-        auth = client.auth,
         callMethod = method,
         path = path,
         partial = partial,
@@ -55,10 +51,8 @@ public abstract class RestResource(private val client: SpaceClient) {
         requestHeaders: List<Pair<String, String>>? = null,
         partial: PartialBuilder.Explicit? = null
     ): DeserializationContext = callSpaceApi(
-        ktorClient = client.ktorClient,
+        client = client,
         functionName = functionName,
-        appInstance = client.appInstance,
-        auth = client.auth,
         callMethod = method,
         path = path,
         partial = partial,
