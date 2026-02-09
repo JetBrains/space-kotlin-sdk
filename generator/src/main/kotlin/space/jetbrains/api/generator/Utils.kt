@@ -12,7 +12,7 @@ const val PARTIALS_PACKAGE = "$TYPES_PACKAGE.partials"
 const val FF_PACKAGE = "$ROOT_PACKAGE.featureFlags"
 
 private val localDateType = ClassName("kotlinx.datetime", "LocalDate")
-private val instantType = ClassName("kotlinx.datetime", "Instant")
+private val instantType = ClassName("kotlin.time", "Instant")
 private val durationType = ClassName("kotlin.time", "Duration")
 
 val batchType = ClassName(ROOT_PACKAGE, "Batch")
